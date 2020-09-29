@@ -1,3 +1,3 @@
-mod scanner;
-mod parser;
-mod value;
+pub mod lexer;
+pub mod parser;
+pub mod value;

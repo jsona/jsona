@@ -1,6 +1,5 @@
-use std::fmt::{self, Formatter, Display};
+use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
@@ -12,6 +11,39 @@ impl Token {
     #[inline]
     pub fn new(kind: TokenKind, pos: Position) -> Self {
         Self { kind, pos }
+    }
+    pub fn is_value(&self) -> bool {
+        match self.kind {
+            TokenKind::Identifier(..)
+            | TokenKind::IntegerLiteral(..)
+            | TokenKind::FloatLiteral(..)
+            | TokenKind::StringLiteral(..) => true,
+            _ => false,
+        }
+    }
+    pub fn get_value(&self) -> Option<String> {
+        if self.is_value() {
+            match self.kind.clone() {
+                TokenKind::Identifier(v) => Some(v),
+                TokenKind::IntegerLiteral(i) => Some(i.to_string()),
+                TokenKind::FloatLiteral(f) => Some(f.to_string()),
+                TokenKind::StringLiteral(v) => Some(v),
+                _ => unreachable!(),
+            }
+        } else {
+            None
+        }
+    }
+    pub fn is_node(&self) -> bool {
+        match self.kind {
+            TokenKind::LeftBrace
+            | TokenKind::LeftBracket
+            | TokenKind::Identifier(..)
+            | TokenKind::IntegerLiteral(..)
+            | TokenKind::FloatLiteral(..)
+            | TokenKind::StringLiteral(..) => true,
+            _ => false,
+        }
     }
 }
 
@@ -41,8 +73,6 @@ pub enum TokenKind {
     LeftBracket,
     /// `]`
     RightBracket,
-    /// `?`
-    Question,
     /// An identifier.
     Identifier(String),
     /// A integer literal.
@@ -51,10 +81,10 @@ pub enum TokenKind {
     FloatLiteral(f64),
     /// A string literal
     StringLiteral(String),
-    /// Indicates a comment
-    Comment,
     /// A lexer error.
-    ScanError(String),
+    LexError(String),
+    /// Eof
+    Eof,
 }
 
 impl Display for TokenKind {
@@ -68,14 +98,13 @@ impl Display for TokenKind {
             TokenKind::LeftParen => write!(f, "("),
             TokenKind::RightParen => write!(f, ")"),
             TokenKind::LeftBracket => write!(f, "["),
-            TokenKind::Question => write!(f, "?"),
             TokenKind::RightBracket => write!(f, "]"),
             TokenKind::Identifier(s) => write!(f, "{}", s),
             TokenKind::IntegerLiteral(i) => write!(f, "{}", i),
             TokenKind::FloatLiteral(v) => write!(f, "{}", v),
             TokenKind::StringLiteral(s) => write!(f, "{}", s),
-            TokenKind::Comment => write!(f, "comment"),
-            TokenKind::ScanError(err) => write!(f, "{}", err),
+            TokenKind::LexError(err) => write!(f, "{}", err),
+            TokenKind::Eof => write!(f, "end of file"),
         }
     }
 }
@@ -131,18 +160,20 @@ fn is_binary_char(c: char) -> bool {
     }
 }
 
-pub struct Scanner<T> {
+pub struct Lexer<T> {
     input: T,
     buf: Option<char>,
     pos: Position,
+    eof: bool,
 }
 
-impl<T: Iterator<Item = char>> Scanner<T> {
+impl<T: Iterator<Item = char>> Lexer<T> {
     pub fn new(input: T) -> Self {
         Self {
             input,
             buf: None,
             pos: Position::new(0, 0, 0),
+            eof: false,
         }
     }
     fn step(&mut self, ch: char) {
@@ -188,7 +219,7 @@ impl<T: Iterator<Item = char>> Scanner<T> {
         let mut start_pos = self.pos.clone();
         while let Some(ch) = self.next_ch() {
             match (ch, self.peek_ch().unwrap_or('\0')) {
-                ('#', _) => return Some(Token::new(TokenKind::At, start_pos)),
+                ('@', _) => return Some(Token::new(TokenKind::At, start_pos)),
                 ('{', _) => return Some(Token::new(TokenKind::LeftBrace, start_pos)),
                 ('}', _) => return Some(Token::new(TokenKind::RightBrace, start_pos)),
                 ('[', _) => return Some(Token::new(TokenKind::LeftBracket, start_pos)),
@@ -197,7 +228,6 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                 (')', _) => return Some(Token::new(TokenKind::RightParen, start_pos)),
                 (',', _) => return Some(Token::new(TokenKind::Comma, start_pos)),
                 (':', _) => return Some(Token::new(TokenKind::Colon, start_pos)),
-                ('?', _) => return Some(Token::new(TokenKind::Question, start_pos)),
                 ('-', '0'..='9') => {
                     let ch_next = self.next_ch().unwrap();
                     return self.scan_number_literal(start_pos, ch_next, true);
@@ -206,21 +236,25 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                     self.next_ch();
                     return self.scan_number_literal(start_pos, '.', true);
                 }
+                ('.', '0'..='9') => {
+                    self.next_ch();
+                    return self.scan_number_literal(start_pos, '.', false);
+                }
                 ('/', '*') => {
                     self.next_ch();
                     loop {
                         if let Some(ch) = self.next_ch() {
                             if ch == '*' && self.peek_ch_is('/') {
+                                self.next();
                                 break;
                             }
                         } else {
                             return Some(Token::new(
-                                TokenKind::ScanError("Unterminated multiline comment".into()),
+                                TokenKind::LexError("unterminated multiline comment".into()),
                                 self.pos.clone(),
                             ));
                         }
                     }
-                    return Some(Token::new(TokenKind::Comment, start_pos));
                 }
                 ('/', '/') => {
                     self.next_ch();
@@ -231,7 +265,6 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                             self.next_ch();
                         }
                     }
-                    return Some(Token::new(TokenKind::Comment, start_pos));
                 }
                 ('"', _) => return self.scan_string_literal(start_pos, '"'),
                 ('\'', _) => return self.scan_string_literal(start_pos, '\''),
@@ -241,23 +274,22 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                 ('0'..='9', _) => return self.scan_number_literal(start_pos, ch, false),
                 (ch, _) if ch.is_whitespace() || ch == '\n' => {
                     start_pos = self.pos.clone();
-                },
+                }
                 (ch, _) => {
                     return Some(Token::new(
-                        TokenKind::ScanError(format!("Unexpected input {}", ch)),
+                        TokenKind::LexError(format!("unexpected input {}", ch)),
                         self.pos.clone(),
                     ))
                 }
             }
         }
-        self.next_ch();
-        None
+        if self.eof {
+            return None;
+        }
+        self.eof = true;
+        Some(Token::new(TokenKind::Eof, start_pos))
     }
-    fn scan_string_literal(
-        &mut self,
-        start_pos: Position,
-        enclosing_char: char,
-    ) -> Option<Token> {
+    fn scan_string_literal(&mut self, start_pos: Position, enclosing_char: char) -> Option<Token> {
         let mut result: Vec<char> = Vec::new();
         let mut escape: Vec<char> = Vec::new();
         loop {
@@ -266,7 +298,7 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                     ch
                 } else {
                     return Some(Token::new(
-                        TokenKind::ScanError("Unexpected string literal".into()),
+                        TokenKind::LexError("unexpected string literal".into()),
                         self.pos.clone(),
                     ));
                 }
@@ -296,7 +328,7 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                                 c
                             } else {
                                 return Some(Token::new(
-                                    TokenKind::ScanError("Unexpected escape string literal".into()),
+                                    TokenKind::LexError("unexpected escape string literal".into()),
                                     start_pos,
                                 ));
                             }
@@ -312,8 +344,8 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                             } else {
                                 let seq: String = seq.iter().collect();
                                 return Some(Token::new(
-                                    TokenKind::ScanError(format!(
-                                        "Unexpected escape string literal {}",
+                                    TokenKind::LexError(format!(
+                                        "unexpected escape string literal {}",
                                         seq
                                     )),
                                     start_pos,
@@ -328,8 +360,8 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                         } else {
                             let seq: String = seq.iter().collect();
                             return Some(Token::new(
-                                TokenKind::ScanError(format!(
-                                    "Unexpected escape string literal {}",
+                                TokenKind::LexError(format!(
+                                    "unexpected escape string literal {}",
                                     seq
                                 )),
                                 start_pos,
@@ -349,14 +381,14 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                     escape.push(ch);
                     let escape: String = escape.iter().collect();
                     return Some(Token::new(
-                        TokenKind::ScanError(format!("Unexpected escape string literal {}", escape)),
+                        TokenKind::LexError(format!("unexpected escape string literal {}", escape)),
                         start_pos,
                     ));
                 }
                 // Cannot have new-lines inside string literals
                 '\n' => {
                     return Some(Token::new(
-                        TokenKind::ScanError("Unterminal string literal".into()),
+                        TokenKind::LexError("unterminal string literal".into()),
                         start_pos,
                     ));
                 }
@@ -448,7 +480,7 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                     i
                 } else {
                     return Some(Token::new(
-                        TokenKind::ScanError(format!("Unexpected number literal {}", out)),
+                        TokenKind::LexError(format!("unexpected number literal {}", out)),
                         start_pos,
                     ));
                 }
@@ -462,17 +494,13 @@ impl<T: Iterator<Item = char>> Scanner<T> {
                 Some(Token::new(TokenKind::FloatLiteral(f), start_pos))
             } else {
                 Some(Token::new(
-                    TokenKind::ScanError(format!("Unexpected number literal {}", out)),
+                    TokenKind::LexError(format!("unexpected number literal {}", out)),
                     start_pos,
                 ))
             }
         }
     }
-    fn scan_identifier(
-        &mut self,
-        start_pos: Position,
-        first_char: char,
-    ) -> Option<Token> {
+    fn scan_identifier(&mut self, start_pos: Position, first_char: char) -> Option<Token> {
         let mut result: Vec<char> = Vec::new();
         result.push(first_char);
 
@@ -491,7 +519,7 @@ impl<T: Iterator<Item = char>> Scanner<T> {
     }
 }
 
-impl<T: Iterator<Item = char>> Iterator for Scanner<T> {
+impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         self.scan_next_token()
@@ -504,10 +532,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_simple() {
+    fn test_lex() {
         let s = r##"
 @abc
 @def(a, b)
+/*
+multi-line comments
+*/
 
 {
     a: null,
@@ -519,7 +550,7 @@ mod tests {
         "abc", @upper
         "def",
     ],
-    d: { a:3, b: 4 },
+    o: { a:3, b: 4 },
     // This is comments
     g: { @object
         a: 3,
@@ -527,12 +558,10 @@ mod tests {
         c: 5,
     },
     x: 0x1b,
-    y: 3.2, @xxg(a, b)
-    t?: "optional field",
+    y: 3.2 @optional @xxg(a, b)
 }
-
         "##;
-        let scanner = Scanner::new(s.chars());
+        let scanner = Lexer::new(s.chars());
         let expects: Vec<TokenKind> = vec![
             At,
             Identifier("abc".into()),
@@ -577,7 +606,7 @@ mod tests {
             Comma,
             RightBracket,
             Comma,
-            Identifier("d".into()),
+            Identifier("o".into()),
             Colon,
             LeftBrace,
             Identifier("a".into()),
@@ -589,7 +618,6 @@ mod tests {
             IntegerLiteral(4),
             RightBrace,
             Comma,
-            Comment,
             Identifier("g".into()),
             Colon,
             LeftBrace,
@@ -616,7 +644,8 @@ mod tests {
             Identifier("y".into()),
             Colon,
             FloatLiteral(3.2),
-            Comma,
+            At,
+            Identifier("optional".into()),
             At,
             Identifier("xxg".into()),
             LeftParen,
@@ -624,12 +653,8 @@ mod tests {
             Comma,
             Identifier("b".into()),
             RightParen,
-            Identifier("t".into()),
-            Question,
-            Colon,
-            StringLiteral("optional field".into()),
-            Comma,
-            RightBrace
+            RightBrace,
+            Eof,
         ];
         let targets: Vec<TokenKind> = scanner.into_iter().map(|t| t.kind).collect();
         assert_eq!(expects, targets);
