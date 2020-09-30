@@ -1,6 +1,4 @@
 use indexmap::IndexMap;
-use std::ops::Index;
-use std::vec;
 
 #[derive(Debug, PartialEq)]
 pub enum Value {
@@ -11,11 +9,6 @@ pub enum Value {
     String(String, Option<Amap>),
     Array(Array, Option<Amap>),
     Object(Object, Option<Amap>),
-
-    /// Accessing a nonexistent node via the Index trait returns `BadValue`. This
-    /// simplifies error handling in the calling code. Invalid type conversion also
-    /// returns `BadValue`.
-    BadValue(Option<Amap>),
 }
 
 impl Value {
@@ -37,26 +30,24 @@ impl Value {
     }
     pub fn get_annotations(&self) -> &Option<Amap> {
         match self {
-            Value::Null(annotations) => annotations,
-            Value::Boolean(_, annotations) => annotations,
-            Value::Integer(_, annotations) => annotations,
-            Value::Float(_, annotations) => annotations,
-            Value::String(_, annotations) => annotations,
-            Value::Array(_, annotations) => annotations,
-            Value::Object(_, annotations) => annotations,
-            Value::BadValue(annotations) => annotations,
+            Value::Null(a) => a,
+            Value::Boolean(_, a) => a,
+            Value::Integer(_, a) => a,
+            Value::Float(_, a) => a,
+            Value::String(_, a) => a,
+            Value::Array(_, a) => a,
+            Value::Object(_, a) => a,
         }
     }
     pub fn get_annotations_mut(&mut self) -> &mut Option<Amap> {
         match self {
-            Value::Null(annotations) => annotations,
-            Value::Boolean(_, annotations) => annotations,
-            Value::Integer(_, annotations) => annotations,
-            Value::Float(_, annotations) => annotations,
-            Value::String(_, annotations) => annotations,
-            Value::Array(_, annotations) => annotations,
-            Value::Object(_, annotations) => annotations,
-            Value::BadValue(annotations) => annotations,
+            Value::Null(a) => a,
+            Value::Boolean(_, a) => a,
+            Value::Integer(_, a) => a,
+            Value::Float(_, a) => a,
+            Value::String(_, a) => a,
+            Value::Array(_, a) => a,
+            Value::Object(_, a) => a,
         }
     }
 }
@@ -134,55 +125,5 @@ impl Value {
             Value::Object(..) => true,
             _ => false,
         }
-    }
-}
-
-static BAD_VALUE: Value = Value::BadValue(None);
-impl<'a> Index<&'a str> for Value {
-    type Output = Value;
-
-    fn index(&self, idx: &'a str) -> &Value {
-        match self.as_hash() {
-            Some(h) => h.get(idx).unwrap_or(&BAD_VALUE),
-            None => &BAD_VALUE,
-        }
-    }
-}
-
-impl Index<usize> for Value {
-    type Output = Value;
-
-    fn index(&self, idx: usize) -> &Value {
-        if let Some(v) = self.as_vec() {
-            v.get(idx).unwrap_or(&BAD_VALUE)
-        } else if let Some(v) = self.as_hash() {
-            let key = idx.to_string();
-            v.get(key.as_str()).unwrap_or(&BAD_VALUE)
-        } else {
-            &BAD_VALUE
-        }
-    }
-}
-
-impl IntoIterator for Value {
-    type Item = Value;
-    type IntoIter = ValueIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        ValueIter {
-            yaml: self.into_vec().unwrap_or_else(Vec::new).into_iter(),
-        }
-    }
-}
-
-pub struct ValueIter {
-    yaml: vec::IntoIter<Value>,
-}
-
-impl Iterator for ValueIter {
-    type Item = Value;
-
-    fn next(&mut self) -> Option<Value> {
-        self.yaml.next()
     }
 }
