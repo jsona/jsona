@@ -12,6 +12,16 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn is_scalar(&self) -> bool {
+        match self {
+            Value::Null(_)
+            | Value::Boolean(_, _)
+            | Value::Integer(_, _)
+            | Value::Float(_, _)
+            | Value::String(_, _) => true,
+            _ => false,
+        }
+    }
     pub fn set_annotations(&mut self, annotations: Option<Amap>) {
         match annotations {
             Some(v) => self.get_annotations_mut().replace(v),

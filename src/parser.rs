@@ -391,9 +391,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
         }
         Ok(())
     }
-    fn parse_annotation_args(
-        &mut self,
-    ) -> ParseResult<Vec<String>> {
+    fn parse_annotation_args(&mut self) -> ParseResult<Vec<String>> {
         let mut result: Vec<String> = Vec::new();
         let mut allow_comma = false;
         loop {
