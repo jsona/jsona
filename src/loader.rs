@@ -150,7 +150,8 @@ multi-line comments
 
 {
     a: null,
-    b: 'say "hello"',
+    b: 'say "hello" \
+to',
     c: true,
     m: "it's awesome",
     h: -3.13,
@@ -173,7 +174,7 @@ multi-line comments
         let value = Value::Object(
             map! {
                 "a".into() => Value::Null(None),
-                "b".into() => Value::String(r#"say "hello""#.into(), None),
+                "b".into() => Value::String(r#"say "hello" to"#.into(), None),
                 "c".into() => Value::Boolean(true, None),
                 "m".into() => Value::String(r#"it's awesome"#.into(), None),
                 "h".into() => Value::Float(-3.13, None),

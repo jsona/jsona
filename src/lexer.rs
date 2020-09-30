@@ -309,6 +309,12 @@ impl<T: Iterator<Item = char>> Lexer<T> {
             };
             match next_char {
                 '\\' if escape.is_empty() => {
+                    if let Some(ch) = self.peek_ch() {
+                        if ch == '\n' {
+                            self.next_ch();
+                            continue;
+                        }
+                    }
                     escape.push('\\');
                 }
                 't' | '\\' | '\n' | 'r' if !escape.is_empty() => {
@@ -546,7 +552,8 @@ multi-line comments
 
 {
     a: null,
-    b: 'say "hello"',
+    b: 'say "hello" \
+to',
     c: true,
     m: "it's awesome",
     h: -3.13,
@@ -587,7 +594,7 @@ multi-line comments
             Comma,
             Identifier("b".into()),
             Colon,
-            StringLiteral("say \"hello\"".into()),
+            StringLiteral("say \"hello\" to".into()),
             Comma,
             Identifier("c".into()),
             Colon,

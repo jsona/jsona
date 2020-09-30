@@ -320,7 +320,8 @@ multi-line comments
 
 {
     a: null,
-    b: 'say "hello"',
+    b: 'say "hello" \
+to',
     c: true,
     m: "it's awesome",
     h: -3.13,
@@ -345,7 +346,7 @@ multi-line comments
 
 {
   a: null,
-  b: "say \"hello\"",
+  b: "say \"hello\" to",
   c: true,
   m: "it's awesome",
   h: -3.13,
