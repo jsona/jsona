@@ -132,6 +132,7 @@ impl<'a> Emitter<'a> {
                 self.emit_object(o, a)?;
                 Ok(())
             }
+            Value::BadValue(..) => Ok(()),
         }
     }
     fn write_indent(&mut self) -> EmitResult {
