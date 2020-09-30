@@ -65,7 +65,7 @@ pub type Array = Vec<Value>;
 
 pub type Object = IndexMap<String, Value>;
 
-pub type Amap = IndexMap<String, Vec<String>>;
+pub type Amap = IndexMap<String, IndexMap<String, String>>;
 
 macro_rules! define_as (
     ($name:ident, $t:ident, $yt:ident) => (

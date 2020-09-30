@@ -61,6 +61,8 @@ pub enum TokenKind {
     Comma,
     /// `:`
     Colon,
+    /// `=`
+    Eq,
     /// `{`
     LeftBrace,
     /// `}`
@@ -93,6 +95,7 @@ impl Display for TokenKind {
             TokenKind::At => write!(f, "@"),
             TokenKind::Comma => write!(f, ","),
             TokenKind::Colon => write!(f, ":"),
+            TokenKind::Eq => write!(f, "="),
             TokenKind::LeftBrace => write!(f, "{{"),
             TokenKind::RightBrace => write!(f, "}}"),
             TokenKind::LeftParen => write!(f, "("),
@@ -220,14 +223,15 @@ impl<T: Iterator<Item = char>> Lexer<T> {
         while let Some(ch) = self.next_ch() {
             match (ch, self.peek_ch().unwrap_or('\0')) {
                 ('@', _) => return Some(Token::new(TokenKind::At, start_pos)),
+                (',', _) => return Some(Token::new(TokenKind::Comma, start_pos)),
+                (':', _) => return Some(Token::new(TokenKind::Colon, start_pos)),
+                ('=', _) => return Some(Token::new(TokenKind::Eq, start_pos)),
                 ('{', _) => return Some(Token::new(TokenKind::LeftBrace, start_pos)),
                 ('}', _) => return Some(Token::new(TokenKind::RightBrace, start_pos)),
                 ('[', _) => return Some(Token::new(TokenKind::LeftBracket, start_pos)),
                 (']', _) => return Some(Token::new(TokenKind::RightBracket, start_pos)),
                 ('(', _) => return Some(Token::new(TokenKind::LeftParen, start_pos)),
                 (')', _) => return Some(Token::new(TokenKind::RightParen, start_pos)),
-                (',', _) => return Some(Token::new(TokenKind::Comma, start_pos)),
-                (':', _) => return Some(Token::new(TokenKind::Colon, start_pos)),
                 ('-', '0'..='9') => {
                     let ch_next = self.next_ch().unwrap();
                     return self.scan_number_literal(start_pos, ch_next, true);
@@ -535,7 +539,7 @@ mod tests {
     fn test_lex() {
         let s = r##"
 @abc
-@def(a, b)
+@def(k1 = "a", k2 = "b")
 /*
 multi-line comments
 */
@@ -558,7 +562,7 @@ multi-line comments
         c: 5,
     },
     x: 0x1b,
-    y: 3.2 @optional @xxg(a, b)
+    y: 3.2 @optional @xxg(k1 = "a", k2 = "b")
 }
         "##;
         let scanner = Lexer::new(s.chars());
@@ -568,9 +572,13 @@ multi-line comments
             At,
             Identifier("def".into()),
             LeftParen,
-            Identifier("a".into()),
+            Identifier("k1".into()),
+            Eq,
+            StringLiteral("a".into()),
             Comma,
-            Identifier("b".into()),
+            Identifier("k2".into()),
+            Eq,
+            StringLiteral("b".into()),
             RightParen,
             LeftBrace,
             Identifier("a".into()),
@@ -649,9 +657,13 @@ multi-line comments
             At,
             Identifier("xxg".into()),
             LeftParen,
-            Identifier("a".into()),
+            Identifier("k1".into()),
+            Eq,
+            StringLiteral("a".into()),
             Comma,
-            Identifier("b".into()),
+            Identifier("k2".into()),
+            Eq,
+            StringLiteral("b".into()),
             RightParen,
             RightBrace,
             Eof,

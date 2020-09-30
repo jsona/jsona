@@ -328,8 +328,8 @@ impl<T: Iterator<Item = char>> Parser<T> {
                     match tok.kind {
                         TokenKind::Colon => {
                             self.next_token()?;
-                            let tok1 = self.peek_token()?;
-                            if tok1.is_node() {
+                            let tok_next = self.peek_token()?;
+                            if tok_next.is_node() {
                                 self.parse_node(recv)?;
                                 no_kv = false;
                                 allow_comma = true;
@@ -374,7 +374,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         self.next_token()?;
                         self.parse_annotation_args()?
                     } else {
-                        Vec::new()
+                        IndexMap::new()
                     }
                 };
                 annotations.insert(key, args);
@@ -391,12 +391,12 @@ impl<T: Iterator<Item = char>> Parser<T> {
         }
         Ok(())
     }
-    fn parse_annotation_args(&mut self) -> ParseResult<Vec<String>> {
-        let mut result: Vec<String> = Vec::new();
+    fn parse_annotation_args(&mut self) -> ParseResult<IndexMap<String, String>> {
+        let mut amap: IndexMap<String, String> = IndexMap::new();
         let mut allow_comma = false;
         loop {
             let tok = self.peek_token()?;
-            match tok.kind {
+            match &tok.kind {
                 TokenKind::Comma => {
                     if allow_comma {
                         allow_comma = false;
@@ -412,12 +412,28 @@ impl<T: Iterator<Item = char>> Parser<T> {
                     self.next_token()?;
                     break;
                 }
-                _ if tok.is_value() => {
+                TokenKind::Identifier(key) => {
                     if !allow_comma {
+                        self.next_token()?;
                         let tok = self.next_token()?;
-                        let v = tok.get_value().unwrap();
-                        allow_comma = true;
-                        result.push(v);
+                        if let TokenKind::Eq = tok.kind {
+                            let tok = self.next_token()?;
+                            if tok.is_value() {
+                                amap.insert(key.to_owned(), tok.get_value().unwrap());
+                                allow_comma = true;
+                            } else {
+                                return Err(ParseError::Unexpected {
+                                    message: Some("in annotattion args".into()),
+                                    found: tok,
+                                });
+                            }
+                        } else {
+                            return Err(ParseError::Expected {
+                                expected: Box::new([TokenKind::Eq]),
+                                found: tok,
+                                context: "annotation args".into(),
+                            });
+                        }
                     } else {
                         return Err(ParseError::Expected {
                             expected: Box::new([TokenKind::Comma]),
@@ -434,6 +450,6 @@ impl<T: Iterator<Item = char>> Parser<T> {
                 }
             }
         }
-        Ok(result)
+        Ok(amap)
     }
 }

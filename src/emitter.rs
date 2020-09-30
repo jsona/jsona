@@ -59,10 +59,12 @@ impl<'a> Emitter<'a> {
                 let len = args.len();
                 if len > 0 {
                     write!(self.writer, "(")?;
-                    for (i, arg) in args.iter().enumerate() {
-                        self.write_string(arg.as_str(), false)?;
+                    for (i, (k, v)) in args.iter().enumerate() {
+                        self.write_string(k.as_str(), false)?;
+                        write!(self.writer, " = ")?;
+                        self.write_string(v.as_str(), true)?;
                         if i < len - 1 {
-                            write!(self.writer, ",")?;
+                            write!(self.writer, ", ")?;
                         }
                     }
                     write!(self.writer, ")")?;
@@ -79,10 +81,12 @@ impl<'a> Emitter<'a> {
                 let len = args.len();
                 if len > 0 {
                     write!(self.writer, "(")?;
-                    for (i, arg) in args.iter().enumerate() {
-                        self.write_string(arg.as_str(), false)?;
+                    for (i, (k, v)) in args.iter().enumerate() {
+                        self.write_string(k.as_str(), false)?;
+                        write!(self.writer, " = ")?;
+                        self.write_string(v.as_str(), true)?;
                         if i < len - 1 {
-                            write!(self.writer, ",")?;
+                            write!(self.writer, ", ")?;
                         }
                     }
                     write!(self.writer, ")")?;
@@ -323,7 +327,7 @@ mod tests {
     fn test_emit() {
         let s = r##"
 @abc
-@def(a, b)
+@def(k1 = "a", k2 = "b")
 /*
 multi-line comments
 */
@@ -346,12 +350,12 @@ multi-line comments
         c: 5,
     },
     x: 0x1b,
-    y: 3.2 @optional @xxg(a, b)
+    y: 3.2 @optional @xxg(k1 = "a", k2 = "b")
 }
         "##;
 
         let t = r##"@abc
-@def(a,b)
+@def(k1 = "a", k2 = "b")
 
 {
   a: null,
@@ -373,7 +377,7 @@ multi-line comments
     c: 5,
   },
   x: 27,
-  y: 3.2, @optional @xxg(a,b)
+  y: 3.2, @optional @xxg(k1 = "a", k2 = "b")
 }"##;
         let result = Loader::load_from_str(s).unwrap();
         let mut writer = String::new();

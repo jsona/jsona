@@ -143,7 +143,7 @@ mod tests {
     fn test_load() {
         let s = r##"
 @abc
-@def(a, b)
+@def(k1 = "a", k2 = "b")
 /*
 multi-line comments
 */
@@ -166,7 +166,7 @@ multi-line comments
         c: 5,
     },
     x: 0x1b,
-    y: 3.2 @optional @xxg(a, b)
+    y: 3.2 @optional @xxg(k1 = "a", k2 = "b")
 }
         "##;
         let result = Loader::load_from_str(s).unwrap();
@@ -179,10 +179,10 @@ multi-line comments
                 "h".into() => Value::Float(-3.13, None),
                 "d".into() => Value::Array(
                     vec![
-                        Value::String("abc".into(), Some(map!{ "upper".into() => vec![] })),
+                        Value::String("abc".into(), Some(map!{ "upper".into() => IndexMap::new() })),
                         Value::String("def".into(), None),
                     ],
-                    Some(map!{ "array".into() => vec![] })
+                    Some(map!{ "array".into() => IndexMap::new() })
                 ),
                 "o".into() => Value::Object(map!{
                     "a".into() => Value::Integer(3, None),
@@ -194,19 +194,22 @@ multi-line comments
                         "b".into() => Value::Integer(4, None),
                         "c".into() => Value::Integer(5, None)
                     },
-                    Some(map!{ "object".into() => vec![] })
+                    Some(map!{ "object".into() => IndexMap::new() })
                 ),
                 "x".into() => Value::Integer(27, None),
                 "y".into() => Value::Float(
                     3.2,
-                    Some(map!{ "optional".into() => vec![],  "xxg".into() => vec!["a".into(), "b".into()] })
+                    Some(map!{
+                        "optional".into() => IndexMap::new(),
+                        "xxg".into() => map!{ "k1".into() => "a".into(), "k2".into() => "b".into() }
+                    })
                 )
             },
             None,
         );
         let annotations: Amap = map! {
-            "abc".into() => vec![],
-            "def".into() => vec!["a".into(), "b".into()]
+            "abc".into() => IndexMap::new(),
+            "def".into() => map!{ "k1".into() => "a".into(), "k2".into() => "b".into() }
         };
         assert_eq!((value, Some(annotations)), result);
     }
