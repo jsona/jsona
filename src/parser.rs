@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 use std::fmt;
 
 use crate::lexer::{Lexer, Position, Token, TokenKind};
-use crate::value::{Amap, Value};
+use crate::value::Amap;
 
 /// `ParseError` is an enum which represents errors encounted during parsing an expression
 #[derive(Debug)]
@@ -90,6 +90,25 @@ impl fmt::Display for ParseError {
     }
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum Event {
+    ArrayStart,
+    ArrayStop,
+    ObjectStart,
+    ObjectStop,
+    Annotations(Amap),
+
+    Null,
+    Boolean(bool),
+    String(String),
+    Integer(i64),
+    Float(f64),
+}
+
+pub trait EventReceiver {
+    fn on_event(&mut self, ev: Event, pos: Position);
+}
+
 pub type ParseResult<T> = Result<T, ParseError>;
 
 pub struct Parser<T> {
@@ -134,46 +153,68 @@ impl<T: Iterator<Item = char>> Parser<T> {
         }
         Err(ParseError::AbruptEnd)
     }
-    pub fn parse(&mut self) -> ParseResult<(Value, Option<Amap>)> {
-        let annotations = self.parse_annotaions()?;
-        let value = self.parse_node()?;
-        Ok((value, annotations))
+    pub fn parse<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
+        self.parse_annotaions(recv)?;
+        self.parse_node(recv)?;
+        let tok = self.peek_token()?;
+        if let TokenKind::Eof = tok.kind {
+            Ok(())
+        } else {
+            Err(ParseError::Unexpected {
+                found: tok,
+                message: None,
+            })
+        }
     }
-    fn parse_node(&mut self) -> ParseResult<Value> {
+    fn parse_node<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
         let tok = self.next_token()?;
         match tok.kind {
             TokenKind::LeftBrace => {
-                return self.parse_object();
+                recv.on_event(Event::ObjectStart, tok.pos);
+                self.parse_object(recv)?;
             }
             TokenKind::LeftBracket => {
-                return self.parse_array();
+                recv.on_event(Event::ArrayStart, tok.pos);
+                self.parse_array(recv)?;
             }
-            TokenKind::Identifier(v) => match v.as_str() {
-                "true" => return Ok(Value::Boolean(true, None)),
-                "false" => return Ok(Value::Boolean(false, None)),
-                "null" => return Ok(Value::Null(None)),
-                _ => {
-                    return Err(ParseError::General {
-                        message: format!("unexpect identifier {}", v),
-                        position: tok.pos,
-                    })
-                }
-            },
-            TokenKind::IntegerLiteral(i) => return Ok(Value::Integer(i, None)),
-            TokenKind::FloatLiteral(f) => return Ok(Value::Float(f, None)),
-            TokenKind::StringLiteral(s) => return Ok(Value::String(s, None)),
+            TokenKind::Identifier(v) => {
+                let ev = {
+                    match v.as_str() {
+                        "true" => Event::Boolean(true),
+                        "false" => Event::Boolean(false),
+                        "null" => Event::Null,
+                        _ => {
+                            return Err(ParseError::General {
+                                message: format!("unexpect identifier {}", v),
+                                position: tok.pos,
+                            })
+                        }
+                    }
+                };
+                recv.on_event(ev, tok.pos);
+            }
+            TokenKind::IntegerLiteral(i) => {
+                recv.on_event(Event::Integer(i), tok.pos);
+            }
+            TokenKind::FloatLiteral(f) => {
+                recv.on_event(Event::Float(f), tok.pos);
+            }
+            TokenKind::StringLiteral(s) => {
+                recv.on_event(Event::String(s), tok.pos);
+            }
             _ => {
                 return Err(ParseError::Unexpected {
                     message: None,
                     found: tok,
                 })
             }
-        }
+        };
+        Ok(())
     }
-    fn parse_array(&mut self) -> ParseResult<Value> {
-        let annotations = self.parse_annotaions()?;
-        let mut elems: Vec<Value> = Vec::new();
+    fn parse_array<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
+        self.parse_annotaions(recv)?;
         let mut allow_comma = false;
+        let mut no_elem = true;
         loop {
             let tok = self.peek_token()?;
             match tok.kind {
@@ -189,11 +230,12 @@ impl<T: Iterator<Item = char>> Parser<T> {
                     }
                 }
                 TokenKind::RightBracket => {
+                    recv.on_event(Event::ArrayStop, tok.pos);
                     self.next_token()?;
                     break;
                 }
                 TokenKind::At => {
-                    let annotations = self.parse_annotaions()?;
+                    self.parse_annotaions(recv)?;
                     let allow_annotations = {
                         if !allow_comma {
                             true
@@ -205,19 +247,18 @@ impl<T: Iterator<Item = char>> Parser<T> {
                             }
                         }
                     };
-                    if !allow_annotations || elems.len() == 0 {
+                    if !allow_annotations || no_elem {
                         return Err(ParseError::Unexpected {
                             message: None,
                             found: tok,
                         });
                     }
-                    elems.last_mut().map(|v| v.set_annotiaons(annotations));
                 }
                 _ if tok.is_node() => {
                     if !allow_comma {
-                        let elem = self.parse_node()?;
+                        self.parse_node(recv)?;
+                        no_elem = false;
                         allow_comma = true;
-                        elems.push(elem);
                     } else {
                         return Err(ParseError::Expected {
                             expected: Box::new([TokenKind::Comma]),
@@ -234,12 +275,12 @@ impl<T: Iterator<Item = char>> Parser<T> {
                 }
             }
         }
-        Ok(Value::Array(elems, annotations))
+        Ok(())
     }
-    fn parse_object(&mut self) -> ParseResult<Value> {
-        let annotations = self.parse_annotaions()?;
-        let mut kvs: IndexMap<String, Value> = IndexMap::new();
+    fn parse_object<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
+        self.parse_annotaions(recv)?;
         let mut allow_comma = false;
+        let mut no_kv = true;
         loop {
             let tok = self.peek_token()?;
             match tok.kind {
@@ -255,11 +296,12 @@ impl<T: Iterator<Item = char>> Parser<T> {
                     }
                 }
                 TokenKind::RightBrace => {
+                    recv.on_event(Event::ObjectStop, tok.pos);
                     self.next_token()?;
                     break;
                 }
                 TokenKind::At => {
-                    let annotations = self.parse_annotaions()?;
+                    self.parse_annotaions(recv)?;
                     let allow_annotations = {
                         if !allow_comma {
                             true
@@ -271,26 +313,25 @@ impl<T: Iterator<Item = char>> Parser<T> {
                             }
                         }
                     };
-                    if !allow_annotations || kvs.len() == 0 {
+                    if !allow_annotations || no_kv {
                         return Err(ParseError::Unexpected {
                             message: None,
                             found: tok,
                         });
                     }
-                    kvs.get_index_mut(kvs.len() - 1)
-                        .map(|(_, v)| v.set_annotiaons(annotations));
                 }
                 TokenKind::Identifier(..) | TokenKind::StringLiteral(..) => {
                     let tok = self.next_token()?;
                     let key = tok.get_value().unwrap();
+                    recv.on_event(Event::String(key), tok.pos);
                     let tok = self.peek_token()?;
                     match tok.kind {
                         TokenKind::Colon => {
                             self.next_token()?;
                             let tok1 = self.peek_token()?;
                             if tok1.is_node() {
-                                let value = self.parse_node()?;
-                                kvs.insert(key, value);
+                                self.parse_node(recv)?;
+                                no_kv = false;
                                 allow_comma = true;
                             } else {
                                 return Err(ParseError::Unexpected {
@@ -316,10 +357,11 @@ impl<T: Iterator<Item = char>> Parser<T> {
                 }
             }
         }
-        Ok(Value::Object(kvs, annotations))
+        Ok(())
     }
-    fn parse_annotaions(&mut self) -> ParseResult<Option<Amap>> {
+    fn parse_annotaions<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
         let mut annotations: Amap = IndexMap::new();
+        let pos = self.peek_token()?.pos;
         while let TokenKind::At = self.peek_token()?.kind {
             self.next_token()?;
             let tok = self.peek_token()?;
@@ -345,12 +387,13 @@ impl<T: Iterator<Item = char>> Parser<T> {
             }
         }
         if annotations.len() > 0 {
-            Ok(Some(annotations))
-        } else {
-            Ok(None)
+            recv.on_event(Event::Annotations(annotations), pos);
         }
+        Ok(())
     }
-    fn parse_annotation_args(&mut self) -> ParseResult<Vec<String>> {
+    fn parse_annotation_args(
+        &mut self,
+    ) -> ParseResult<Vec<String>> {
         let mut result: Vec<String> = Vec::new();
         let mut allow_comma = false;
         loop {
@@ -394,97 +437,5 @@ impl<T: Iterator<Item = char>> Parser<T> {
             }
         }
         Ok(result)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use indexmap::IndexMap;
-
-    macro_rules! map(
-        { $($key:expr => $value:expr),+ } => {
-            {
-                let mut m = IndexMap::new();
-                $(
-                    m.insert($key, $value);
-                )+
-                m
-            }
-        };
-    );
-
-    #[test]
-    fn test_parse() {
-        let s = r##"
-@abc
-@def(a, b)
-/*
-multi-line comments
-*/
-
-{
-    a: null,
-    b: 'say "hello"',
-    c: true,
-    m: "it's awesome",
-    h: -3.13,
-    d: [ @array
-        "abc", @upper
-        "def",
-    ],
-    o: { a:3, b: 4 },
-    // This is comments
-    g: { @object
-        a: 3,
-        b: 4,
-        c: 5,
-    },
-    x: 0x1b,
-    y: 3.2 @optional @xxg(a, b)
-}
-        "##;
-        let mut parser = Parser::new(s.chars());
-        let result = parser.parse().unwrap();
-        let value = Value::Object(
-            map! {
-                "a".into() => Value::Null(None),
-                "b".into() => Value::String(r#"say "hello""#.into(), None),
-                "c".into() => Value::Boolean(true, None),
-                "m".into() => Value::String(r#"it's awesome"#.into(), None),
-                "h".into() => Value::Float(-3.13, None),
-                "d".into() => Value::Array(
-                    vec![
-                        Value::String("abc".into(), Some(map!{ "upper".into() => vec![] })),
-                        Value::String("def".into(), None),
-                    ],
-                    Some(map!{ "array".into() => vec![] })
-                ),
-                "o".into() => Value::Object(map!{
-                    "a".into() => Value::Integer(3, None),
-                    "b".into() => Value::Integer(4, None)
-                }, None),
-                "g".into() => Value::Object(
-                    map!{
-                        "a".into() => Value::Integer(3, None),
-                        "b".into() => Value::Integer(4, None),
-                        "c".into() => Value::Integer(5, None)
-                    },
-                    Some(map!{ "object".into() => vec![] })
-                ),
-                "x".into() => Value::Integer(27, None),
-                "y".into() => Value::Float(
-                    3.2,
-                    Some(map!{ "optional".into() => vec![],  "xxg".into() => vec!["a".into(), "b".into()] })
-                )
-            },
-            None,
-        );
-        let annotations: Amap = map! {
-            "abc".into() => vec![],
-            "def".into() => vec!["a".into(), "b".into()]
-        };
-        assert_eq!(value, result.0);
-        assert_eq!(Some(annotations), result.1);
     }
 }

@@ -12,8 +12,8 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn set_annotiaons(&mut self, annotiaons: Option<Amap>) {
-        match annotiaons {
+    pub fn set_annotations(&mut self, annotations: Option<Amap>) {
+        match annotations {
             Some(v) => self.get_annotations_mut().replace(v),
             None => self.get_annotations_mut().take(),
         };
