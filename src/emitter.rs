@@ -96,16 +96,19 @@ impl<'a> Emitter<'a> {
         Ok(())
     }
     pub fn emit_value(&mut self, node: &Value) -> EmitResult {
-        self.emit_node(node)?;
+        self.emit_node(node, false)?;
         if node.is_scalar() {
             self.emit_annotations(node.get_annotations())?;
         }
         Ok(())
     }
-    fn emit_node(&mut self, node: &Value) -> EmitResult {
+    fn emit_node(&mut self, node: &Value, comma: bool) -> EmitResult {
         match *node {
             Value::Null(_) => {
                 self.writer.write_str("null")?;
+                if comma {
+                    write!(self.writer, ",")?;
+                }
                 Ok(())
             }
             Value::Boolean(b, _) => {
@@ -114,26 +117,38 @@ impl<'a> Emitter<'a> {
                 } else {
                     self.writer.write_str("false")?;
                 }
+                if comma {
+                    write!(self.writer, ",")?;
+                }
                 Ok(())
             }
             Value::Integer(i, _) => {
                 write!(self.writer, "{}", i)?;
+                if comma {
+                    write!(self.writer, ",")?;
+                }
                 Ok(())
             }
             Value::Float(f, _) => {
                 write!(self.writer, "{}", f)?;
+                if comma {
+                    write!(self.writer, ",")?;
+                }
                 Ok(())
             }
             Value::String(ref s, _) => {
                 self.write_string(s.as_str(), true)?;
+                if comma {
+                    write!(self.writer, ",")?;
+                }
                 Ok(())
             }
             Value::Array(ref v, ref a) => {
-                self.emit_array(v, a)?;
+                self.emit_array(v, a, comma)?;
                 Ok(())
             }
             Value::Object(ref o, ref a) => {
-                self.emit_object(o, a)?;
+                self.emit_object(o, a, comma)?;
                 Ok(())
             }
         }
@@ -146,18 +161,21 @@ impl<'a> Emitter<'a> {
         }
         Ok(())
     }
-    fn emit_array(&mut self, v: &[Value], a: &Option<Amap>) -> EmitResult {
+    fn emit_array(&mut self, v: &[Value], a: &Option<Amap>, comma: bool) -> EmitResult {
         if v.is_empty() {
             write!(self.writer, "[]")?;
+            if comma {
+                write!(self.writer, ",")?;
+            }
+            self.emit_annotations(a)?;
         } else {
             write!(self.writer, "[")?;
             self.emit_annotations(a)?;
             writeln!(self.writer)?;
             self.level += 1;
-            for x in v.iter() {
+            for (i, x) in v.iter().enumerate() {
                 self.write_indent()?;
-                self.emit_node(x)?;
-                write!(self.writer, ",")?;
+                self.emit_node(x, i < v.len() - 1)?;
                 if x.is_scalar() {
                     self.emit_annotations(x.get_annotations())?;
                 }
@@ -166,23 +184,29 @@ impl<'a> Emitter<'a> {
             self.level -= 1;
             self.write_indent()?;
             write!(self.writer, "]")?;
+            if comma {
+                write!(self.writer, ",")?;
+            }
         }
         Ok(())
     }
-    fn emit_object(&mut self, o: &Object, a: &Option<Amap>) -> EmitResult {
+    fn emit_object(&mut self, o: &Object, a: &Option<Amap>, comma: bool) -> EmitResult {
         if o.is_empty() {
-            self.writer.write_str("{}")?;
+            write!(self.writer, "{{}}")?;
+            if comma {
+                write!(self.writer, ",")?;
+            }
+            self.emit_annotations(a)?;
         } else {
             write!(self.writer, "{{")?;
             self.emit_annotations(a)?;
             writeln!(self.writer)?;
             self.level += 1;
-            for (k, v) in o.iter() {
+            for (i, (k, v)) in o.iter().enumerate() {
                 self.write_indent()?;
                 self.write_string(k.as_str(), false)?;
                 write!(self.writer, ": ")?;
-                self.emit_node(v)?;
-                write!(self.writer, ",")?;
+                self.emit_node(v, i < o.len() - 1)?;
                 if v.is_scalar() {
                     self.emit_annotations(v.get_annotations())?;
                 }
@@ -191,6 +215,9 @@ impl<'a> Emitter<'a> {
             self.level -= 1;
             self.write_indent()?;
             write!(self.writer, "}}")?;
+            if comma {
+                write!(self.writer, ",")?;
+            }
         }
         Ok(())
     }
@@ -302,76 +329,4 @@ fn escape_str(wr: &mut dyn fmt::Write, v: &str) -> Result<(), fmt::Error> {
 
     wr.write_str("\"")?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::loader::Loader;
-
-    #[test]
-    fn test_emit() {
-        let s = r##"
-@abc
-@def(k1 = "a", k2 = "b")
-/*
-multi-line comments
-*/
-
-{
-    a: null,
-    b: 'say "hello" \
-to',
-    c: true,
-    m: "it's awesome",
-    h: -3.13,
-    d: [ @array
-        "abc", @upper
-        "def",
-    ],
-    o: { a:3, b: 4 },
-    // This is comments
-    g: { @object
-        a: 3,
-        b: 4,
-        c: 5,
-    },
-    x: 0x1b,
-    y: 3.2 @optional @xxg(k1 = "a", k2 = "b")
-}
-        "##;
-
-        let t = r##"@abc
-@def(k1 = "a", k2 = "b")
-
-{
-  a: null,
-  b: "say \"hello\" to",
-  c: true,
-  m: "it's awesome",
-  h: -3.13,
-  d: [ @array
-    "abc", @upper
-    "def",
-  ],
-  o: {
-    a: 3,
-    b: 4,
-  },
-  g: { @object
-    a: 3,
-    b: 4,
-    c: 5,
-  },
-  x: 27,
-  y: 3.2, @optional @xxg(k1 = "a", k2 = "b")
-}"##;
-        let result = Loader::load_from_str(s).unwrap();
-        let mut writer = String::new();
-        {
-            let mut emitter = Emitter::new(&mut writer);
-            emitter.emit(&result).unwrap();
-        }
-        assert_eq!(writer, t);
-    }
 }
