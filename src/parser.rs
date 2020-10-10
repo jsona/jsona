@@ -412,7 +412,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                     self.next_token()?;
                     break;
                 }
-                TokenKind::Identifier(key) => {
+                TokenKind::Identifier(key) | TokenKind::StringLiteral(key) => {
                     if !allow_comma {
                         self.next_token()?;
                         let tok = self.next_token()?;

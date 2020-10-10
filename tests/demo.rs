@@ -12,7 +12,6 @@ fn test_lex() {
     for tok in lexer.into_iter() {
         target.push_str(&format!("{:?}\n", tok))
     }
-    // println!("{}", &target);
     assert_eq!(expect, target)
 }
 
@@ -47,7 +46,6 @@ fn test_parse() {
     for (ev, pos) in ec.evs {
         target.push_str(&format!("({:?}, {:?})\n", ev, pos))
     }
-    // println!("{}", &target);
     assert_eq!(expect, target)
 }
 
@@ -62,6 +60,5 @@ fn test_load() {
         let mut emitter = Emitter::new(&mut target);
         emitter.emit(&result).unwrap();
     }
-    println!("{}", &target);
     assert_eq!(expect, target)
 }
