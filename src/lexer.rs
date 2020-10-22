@@ -1,6 +1,9 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+#[cfg(feature = "serde-support")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
@@ -113,6 +116,7 @@ impl Display for TokenKind {
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Eq)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Position {
     index: usize,
     line: usize,

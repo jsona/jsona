@@ -1,4 +1,6 @@
 use indexmap::IndexMap;
+#[cfg(feature = "serde-support")]
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::lexer::{Lexer, Position, Token, TokenKind};
@@ -6,100 +8,81 @@ use crate::value::Amap;
 
 /// `ParseError` is an enum which represents errors encounted during parsing an expression
 #[derive(Debug)]
-pub enum ParseError {
-    /// When it expected a certain kind of token, but got another as part of something
-    Expected {
-        expected: Box<[TokenKind]>,
-        token: Token,
-        context: String,
-    },
-    /// When a token is unexpected
-    Unexpected {
-        token: Token,
-        message: Option<String>,
-    },
-    /// Catch all General Error
-    General { position: Position, message: String },
-    /// When there is an abrupt end to the parsing
-    AbruptEnd,
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+pub struct ParseError {
+    info: String,
+    position: Option<Position>,
 }
 
 impl ParseError {
-    pub fn position(&self) -> Option<Position> {
-        match self {
-            ParseError::Expected { token, .. } => Some(token.position.clone()),
-            ParseError::Unexpected { token, .. } => Some(token.position.clone()),
-            ParseError::General { position, .. } => Some(position.clone()),
-            ParseError::AbruptEnd => None,
+    pub fn expect(expect_toks: &[TokenKind], tok: Token, context: String) -> Self {
+        let info = format!(
+            "expected {}, got '{}' in {}",
+            if expect_toks.len() == 1 {
+                format!(
+                    "token '{}'",
+                    expect_toks.first().map(TokenKind::to_string).unwrap()
+                )
+            } else {
+                format!(
+                    "one of {}",
+                    expect_toks
+                        .iter()
+                        .enumerate()
+                        .map(|(i, t)| {
+                            format!(
+                                "{}'{}'",
+                                if i == 0 {
+                                    ""
+                                } else if i == expect_toks.len() - 1 {
+                                    " or "
+                                } else {
+                                    ", "
+                                },
+                                t
+                            )
+                        })
+                        .collect::<String>()
+                )
+            },
+            tok,
+            context,
+        );
+        Self::new(info, Some(tok.position))
+    }
+    pub fn unexpect(tok: Token, context: Option<String>) -> Self {
+        let info = format!(
+            "unexpected token '{}' {}",
+            tok,
+            context.unwrap_or(String::new()),
+        );
+        Self::new(info, Some(tok.position))
+    }
+    pub fn new(info: String, position: Option<Position>) -> Self {
+        Self { info, position }
+    }
+    pub fn abort() -> Self {
+        Self {
+            info: String::from("abort end"),
+            position: None,
         }
+    }
+    pub fn position(&self) -> &Option<Position> {
+        &self.position
     }
 }
 
 impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Expected {
-                expected,
-                token: found,
-                context,
-            } => write!(
-                f,
-                "expected {}, got '{}' in {} at line {}, col {}",
-                if expected.len() == 1 {
-                    format!(
-                        "token '{}'",
-                        expected.first().map(TokenKind::to_string).unwrap()
-                    )
-                } else {
-                    format!(
-                        "one of {}",
-                        expected
-                            .iter()
-                            .enumerate()
-                            .map(|(i, t)| {
-                                format!(
-                                    "{}'{}'",
-                                    if i == 0 {
-                                        ""
-                                    } else if i == expected.len() - 1 {
-                                        " or "
-                                    } else {
-                                        ", "
-                                    },
-                                    t
-                                )
-                            })
-                            .collect::<String>()
-                    )
-                },
-                found,
-                context,
-                found.position.line(),
-                found.position.col(),
-            ),
-            Self::Unexpected {
-                token: found,
-                message,
-            } => write!(
-                f,
-                "unexpected token '{}' {} at line {}, col {}",
-                found,
-                if let Some(m) = message {
-                    format!(", {}", m)
-                } else {
-                    String::new()
-                },
-                found.position.line(),
-                found.position.col(),
-            ),
-            Self::AbruptEnd => f.write_str("abrupt end"),
-            Self::General { message, position } => write!(
-                f,
-                "{} at line {}, col {}",
-                message,
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match self.position {
+            Some(position) => write!(
+                formatter,
+                "{} at line {} column {}",
+                self.info,
                 position.line(),
                 position.col(),
             ),
+            None => write!(formatter, "{}", self.info,),
         }
     }
 }
@@ -132,10 +115,7 @@ pub struct Parser<T> {
 
 fn sanitize_token(tok: Token) -> ParseResult<Token> {
     if let TokenKind::LexError(message) = tok.kind {
-        return Err(ParseError::General {
-            message,
-            position: tok.position,
-        });
+        return Err(ParseError::new(message, Some(tok.position)));
     }
     return Ok(tok);
 }
@@ -156,7 +136,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
             self.buf = Some(tok.clone());
             return Ok(tok);
         }
-        return Err(ParseError::AbruptEnd);
+        return Err(ParseError::abort());
     }
     fn next_token(&mut self) -> ParseResult<Token> {
         if let Some(tok) = self.buf.take() {
@@ -165,7 +145,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
         if let Some(tok) = self.scanner.next() {
             return sanitize_token(tok);
         }
-        Err(ParseError::AbruptEnd)
+        Err(ParseError::abort())
     }
     pub fn parse<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
         self.parse_annotaions(recv)?;
@@ -174,10 +154,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
         if let TokenKind::Eof = tok.kind {
             Ok(())
         } else {
-            Err(ParseError::Unexpected {
-                token: tok,
-                message: None,
-            })
+            Err(ParseError::unexpect(tok, None))
         }
     }
     fn parse_node<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
@@ -198,10 +175,10 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         "false" => Event::Boolean(false),
                         "null" => Event::Null,
                         _ => {
-                            return Err(ParseError::General {
-                                message: format!("unexpect identifier {}", v),
-                                position: tok.position,
-                            })
+                            return Err(ParseError::new(
+                                format!("unexpect identifier \"{}\"", v),
+                                Some(tok.position),
+                            ))
                         }
                     }
                 };
@@ -216,12 +193,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
             TokenKind::StringLiteral(s) => {
                 recv.on_event(Event::String(s), tok.position);
             }
-            _ => {
-                return Err(ParseError::Unexpected {
-                    message: None,
-                    token: tok,
-                })
-            }
+            _ => return Err(ParseError::unexpect(tok, None)),
         };
         Ok(())
     }
@@ -237,10 +209,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         self.next_token()?;
                         allow_comma = false;
                     } else {
-                        return Err(ParseError::Unexpected {
-                            message: None,
-                            token: tok,
-                        });
+                        return Err(ParseError::unexpect(tok, None));
                     }
                 }
                 TokenKind::RightBracket => {
@@ -262,10 +231,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         }
                     };
                     if !allow_annotations || no_elem {
-                        return Err(ParseError::Unexpected {
-                            message: None,
-                            token: tok,
-                        });
+                        return Err(ParseError::unexpect(tok, None));
                     }
                 }
                 _ if tok.is_node() => {
@@ -274,19 +240,10 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         no_elem = false;
                         allow_comma = true;
                     } else {
-                        return Err(ParseError::Expected {
-                            expected: Box::new([TokenKind::Comma]),
-                            token: tok,
-                            context: "array".into(),
-                        });
+                        return Err(ParseError::expect(&[TokenKind::Comma], tok, "array".into()));
                     }
                 }
-                _ => {
-                    return Err(ParseError::Unexpected {
-                        message: None,
-                        token: tok,
-                    })
-                }
+                _ => return Err(ParseError::unexpect(tok, None)),
             }
         }
         Ok(())
@@ -303,10 +260,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         self.next_token()?;
                         allow_comma = false;
                     } else {
-                        return Err(ParseError::Unexpected {
-                            message: None,
-                            token: tok,
-                        });
+                        return Err(ParseError::unexpect(tok, None));
                     }
                 }
                 TokenKind::RightBrace => {
@@ -328,10 +282,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         }
                     };
                     if !allow_annotations || no_kv {
-                        return Err(ParseError::Unexpected {
-                            message: None,
-                            token: tok,
-                        });
+                        return Err(ParseError::unexpect(tok, None));
                     }
                 }
                 TokenKind::Identifier(..) | TokenKind::StringLiteral(..) => {
@@ -348,27 +299,22 @@ impl<T: Iterator<Item = char>> Parser<T> {
                                 no_kv = false;
                                 allow_comma = true;
                             } else {
-                                return Err(ParseError::Unexpected {
-                                    message: None,
-                                    token: tok,
-                                });
+                                return Err(ParseError::unexpect(tok, None));
                             }
                         }
                         _ => {
-                            return Err(ParseError::Expected {
-                                expected: Box::new([TokenKind::Identifier("identifer".into())]),
-                                token: tok,
-                                context: "annotation".into(),
-                            });
+                            return Err(ParseError::expect(
+                                &[
+                                    TokenKind::Identifier("identifier".into()),
+                                    TokenKind::StringLiteral("stringliteral".into()),
+                                ],
+                                tok,
+                                "annotation".into(),
+                            ))
                         }
                     }
                 }
-                _ => {
-                    return Err(ParseError::Unexpected {
-                        message: None,
-                        token: tok,
-                    })
-                }
+                _ => return Err(ParseError::unexpect(tok, None)),
             }
         }
         Ok(())
@@ -393,11 +339,11 @@ impl<T: Iterator<Item = char>> Parser<T> {
                 };
                 annotations.insert(key, args);
             } else {
-                return Err(ParseError::Expected {
-                    expected: Box::new([TokenKind::Identifier("identifer".into())]),
-                    token: tok,
-                    context: "annotation".into(),
-                });
+                return Err(ParseError::expect(
+                    &[TokenKind::Identifier("identifer".into())],
+                    tok,
+                    "annotation".into(),
+                ));
             }
         }
         if annotations.len() > 0 {
@@ -416,10 +362,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         allow_comma = false;
                         self.next_token()?;
                     } else {
-                        return Err(ParseError::Unexpected {
-                            message: None,
-                            token: tok,
-                        });
+                        return Err(ParseError::unexpect(tok, None));
                     }
                 }
                 TokenKind::RightParen => {
@@ -436,31 +379,31 @@ impl<T: Iterator<Item = char>> Parser<T> {
                                 amap.insert(key.to_owned(), tok.get_value().unwrap());
                                 allow_comma = true;
                             } else {
-                                return Err(ParseError::Unexpected {
-                                    message: Some("in annotattion args".into()),
-                                    token: tok,
-                                });
+                                return Err(ParseError::unexpect(
+                                    tok,
+                                    Some("in annotattion args".into()),
+                                ));
                             }
                         } else {
-                            return Err(ParseError::Expected {
-                                expected: Box::new([TokenKind::Eq]),
-                                token: tok,
-                                context: "annotation args".into(),
-                            });
+                            return Err(ParseError::expect(
+                                &[TokenKind::Eq],
+                                tok,
+                                "annotation args".into(),
+                            ));
                         }
                     } else {
-                        return Err(ParseError::Expected {
-                            expected: Box::new([TokenKind::Comma]),
-                            token: tok,
-                            context: "annotation args".into(),
-                        });
+                        return Err(ParseError::expect(
+                            &[TokenKind::Comma],
+                            tok,
+                            "annotation args".into(),
+                        ));
                     }
                 }
                 _ => {
-                    return Err(ParseError::Unexpected {
-                        message: Some("in annotattion args".into()),
-                        token: tok,
-                    })
+                    return Err(ParseError::unexpect(
+                        tok,
+                        Some("in annotattion args".into()),
+                    ))
                 }
             }
         }
