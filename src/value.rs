@@ -2,23 +2,23 @@ use indexmap::IndexMap;
 
 #[derive(Debug, PartialEq)]
 pub enum Value {
-    Null(Option<Amap>),
-    Boolean(bool, Option<Amap>),
-    Integer(i64, Option<Amap>),
-    Float(f64, Option<Amap>),
-    String(String, Option<Amap>),
-    Array(Array, Option<Amap>),
-    Object(Object, Option<Amap>),
+    Null { annotations: Option<Amap> },
+    Boolean{ value: bool, annotations: Option<Amap>},
+    Integer{ value: i64, annotations: Option<Amap>},
+    Float{ value: f64, annotations: Option<Amap> },
+    String{ value: String, annotations: Option<Amap> },
+    Array{ value: Array, annotations: Option<Amap> },
+    Object{ value: Object, annotations: Option<Amap> },
 }
 
 impl Value {
     pub fn is_scalar(&self) -> bool {
         match self {
-            Value::Null(_)
-            | Value::Boolean(_, _)
-            | Value::Integer(_, _)
-            | Value::Float(_, _)
-            | Value::String(_, _) => true,
+            Value::Null{..}
+            | Value::Boolean{..}
+            | Value::Integer{..}
+            | Value::Float{..}
+            | Value::String{..} => true,
             _ => false,
         }
     }
@@ -30,24 +30,24 @@ impl Value {
     }
     pub fn get_annotations(&self) -> &Option<Amap> {
         match self {
-            Value::Null(a) => a,
-            Value::Boolean(_, a) => a,
-            Value::Integer(_, a) => a,
-            Value::Float(_, a) => a,
-            Value::String(_, a) => a,
-            Value::Array(_, a) => a,
-            Value::Object(_, a) => a,
+            Value::Null{ annotations} => annotations,
+            Value::Boolean{ annotations, ..} => annotations,
+            Value::Integer{ annotations, ..} => annotations,
+            Value::Float{ annotations, ..} => annotations,
+            Value::String{ annotations, ..} => annotations,
+            Value::Array{ annotations, ..} => annotations,
+            Value::Object{ annotations, ..} => annotations,
         }
     }
     pub fn get_annotations_mut(&mut self) -> &mut Option<Amap> {
         match self {
-            Value::Null(a) => a,
-            Value::Boolean(_, a) => a,
-            Value::Integer(_, a) => a,
-            Value::Float(_, a) => a,
-            Value::String(_, a) => a,
-            Value::Array(_, a) => a,
-            Value::Object(_, a) => a,
+            Value::Null{ annotations} => annotations,
+            Value::Boolean{ annotations, ..} => annotations,
+            Value::Integer{ annotations, ..} => annotations,
+            Value::Float{ annotations, ..} => annotations,
+            Value::String{ annotations, ..} => annotations,
+            Value::Array{ annotations, ..} => annotations,
+            Value::Object{ annotations, ..} => annotations,
         }
     }
 }
@@ -62,7 +62,7 @@ macro_rules! define_as (
     ($name:ident, $t:ident, $yt:ident) => (
 pub fn $name(&self) -> Option<$t> {
     match *self {
-        Value::$yt(v, _) => Some(v),
+        Value::$yt{ value, .. } => Some(value),
         _ => None
     }
 }
@@ -73,7 +73,7 @@ macro_rules! define_as_ref (
     ($name:ident, $t:ty, $yt:ident) => (
 pub fn $name(&self) -> Option<$t> {
     match *self {
-        Value::$yt(ref v, _) => Some(v),
+        Value::$yt{ ref value, .. } => Some(value),
         _ => None
     }
 }
@@ -84,7 +84,7 @@ macro_rules! define_into (
     ($name:ident, $t:ty, $yt:ident) => (
 pub fn $name(self) -> Option<$t> {
     match self {
-        Value::$yt(v, _) => Some(v),
+        Value::$yt{ value, .. } => Some(value),
         _ => None
     }
 }
@@ -109,20 +109,20 @@ impl Value {
 
     pub fn is_null(&self) -> bool {
         match *self {
-            Value::Null(_) => true,
+            Value::Null{ .. } => true,
             _ => false,
         }
     }
 
     pub fn is_array(&self) -> bool {
         match *self {
-            Value::Array(..) => true,
+            Value::Array{ .. } => true,
             _ => false,
         }
     }
     pub fn is_object(&self) -> bool {
         match *self {
-            Value::Object(..) => true,
+            Value::Object{ .. } => true,
             _ => false,
         }
     }

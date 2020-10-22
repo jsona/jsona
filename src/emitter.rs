@@ -104,15 +104,15 @@ impl<'a> Emitter<'a> {
     }
     fn emit_node(&mut self, node: &Value, comma: bool) -> EmitResult {
         match *node {
-            Value::Null(_) => {
+            Value::Null{ .. } => {
                 self.writer.write_str("null")?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::Boolean(b, _) => {
-                if b {
+            Value::Boolean{ value, .. } => {
+                if value {
                     self.writer.write_str("true")?;
                 } else {
                     self.writer.write_str("false")?;
@@ -122,33 +122,33 @@ impl<'a> Emitter<'a> {
                 }
                 Ok(())
             }
-            Value::Integer(i, _) => {
-                write!(self.writer, "{}", i)?;
+            Value::Integer{ value, .. } => {
+                write!(self.writer, "{}", value)?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::Float(f, _) => {
-                write!(self.writer, "{}", f)?;
+            Value::Float{ value, .. } => {
+                write!(self.writer, "{}", value)?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::String(ref s, _) => {
-                self.write_string(s.as_str(), true)?;
+            Value::String{ref value, .. } => {
+                self.write_string(value.as_str(), true)?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::Array(ref v, ref a) => {
-                self.emit_array(v, a, comma)?;
+            Value::Array{ref value, ref annotations} => {
+                self.emit_array(value, annotations, comma)?;
                 Ok(())
             }
-            Value::Object(ref o, ref a) => {
-                self.emit_object(o, a, comma)?;
+            Value::Object{ref value, ref annotations} => {
+                self.emit_object(value, annotations, comma)?;
                 Ok(())
             }
         }
