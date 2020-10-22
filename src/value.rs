@@ -1,6 +1,10 @@
 use indexmap::IndexMap;
 
+#[cfg(feature = "serde_support")]
+use serde::{Serialize, Deserialize};
+
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum Value {
     Null { annotations: Option<Amap> },
     Boolean{ value: bool, annotations: Option<Amap>},
