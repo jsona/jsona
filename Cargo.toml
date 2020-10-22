@@ -11,4 +11,4 @@ indexmap = { version = "1.6" }
 serde = { version = "1", features = ["derive"], optional=true }
 
 [features]
-serde_support = ["indexmap/serde-1", "serde"]
+serde-support = ["indexmap/serde-1", "serde"]

@@ -1,17 +1,17 @@
 use indexmap::IndexMap;
 
-#[cfg(feature = "serde_support")]
+#[cfg(feature = "serde-support")]
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Doc {
     pub value: Value,
     pub annotation: Option<Amap>,
 }
 
 #[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub enum Value {
     Null {
         annotations: Option<Amap>,
