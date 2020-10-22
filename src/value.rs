@@ -1,28 +1,55 @@
 use indexmap::IndexMap;
 
 #[cfg(feature = "serde_support")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+pub struct Doc {
+    pub value: Value,
+    pub annotation: Option<Amap>,
+}
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum Value {
-    Null { annotations: Option<Amap> },
-    Boolean{ value: bool, annotations: Option<Amap>},
-    Integer{ value: i64, annotations: Option<Amap>},
-    Float{ value: f64, annotations: Option<Amap> },
-    String{ value: String, annotations: Option<Amap> },
-    Array{ value: Array, annotations: Option<Amap> },
-    Object{ value: Object, annotations: Option<Amap> },
+    Null {
+        annotations: Option<Amap>,
+    },
+    Boolean {
+        value: bool,
+        annotations: Option<Amap>,
+    },
+    Integer {
+        value: i64,
+        annotations: Option<Amap>,
+    },
+    Float {
+        value: f64,
+        annotations: Option<Amap>,
+    },
+    String {
+        value: String,
+        annotations: Option<Amap>,
+    },
+    Array {
+        value: Array,
+        annotations: Option<Amap>,
+    },
+    Object {
+        value: Object,
+        annotations: Option<Amap>,
+    },
 }
 
 impl Value {
     pub fn is_scalar(&self) -> bool {
         match self {
-            Value::Null{..}
-            | Value::Boolean{..}
-            | Value::Integer{..}
-            | Value::Float{..}
-            | Value::String{..} => true,
+            Value::Null { .. }
+            | Value::Boolean { .. }
+            | Value::Integer { .. }
+            | Value::Float { .. }
+            | Value::String { .. } => true,
             _ => false,
         }
     }
@@ -34,24 +61,24 @@ impl Value {
     }
     pub fn get_annotations(&self) -> &Option<Amap> {
         match self {
-            Value::Null{ annotations} => annotations,
-            Value::Boolean{ annotations, ..} => annotations,
-            Value::Integer{ annotations, ..} => annotations,
-            Value::Float{ annotations, ..} => annotations,
-            Value::String{ annotations, ..} => annotations,
-            Value::Array{ annotations, ..} => annotations,
-            Value::Object{ annotations, ..} => annotations,
+            Value::Null { annotations } => annotations,
+            Value::Boolean { annotations, .. } => annotations,
+            Value::Integer { annotations, .. } => annotations,
+            Value::Float { annotations, .. } => annotations,
+            Value::String { annotations, .. } => annotations,
+            Value::Array { annotations, .. } => annotations,
+            Value::Object { annotations, .. } => annotations,
         }
     }
     pub fn get_annotations_mut(&mut self) -> &mut Option<Amap> {
         match self {
-            Value::Null{ annotations} => annotations,
-            Value::Boolean{ annotations, ..} => annotations,
-            Value::Integer{ annotations, ..} => annotations,
-            Value::Float{ annotations, ..} => annotations,
-            Value::String{ annotations, ..} => annotations,
-            Value::Array{ annotations, ..} => annotations,
-            Value::Object{ annotations, ..} => annotations,
+            Value::Null { annotations } => annotations,
+            Value::Boolean { annotations, .. } => annotations,
+            Value::Integer { annotations, .. } => annotations,
+            Value::Float { annotations, .. } => annotations,
+            Value::String { annotations, .. } => annotations,
+            Value::Array { annotations, .. } => annotations,
+            Value::Object { annotations, .. } => annotations,
         }
     }
 }
@@ -113,20 +140,20 @@ impl Value {
 
     pub fn is_null(&self) -> bool {
         match *self {
-            Value::Null{ .. } => true,
+            Value::Null { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_array(&self) -> bool {
         match *self {
-            Value::Array{ .. } => true,
+            Value::Array { .. } => true,
             _ => false,
         }
     }
     pub fn is_object(&self) -> bool {
         match *self {
-            Value::Object{ .. } => true,
+            Value::Object { .. } => true,
             _ => false,
         }
     }

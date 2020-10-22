@@ -4,13 +4,13 @@ use std::str::FromStr;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub pos: Position,
+    pub position: Position,
 }
 
 impl Token {
     #[inline]
-    pub fn new(kind: TokenKind, pos: Position) -> Self {
-        Self { kind, pos }
+    pub fn new(kind: TokenKind, position: Position) -> Self {
+        Self { kind, position }
     }
     pub fn is_value(&self) -> bool {
         match self.kind {

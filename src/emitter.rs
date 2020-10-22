@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{self, Display};
 
-use crate::value::{Amap, Object, Value};
+use crate::value::{Amap, Doc, Object, Value};
 
 #[derive(Copy, Clone, Debug)]
 pub enum EmitError {
@@ -46,10 +46,10 @@ impl<'a> Emitter<'a> {
     pub fn set_indent(&mut self, indent: usize) {
         self.indent = indent;
     }
-    pub fn emit(&mut self, data: &(Value, Option<Amap>)) -> EmitResult {
-        self.emit_doc_annotations(&data.1)?;
+    pub fn emit(&mut self, data: &Doc) -> EmitResult {
+        self.emit_doc_annotations(&data.annotation)?;
         writeln!(self.writer)?;
-        self.emit_value(&data.0)?;
+        self.emit_value(&data.value)?;
         Ok(())
     }
     pub fn emit_doc_annotations(&mut self, annotations: &Option<Amap>) -> EmitResult {
@@ -104,14 +104,14 @@ impl<'a> Emitter<'a> {
     }
     fn emit_node(&mut self, node: &Value, comma: bool) -> EmitResult {
         match *node {
-            Value::Null{ .. } => {
+            Value::Null { .. } => {
                 self.writer.write_str("null")?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::Boolean{ value, .. } => {
+            Value::Boolean { value, .. } => {
                 if value {
                     self.writer.write_str("true")?;
                 } else {
@@ -122,32 +122,38 @@ impl<'a> Emitter<'a> {
                 }
                 Ok(())
             }
-            Value::Integer{ value, .. } => {
+            Value::Integer { value, .. } => {
                 write!(self.writer, "{}", value)?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::Float{ value, .. } => {
+            Value::Float { value, .. } => {
                 write!(self.writer, "{}", value)?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::String{ref value, .. } => {
+            Value::String { ref value, .. } => {
                 self.write_string(value.as_str(), true)?;
                 if comma {
                     write!(self.writer, ",")?;
                 }
                 Ok(())
             }
-            Value::Array{ref value, ref annotations} => {
+            Value::Array {
+                ref value,
+                ref annotations,
+            } => {
                 self.emit_array(value, annotations, comma)?;
                 Ok(())
             }
-            Value::Object{ref value, ref annotations} => {
+            Value::Object {
+                ref value,
+                ref annotations,
+            } => {
                 self.emit_object(value, annotations, comma)?;
                 Ok(())
             }

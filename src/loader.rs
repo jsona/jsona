@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 
 use crate::lexer::Position;
 use crate::parser::{Event, EventReceiver, ParseResult, Parser};
-use crate::value::{Amap, Value};
+use crate::value::{Amap, Doc, Value};
 
 pub struct Loader {
     value_stack: Vec<Value>,
@@ -11,7 +11,7 @@ pub struct Loader {
 }
 
 impl Loader {
-    pub fn load_from_str(input: &str) -> ParseResult<(Value, Option<Amap>)> {
+    pub fn load_from_str(input: &str) -> ParseResult<Doc> {
         let mut loader = Loader {
             value_stack: Vec::new(),
             key_stack: Vec::new(),
@@ -19,7 +19,10 @@ impl Loader {
         };
         let mut parser = Parser::new(input.chars());
         parser.parse(&mut loader)?;
-        Ok((loader.value_stack.pop().unwrap(), loader.annotations))
+        Ok(Doc {
+            value: loader.value_stack.pop().unwrap(),
+            annotation: loader.annotations,
+        })
     }
     fn insert_new_node(&mut self, node: Value) {
         if self.value_stack.is_empty() {
@@ -27,11 +30,15 @@ impl Loader {
         } else {
             let parent = self.value_stack.last_mut().unwrap();
             match *parent {
-                Value::Array{ref mut value, ..} => value.push(node),
-                Value::Object{ref mut value, ..} => {
+                Value::Array { ref mut value, .. } => value.push(node),
+                Value::Object { ref mut value, .. } => {
                     let mut cur_key = self.key_stack.pop().unwrap();
                     if cur_key.is_empty() {
-                        if let Value::String{ value: string_value, ..} = node {
+                        if let Value::String {
+                            value: string_value,
+                            ..
+                        } = node
+                        {
                             cur_key = string_value;
                         } else {
                             unreachable!()
@@ -53,16 +60,23 @@ impl Loader {
         } else {
             let parent = self.value_stack.last_mut().unwrap();
             match *parent {
-                Value::Array{ref mut value, ref mut annotations} => {
+                Value::Array {
+                    ref mut value,
+                    ref mut annotations,
+                } => {
                     if value.len() > 0 {
                         value.last_mut().unwrap().set_annotations(_annotations);
                     } else {
                         *annotations = _annotations;
                     }
                 }
-                Value::Object{ref mut value, ref mut annotations} => {
+                Value::Object {
+                    ref mut value,
+                    ref mut annotations,
+                } => {
                     if value.len() > 0 {
-                        value.get_index_mut(value.len() - 1)
+                        value
+                            .get_index_mut(value.len() - 1)
                             .unwrap()
                             .1
                             .set_annotations(_annotations);
@@ -80,7 +94,10 @@ impl EventReceiver for Loader {
     fn on_event(&mut self, ev: Event, _pos: Position) {
         match ev {
             Event::ArrayStart => {
-                self.value_stack.push(Value::Array{value: Vec::new(), annotations: None});
+                self.value_stack.push(Value::Array {
+                    value: Vec::new(),
+                    annotations: None,
+                });
             }
             Event::ArrayStop => {
                 let node = self.value_stack.pop().unwrap();
@@ -88,7 +105,10 @@ impl EventReceiver for Loader {
             }
             Event::ObjectStart => {
                 self.key_stack.push(String::new());
-                self.value_stack.push(Value::Object{ value: IndexMap::new(), annotations: None });
+                self.value_stack.push(Value::Object {
+                    value: IndexMap::new(),
+                    annotations: None,
+                });
             }
             Event::ObjectStop => {
                 self.key_stack.pop().unwrap();
@@ -96,23 +116,35 @@ impl EventReceiver for Loader {
                 self.insert_new_node(node);
             }
             Event::Null => {
-                let node = Value::Null{ annotations: None };
+                let node = Value::Null { annotations: None };
                 self.insert_new_node(node);
             }
             Event::Float(value) => {
-                let node = Value::Float{ value, annotations: None };
+                let node = Value::Float {
+                    value,
+                    annotations: None,
+                };
                 self.insert_new_node(node);
             }
             Event::Integer(value) => {
-                let node = Value::Integer{ value, annotations: None };
+                let node = Value::Integer {
+                    value,
+                    annotations: None,
+                };
                 self.insert_new_node(node);
             }
             Event::Boolean(value) => {
-                let node = Value::Boolean{ value, annotations: None };
+                let node = Value::Boolean {
+                    value,
+                    annotations: None,
+                };
                 self.insert_new_node(node);
             }
             Event::String(value) => {
-                let node = Value::String{ value, annotations: None };
+                let node = Value::String {
+                    value,
+                    annotations: None,
+                };
                 self.insert_new_node(node);
             }
             Event::Annotations(annotations) => {
