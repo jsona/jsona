@@ -1,4 +1,3 @@
-use std::hash::Hash;
 use indexmap::IndexMap;
 
 #[cfg(feature = "serde-support")]
@@ -54,9 +53,9 @@ pub enum Value {
 
 pub type Array = Vec<Value>;
 
-pub type Object = IndexMap<Key, Value>;
+pub type Object = IndexMap<String, (Position, Value)>;
 
-pub type Amap = IndexMap<Key, IndexMap<Key, String>>;
+pub type Amap = IndexMap<String, (Position, IndexMap<String, (Position, String)>)>;
 
 impl Value {
     pub fn is_scalar(&self) -> bool {
@@ -96,44 +95,6 @@ impl Value {
             Value::Array { annotations, .. } => annotations,
             Value::Object { annotations, .. } => annotations,
         }
-    }
-}
-
-
-#[derive(Debug, Eq, Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
-pub struct Key {
-    value: String,
-    position: Position,
-}
-
-impl Hash for Key {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.value.hash(state)
-    }
-}
-
-impl PartialEq for Key {
-    fn eq(&self, other: &Self) -> bool {
-        self.value.eq(&other.value)
-    }
-}
-
-impl Key {
-    pub fn new<T: AsRef<str>>(value: T, position: Position) -> Self {
-        Key { value: value.as_ref().into(), position }
-    }
-    pub fn create(value: &str) -> Self {
-        Key { value: value.into(), position: Position::default() }
-    }
-    pub fn is_empty(&self) -> bool {
-        self.value.len() == 0
-    }
-    pub fn value(&self) -> &str {
-        self.value.as_str()
-    }
-    pub fn position(&self) -> &Position {
-        &self.position
     }
 }
 

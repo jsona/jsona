@@ -2,11 +2,11 @@ use indexmap::IndexMap;
 
 use crate::lexer::Position;
 use crate::parser::{Event, EventReceiver, ParseResult, Parser};
-use crate::value::{Amap, Doc, Value, Key};
+use crate::value::{Amap, Doc, Value};
 
 pub struct Loader {
     value_stack: Vec<Value>,
-    key_stack: Vec<Key>,
+    key_stack: Vec<Option<(Position, String)>>,
     annotations: Option<Amap>,
 }
 
@@ -32,24 +32,24 @@ impl Loader {
             match *parent {
                 Value::Array { ref mut value, .. } => value.push(node),
                 Value::Object { ref mut value, .. } => {
-                    let mut cur_key = self.key_stack.pop().unwrap();
-                    if cur_key.is_empty() {
-                        if let Value::String {
-                            value,
-                            position,
-                            ..
-                        } = node
-                        {
-                            cur_key = Key::new(value, position);
-                        } else {
-                            unreachable!()
+                    let cur_key = self.key_stack.pop().unwrap();
+                    let new_key = match cur_key {
+                        Some((position, key)) => {
+                            value.insert(key, (position, node));
+                            None
                         }
-                    } else {
-                        let key = cur_key;
-                        value.insert(key, node);
-                        cur_key = Key::create("")
-                    }
-                    self.key_stack.push(cur_key);
+                        None => {
+                            if let Value::String {
+                                value, position, ..
+                            } = node
+                            {
+                                Some((position, value))
+                            } else {
+                                unreachable!()
+                            }
+                        }
+                    };
+                    self.key_stack.push(new_key);
                 }
                 _ => unreachable!(),
             }
@@ -82,6 +82,7 @@ impl Loader {
                             .get_index_mut(value.len() - 1)
                             .unwrap()
                             .1
+                             .1
                             .set_annotations(_annotations);
                     } else {
                         *annotations = _annotations;
@@ -100,7 +101,7 @@ impl EventReceiver for Loader {
                 self.value_stack.push(Value::Array {
                     value: Vec::new(),
                     annotations: None,
-                    position
+                    position,
                 });
             }
             Event::ArrayStop => {
@@ -108,7 +109,7 @@ impl EventReceiver for Loader {
                 self.insert_new_node(node);
             }
             Event::ObjectStart => {
-                self.key_stack.push(Key::create(""));
+                self.key_stack.push(None);
                 self.value_stack.push(Value::Object {
                     value: IndexMap::new(),
                     annotations: None,
@@ -121,7 +122,10 @@ impl EventReceiver for Loader {
                 self.insert_new_node(node);
             }
             Event::Null => {
-                let node = Value::Null { annotations: None, position };
+                let node = Value::Null {
+                    annotations: None,
+                    position,
+                };
                 self.insert_new_node(node);
             }
             Event::Float(value) => {

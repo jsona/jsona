@@ -61,3 +61,15 @@ fn test_emit() {
     }
     assert_eq!(expect, target)
 }
+
+#[test]
+#[cfg(feature = "serde-support")]
+fn test_json() {
+    let expect = include_str!("spec/test_jsona_example_value.json");
+
+    let result = Loader::load_from_str(INPUT).unwrap();
+    let target = serde_json::to_string_pretty(&result).unwrap();
+    println!("{}", target);
+
+    assert_eq!(expect, target)
+}

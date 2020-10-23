@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{self, Display};
 
-use crate::value::{Amap, Doc, Object, Value, Key};
+use crate::value::{Amap, Doc, Object, Value};
 
 #[derive(Copy, Clone, Debug)]
 pub enum EmitError {
@@ -54,19 +54,18 @@ impl<'a> Emitter<'a> {
     }
     fn emit_annotations(&mut self, annotations: &Option<Amap>, is_doc: bool) -> EmitResult {
         if let Some(a) = annotations {
-            for (name, args) in a.iter() {
-                write!(self.writer, " @{}", name.value())?;
+            for (name, (_, args)) in a.iter() {
+                write!(self.writer, " @{}", name)?;
                 let len = args.len();
                 if len > 0 {
                     write!(self.writer, "(")?;
-                    let anony_key = Key::create("_");
-                    if len == 1 && args.get(&anony_key).is_some() {
-                        self.write_string(args.get(&anony_key).unwrap(), false)?;
+                    if len == 1 && args.get("_").is_some() {
+                        self.write_string(args.get("_").unwrap().1.as_str(), false)?;
                     } else {
                         for (i, (k, v)) in args.iter().enumerate() {
-                            self.write_string(k.value(), false)?;
+                            self.write_string(k, false)?;
                             write!(self.writer, " = ")?;
-                            self.write_string(v.as_str(), true)?;
+                            self.write_string(v.1.as_str(), true)?;
                             if i < len - 1 {
                                 write!(self.writer, ", ")?;
                             }
@@ -196,9 +195,9 @@ impl<'a> Emitter<'a> {
             self.emit_annotations(a, false)?;
             writeln!(self.writer)?;
             self.level += 1;
-            for (i, (k, v)) in o.iter().enumerate() {
+            for (i, (k, (_, v))) in o.iter().enumerate() {
                 self.write_indent()?;
-                self.write_string(k.value(), false)?;
+                self.write_string(k, false)?;
                 write!(self.writer, ": ")?;
                 self.emit_node(v, i < o.len() - 1)?;
                 if v.is_scalar() {
