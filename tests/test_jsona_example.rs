@@ -1,6 +1,6 @@
 use jsona::lexer::{Lexer, Position};
-use jsona::parser::{Event, EventReceiver, Parser};
 use jsona::loader::Loader;
+use jsona::parser::{Event, EventReceiver, Parser};
 
 const INPUT: &str = include_str!("spec/test_jsona_example.jsona");
 

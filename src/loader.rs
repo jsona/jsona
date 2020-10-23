@@ -23,8 +23,12 @@ impl Loader {
         } else {
             let parent = self.value_stack.last_mut().unwrap();
             match *parent {
-                Ast::Array(Array { ref mut elements, .. }) => elements.push(node),
-                Ast::Object(Object { ref mut properties, .. }) => {
+                Ast::Array(Array {
+                    ref mut elements, ..
+                }) => elements.push(node),
+                Ast::Object(Object {
+                    ref mut properties, ..
+                }) => {
                     let cur_key = self.key_stack.pop().unwrap();
                     let new_key = match cur_key {
                         Some((position, key)) => {
@@ -55,7 +59,9 @@ impl Loader {
     fn insert_annotations(&mut self, annos: Vec<Anno>) {
         let parent = self.value_stack.last_mut().unwrap();
         match *parent {
-            Ast::Array(Array { ref mut elements, .. }) => {
+            Ast::Array(Array {
+                ref mut elements, ..
+            }) => {
                 if elements.len() > 0 {
                     let last_elem = elements.last_mut().unwrap();
                     append_annos(last_elem.get_annotations_mut(), annos)
@@ -63,7 +69,9 @@ impl Loader {
                     append_annos(parent.get_annotations_mut(), annos);
                 }
             }
-            Ast::Object(Object { ref mut properties, .. }) => {
+            Ast::Object(Object {
+                ref mut properties, ..
+            }) => {
                 if properties.len() > 0 {
                     let last_prop = properties.last_mut().unwrap();
                     append_annos(last_prop.value.get_annotations_mut(), annos)

@@ -380,7 +380,10 @@ impl<T: Iterator<Item = char>> Parser<T> {
                             let tok3 = self.next_token()?;
                             if let Some(value) = token_to_annno_field_value(tok3.clone()) {
                                 fields.push(AnnoField {
-                                    key: AnnoFieldKey { value: key.into(), position: tok.position },
+                                    key: AnnoFieldKey {
+                                        value: key.into(),
+                                        position: tok.position,
+                                    },
                                     value,
                                 });
                                 allow_comma = true;
@@ -393,7 +396,10 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         } else if let TokenKind::RightParen = tok2.kind {
                             if let Some(value) = token_to_annno_field_value(tok.clone()) {
                                 fields.push(AnnoField {
-                                    key: AnnoFieldKey { value: "_".into(), position: tok.position },
+                                    key: AnnoFieldKey {
+                                        value: "_".into(),
+                                        position: tok.position,
+                                    },
                                     value,
                                 });
                             } else {

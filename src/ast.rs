@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-support", serde(tag="type", content="value"))]
+#[cfg_attr(feature = "serde-support", serde(tag = "type", content = "value"))]
 pub enum Ast {
     Null(Null),
     Boolean(Boolean),
@@ -102,7 +102,7 @@ pub struct AnnoFieldKey {
 
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-support", serde(tag="type", content="value"))]
+#[cfg_attr(feature = "serde-support", serde(tag = "type", content = "value"))]
 pub enum AnnoFieldValue {
     Null,
     Bool(bool),

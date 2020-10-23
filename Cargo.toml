@@ -7,11 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-indexmap = { version = "1.6" }
 serde = { version = "1", features = ["derive"], optional=true }
 
 [features]
-serde-support = ["indexmap/serde-1", "serde"]
+serde-support = ["serde"]
 
 [dev-dependencies]
 serde_json = "1"
