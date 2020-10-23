@@ -5,8 +5,8 @@ use jsona::parser::{Event, EventReceiver, Parser};
 
 #[test]
 fn test_lex() {
-    let input = include_str!("spec/demo.jsona");
-    let expect = include_str!("spec/demo.tok.txt");
+    let input = include_str!("spec/test_jsona_example.jsona");
+    let expect = include_str!("spec/test_jsona_example_tok.txt");
     let mut target = String::new();
     let lexer = Lexer::new(input.chars());
     for tok in lexer.into_iter() {
@@ -37,8 +37,8 @@ impl EventReceiver for EventCollector {
 
 #[test]
 fn test_parse() {
-    let input = include_str!("spec/demo.jsona");
-    let expect = include_str!("spec/demo.ev.txt");
+    let input = include_str!("spec/test_jsona_example.jsona");
+    let expect = include_str!("spec/test_jsona_example_event.txt");
     let mut ec = EventCollector::new();
     let mut parser = Parser::new(input.chars());
     parser.parse(&mut ec).unwrap();
@@ -51,8 +51,8 @@ fn test_parse() {
 
 #[test]
 fn test_load() {
-    let input = include_str!("spec/demo.jsona");
-    let expect = include_str!("spec/demo.emit.jsona");
+    let input = include_str!("spec/test_jsona_example.jsona");
+    let expect = include_str!("spec/test_jsona_example_emit.jsona");
 
     let result = Loader::load_from_str(input).unwrap();
     let mut target = String::new();

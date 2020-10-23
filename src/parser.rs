@@ -51,11 +51,17 @@ impl ParseError {
         Self::new(info, Some(tok.position))
     }
     pub fn unexpect(tok: Token, context: Option<String>) -> Self {
-        let info = format!(
-            "unexpected token '{}' {}",
-            tok,
-            context.unwrap_or(String::new()),
-        );
+        let info = match context {
+            Some(ctx) => format!(
+                "unexpected token '{}' {}",
+                tok,
+                ctx
+            ),
+            None => format!(
+                "unexpected token '{}'",
+                tok,
+            ),
+        };
         Self::new(info, Some(tok.position))
     }
     pub fn new(info: String, position: Option<Position>) -> Self {
@@ -372,11 +378,12 @@ impl<T: Iterator<Item = char>> Parser<T> {
                 TokenKind::Identifier(key) | TokenKind::StringLiteral(key) => {
                     if !allow_comma {
                         self.next_token()?;
-                        let tok = self.next_token()?;
+                        let tok = self.peek_token()?;
                         if let TokenKind::Eq = tok.kind {
+                            self.next_token()?;
                             let tok = self.next_token()?;
                             if tok.is_value() {
-                                amap.insert(key.to_owned(), tok.get_value().unwrap());
+                                amap.insert(key.into(), tok.get_value().unwrap());
                                 allow_comma = true;
                             } else {
                                 return Err(ParseError::unexpect(
@@ -384,6 +391,9 @@ impl<T: Iterator<Item = char>> Parser<T> {
                                     Some("in annotattion args".into()),
                                 ));
                             }
+                        } else if let TokenKind::RightParen = tok.kind {
+                            amap.insert("_".into(), key.into());
+                            continue;
                         } else {
                             return Err(ParseError::expect(
                                 &[TokenKind::Eq],

@@ -32,14 +32,14 @@ ghi \\n mij',
     ],
     array5: ["a", "b"], @array
     array6: ["a", "b",],
-    object1: {},
+    object1: {}, @use(Object4)
     object2: { @object
     },
     object3: { @object
         k1: "v1", @upper
         k2: "v2",
     },
-    object4: {
+    object4: { @save(Object4)
         k1: "v1",
         k2: "v2"
     },

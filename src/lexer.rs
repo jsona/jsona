@@ -179,14 +179,14 @@ impl<T: Iterator<Item = char>> Lexer<T> {
         Self {
             input,
             buf: None,
-            pos: Position::new(0, 0, 0),
+            pos: Position::new(0, 1, 1),
             eof: false,
         }
     }
     fn step(&mut self, ch: char) {
         if ch == '\n' {
             self.pos.index += 1;
-            self.pos.col = 0;
+            self.pos.col = 1;
             self.pos.line += 1;
         } else {
             self.pos.index += 1;
@@ -285,7 +285,7 @@ impl<T: Iterator<Item = char>> Lexer<T> {
                 }
                 (ch, _) => {
                     return Some(Token::new(
-                        TokenKind::LexError(format!("unexpected input {}", ch)),
+                        TokenKind::LexError(format!("unexpected input '{}'", ch)),
                         self.pos.clone(),
                     ))
                 }

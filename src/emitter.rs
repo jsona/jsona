@@ -47,49 +47,34 @@ impl<'a> Emitter<'a> {
         self.indent = indent;
     }
     pub fn emit(&mut self, data: &Doc) -> EmitResult {
-        self.emit_doc_annotations(&data.annotation)?;
+        self.emit_annotations(&data.annotation, true)?;
         writeln!(self.writer)?;
         self.emit_value(&data.value)?;
         Ok(())
     }
-    pub fn emit_doc_annotations(&mut self, annotations: &Option<Amap>) -> EmitResult {
-        if let Some(a) = annotations {
-            for (name, args) in a.iter() {
-                write!(self.writer, "@{}", name)?;
-                let len = args.len();
-                if len > 0 {
-                    write!(self.writer, "(")?;
-                    for (i, (k, v)) in args.iter().enumerate() {
-                        self.write_string(k.as_str(), false)?;
-                        write!(self.writer, " = ")?;
-                        self.write_string(v.as_str(), true)?;
-                        if i < len - 1 {
-                            write!(self.writer, ", ")?;
-                        }
-                    }
-                    write!(self.writer, ")")?;
-                }
-                writeln!(self.writer)?;
-            }
-        }
-        Ok(())
-    }
-    fn emit_annotations(&mut self, annotations: &Option<Amap>) -> EmitResult {
+    fn emit_annotations(&mut self, annotations: &Option<Amap>, is_doc: bool) -> EmitResult {
         if let Some(a) = annotations {
             for (name, args) in a.iter() {
                 write!(self.writer, " @{}", name)?;
                 let len = args.len();
                 if len > 0 {
                     write!(self.writer, "(")?;
-                    for (i, (k, v)) in args.iter().enumerate() {
-                        self.write_string(k.as_str(), false)?;
-                        write!(self.writer, " = ")?;
-                        self.write_string(v.as_str(), true)?;
-                        if i < len - 1 {
-                            write!(self.writer, ", ")?;
+                    if len == 1 && args.get("_").is_some() {
+                        self.write_string(args.get("_").unwrap(), false)?;
+                    } else {
+                        for (i, (k, v)) in args.iter().enumerate() {
+                            self.write_string(k.as_str(), false)?;
+                            write!(self.writer, " = ")?;
+                            self.write_string(v.as_str(), true)?;
+                            if i < len - 1 {
+                                write!(self.writer, ", ")?;
+                            }
                         }
                     }
                     write!(self.writer, ")")?;
+                }
+                if is_doc {
+                    writeln!(self.writer)?;
                 }
             }
         }
@@ -98,7 +83,7 @@ impl<'a> Emitter<'a> {
     pub fn emit_value(&mut self, node: &Value) -> EmitResult {
         self.emit_node(node, false)?;
         if node.is_scalar() {
-            self.emit_annotations(node.get_annotations())?;
+            self.emit_annotations(node.get_annotations(), false)?;
         }
         Ok(())
     }
@@ -173,17 +158,17 @@ impl<'a> Emitter<'a> {
             if comma {
                 write!(self.writer, ",")?;
             }
-            self.emit_annotations(a)?;
+            self.emit_annotations(a, false)?;
         } else {
             write!(self.writer, "[")?;
-            self.emit_annotations(a)?;
+            self.emit_annotations(a, false)?;
             writeln!(self.writer)?;
             self.level += 1;
             for (i, x) in v.iter().enumerate() {
                 self.write_indent()?;
                 self.emit_node(x, i < v.len() - 1)?;
                 if x.is_scalar() {
-                    self.emit_annotations(x.get_annotations())?;
+                    self.emit_annotations(x.get_annotations(), false)?;
                 }
                 writeln!(self.writer)?;
             }
@@ -202,10 +187,10 @@ impl<'a> Emitter<'a> {
             if comma {
                 write!(self.writer, ",")?;
             }
-            self.emit_annotations(a)?;
+            self.emit_annotations(a, false)?;
         } else {
             write!(self.writer, "{{")?;
-            self.emit_annotations(a)?;
+            self.emit_annotations(a, false)?;
             writeln!(self.writer)?;
             self.level += 1;
             for (i, (k, v)) in o.iter().enumerate() {
@@ -214,7 +199,7 @@ impl<'a> Emitter<'a> {
                 write!(self.writer, ": ")?;
                 self.emit_node(v, i < o.len() - 1)?;
                 if v.is_scalar() {
-                    self.emit_annotations(v.get_annotations())?;
+                    self.emit_annotations(v.get_annotations(), false)?;
                 }
                 writeln!(self.writer)?;
             }
