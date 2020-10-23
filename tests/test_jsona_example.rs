@@ -3,12 +3,13 @@ use jsona::lexer::{Lexer, Position};
 use jsona::loader::Loader;
 use jsona::parser::{Event, EventReceiver, Parser};
 
+const INPUT: &str = include_str!("spec/test_jsona_example.jsona");
+
 #[test]
 fn test_lex() {
-    let input = include_str!("spec/test_jsona_example.jsona");
     let expect = include_str!("spec/test_jsona_example_tok.txt");
     let mut target = String::new();
-    let lexer = Lexer::new(input.chars());
+    let lexer = Lexer::new(INPUT.chars());
     for tok in lexer.into_iter() {
         target.push_str(&format!("{:?}\n", tok))
     }
@@ -30,17 +31,16 @@ impl EventCollector {
 }
 
 impl EventReceiver for EventCollector {
-    fn on_event(&mut self, ev: Event, pos: Position) {
-        self.evs.push((ev, pos))
+    fn on_event(&mut self, event: Event, position: Position) {
+        self.evs.push((event, position))
     }
 }
 
 #[test]
 fn test_parse() {
-    let input = include_str!("spec/test_jsona_example.jsona");
     let expect = include_str!("spec/test_jsona_example_event.txt");
     let mut ec = EventCollector::new();
-    let mut parser = Parser::new(input.chars());
+    let mut parser = Parser::new(INPUT.chars());
     parser.parse(&mut ec).unwrap();
     let mut target = String::new();
     for (ev, pos) in ec.evs {
@@ -50,11 +50,10 @@ fn test_parse() {
 }
 
 #[test]
-fn test_load() {
-    let input = include_str!("spec/test_jsona_example.jsona");
+fn test_emit() {
     let expect = include_str!("spec/test_jsona_example_emit.jsona");
 
-    let result = Loader::load_from_str(input).unwrap();
+    let result = Loader::load_from_str(INPUT).unwrap();
     let mut target = String::new();
     {
         let mut emitter = Emitter::new(&mut target);

@@ -2,11 +2,11 @@ use indexmap::IndexMap;
 
 use crate::lexer::Position;
 use crate::parser::{Event, EventReceiver, ParseResult, Parser};
-use crate::value::{Amap, Doc, Value};
+use crate::value::{Amap, Doc, Value, Key};
 
 pub struct Loader {
     value_stack: Vec<Value>,
-    key_stack: Vec<String>,
+    key_stack: Vec<Key>,
     annotations: Option<Amap>,
 }
 
@@ -35,18 +35,19 @@ impl Loader {
                     let mut cur_key = self.key_stack.pop().unwrap();
                     if cur_key.is_empty() {
                         if let Value::String {
-                            value: string_value,
+                            value,
+                            position,
                             ..
                         } = node
                         {
-                            cur_key = string_value;
+                            cur_key = Key::new(value, position);
                         } else {
                             unreachable!()
                         }
                     } else {
                         let key = cur_key;
                         value.insert(key, node);
-                        cur_key = String::new();
+                        cur_key = Key::create("")
                     }
                     self.key_stack.push(cur_key);
                 }
@@ -63,6 +64,7 @@ impl Loader {
                 Value::Array {
                     ref mut value,
                     ref mut annotations,
+                    ..
                 } => {
                     if value.len() > 0 {
                         value.last_mut().unwrap().set_annotations(_annotations);
@@ -73,6 +75,7 @@ impl Loader {
                 Value::Object {
                     ref mut value,
                     ref mut annotations,
+                    ..
                 } => {
                     if value.len() > 0 {
                         value
@@ -91,12 +94,13 @@ impl Loader {
 }
 
 impl EventReceiver for Loader {
-    fn on_event(&mut self, ev: Event, _pos: Position) {
-        match ev {
+    fn on_event(&mut self, event: Event, position: Position) {
+        match event {
             Event::ArrayStart => {
                 self.value_stack.push(Value::Array {
                     value: Vec::new(),
                     annotations: None,
+                    position
                 });
             }
             Event::ArrayStop => {
@@ -104,10 +108,11 @@ impl EventReceiver for Loader {
                 self.insert_new_node(node);
             }
             Event::ObjectStart => {
-                self.key_stack.push(String::new());
+                self.key_stack.push(Key::create(""));
                 self.value_stack.push(Value::Object {
                     value: IndexMap::new(),
                     annotations: None,
+                    position,
                 });
             }
             Event::ObjectStop => {
@@ -116,13 +121,14 @@ impl EventReceiver for Loader {
                 self.insert_new_node(node);
             }
             Event::Null => {
-                let node = Value::Null { annotations: None };
+                let node = Value::Null { annotations: None, position };
                 self.insert_new_node(node);
             }
             Event::Float(value) => {
                 let node = Value::Float {
                     value,
                     annotations: None,
+                    position,
                 };
                 self.insert_new_node(node);
             }
@@ -130,6 +136,7 @@ impl EventReceiver for Loader {
                 let node = Value::Integer {
                     value,
                     annotations: None,
+                    position,
                 };
                 self.insert_new_node(node);
             }
@@ -137,6 +144,7 @@ impl EventReceiver for Loader {
                 let node = Value::Boolean {
                     value,
                     annotations: None,
+                    position,
                 };
                 self.insert_new_node(node);
             }
@@ -144,6 +152,7 @@ impl EventReceiver for Loader {
                 let node = Value::String {
                     value,
                     annotations: None,
+                    position,
                 };
                 self.insert_new_node(node);
             }

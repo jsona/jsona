@@ -122,6 +122,11 @@ pub struct Position {
     line: usize,
     col: usize,
 }
+impl Default for Position {
+    fn default() -> Self {
+        Self { index: 0, line: 1, col: 1 }
+    }
+}
 
 impl Position {
     pub fn new(index: usize, line: usize, col: usize) -> Self {

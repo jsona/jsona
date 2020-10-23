@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::lexer::{Lexer, Position, Token, TokenKind};
-use crate::value::Amap;
+use crate::value::{Amap, Key};
 
 /// `ParseError` is an enum which represents errors encounted during parsing an expression
 #[derive(Debug)]
@@ -109,7 +109,7 @@ pub enum Event {
 }
 
 pub trait EventReceiver {
-    fn on_event(&mut self, ev: Event, pos: Position);
+    fn on_event(&mut self, event: Event, position: Position);
 }
 
 pub type ParseResult<T> = Result<T, ParseError>;
@@ -343,7 +343,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         IndexMap::new()
                     }
                 };
-                annotations.insert(key, args);
+                annotations.insert(Key::new(key, tok.position), args);
             } else {
                 return Err(ParseError::expect(
                     &[TokenKind::Identifier("identifer".into())],
@@ -357,8 +357,8 @@ impl<T: Iterator<Item = char>> Parser<T> {
         }
         Ok(())
     }
-    fn parse_annotation_args(&mut self) -> ParseResult<IndexMap<String, String>> {
-        let mut amap: IndexMap<String, String> = IndexMap::new();
+    fn parse_annotation_args(&mut self) -> ParseResult<IndexMap<Key, String>> {
+        let mut amap: IndexMap<Key, String> = IndexMap::new();
         let mut allow_comma = false;
         loop {
             let tok = self.peek_token()?;
@@ -378,26 +378,26 @@ impl<T: Iterator<Item = char>> Parser<T> {
                 TokenKind::Identifier(key) | TokenKind::StringLiteral(key) => {
                     if !allow_comma {
                         self.next_token()?;
-                        let tok = self.peek_token()?;
-                        if let TokenKind::Eq = tok.kind {
+                        let tok2 = self.peek_token()?;
+                        if let TokenKind::Eq = tok2.kind {
                             self.next_token()?;
-                            let tok = self.next_token()?;
-                            if tok.is_value() {
-                                amap.insert(key.into(), tok.get_value().unwrap());
+                            let tok3 = self.next_token()?;
+                            if tok3.is_value() {
+                                amap.insert(Key::new(key, tok.position), tok3.get_value().unwrap());
                                 allow_comma = true;
                             } else {
                                 return Err(ParseError::unexpect(
-                                    tok,
+                                    tok3,
                                     Some("in annotattion args".into()),
                                 ));
                             }
-                        } else if let TokenKind::RightParen = tok.kind {
-                            amap.insert("_".into(), key.into());
+                        } else if let TokenKind::RightParen = tok2.kind {
+                            amap.insert(Key::new("_", tok.position), key.into());
                             continue;
                         } else {
                             return Err(ParseError::expect(
                                 &[TokenKind::Eq],
-                                tok,
+                                tok2,
                                 "annotation args".into(),
                             ));
                         }

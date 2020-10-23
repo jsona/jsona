@@ -1,7 +1,10 @@
+use std::hash::Hash;
 use indexmap::IndexMap;
 
 #[cfg(feature = "serde-support")]
 use serde::{Deserialize, Serialize};
+
+use crate::lexer::Position;
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
@@ -15,32 +18,45 @@ pub struct Doc {
 pub enum Value {
     Null {
         annotations: Option<Amap>,
+        position: Position,
     },
     Boolean {
         value: bool,
         annotations: Option<Amap>,
+        position: Position,
     },
     Integer {
         value: i64,
         annotations: Option<Amap>,
+        position: Position,
     },
     Float {
         value: f64,
         annotations: Option<Amap>,
+        position: Position,
     },
     String {
         value: String,
         annotations: Option<Amap>,
+        position: Position,
     },
     Array {
         value: Array,
         annotations: Option<Amap>,
+        position: Position,
     },
     Object {
         value: Object,
         annotations: Option<Amap>,
+        position: Position,
     },
 }
+
+pub type Array = Vec<Value>;
+
+pub type Object = IndexMap<Key, Value>;
+
+pub type Amap = IndexMap<Key, IndexMap<Key, String>>;
 
 impl Value {
     pub fn is_scalar(&self) -> bool {
@@ -61,7 +77,7 @@ impl Value {
     }
     pub fn get_annotations(&self) -> &Option<Amap> {
         match self {
-            Value::Null { annotations } => annotations,
+            Value::Null { annotations, .. } => annotations,
             Value::Boolean { annotations, .. } => annotations,
             Value::Integer { annotations, .. } => annotations,
             Value::Float { annotations, .. } => annotations,
@@ -72,7 +88,7 @@ impl Value {
     }
     pub fn get_annotations_mut(&mut self) -> &mut Option<Amap> {
         match self {
-            Value::Null { annotations } => annotations,
+            Value::Null { annotations, .. } => annotations,
             Value::Boolean { annotations, .. } => annotations,
             Value::Integer { annotations, .. } => annotations,
             Value::Float { annotations, .. } => annotations,
@@ -83,78 +99,41 @@ impl Value {
     }
 }
 
-pub type Array = Vec<Value>;
 
-pub type Object = IndexMap<String, Value>;
+#[derive(Debug, Eq, Clone)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+pub struct Key {
+    value: String,
+    position: Position,
+}
 
-pub type Amap = IndexMap<String, IndexMap<String, String>>;
-
-macro_rules! define_as (
-    ($name:ident, $t:ident, $yt:ident) => (
-pub fn $name(&self) -> Option<$t> {
-    match *self {
-        Value::$yt{ value, .. } => Some(value),
-        _ => None
+impl Hash for Key {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state)
     }
 }
-    );
-);
 
-macro_rules! define_as_ref (
-    ($name:ident, $t:ty, $yt:ident) => (
-pub fn $name(&self) -> Option<$t> {
-    match *self {
-        Value::$yt{ ref value, .. } => Some(value),
-        _ => None
+impl PartialEq for Key {
+    fn eq(&self, other: &Self) -> bool {
+        self.value.eq(&other.value)
     }
 }
-    );
-);
 
-macro_rules! define_into (
-    ($name:ident, $t:ty, $yt:ident) => (
-pub fn $name(self) -> Option<$t> {
-    match self {
-        Value::$yt{ value, .. } => Some(value),
-        _ => None
+impl Key {
+    pub fn new<T: AsRef<str>>(value: T, position: Position) -> Self {
+        Key { value: value.as_ref().into(), position }
+    }
+    pub fn create(value: &str) -> Self {
+        Key { value: value.into(), position: Position::default() }
+    }
+    pub fn is_empty(&self) -> bool {
+        self.value.len() == 0
+    }
+    pub fn value(&self) -> &str {
+        self.value.as_str()
+    }
+    pub fn position(&self) -> &Position {
+        &self.position
     }
 }
-    );
-);
 
-impl Value {
-    define_as!(as_bool, bool, Boolean);
-    define_as!(as_i64, i64, Integer);
-    define_as!(as_f64, f64, Float);
-
-    define_as_ref!(as_str, &str, String);
-    define_as_ref!(as_hash, &Object, Object);
-    define_as_ref!(as_vec, &Array, Array);
-
-    define_into!(into_bool, bool, Boolean);
-    define_into!(into_f64, f64, Float);
-    define_into!(into_i64, i64, Integer);
-    define_into!(into_string, String, String);
-    define_into!(into_hash, Object, Object);
-    define_into!(into_vec, Array, Array);
-
-    pub fn is_null(&self) -> bool {
-        match *self {
-            Value::Null { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_array(&self) -> bool {
-        match *self {
-            Value::Array { .. } => true,
-            _ => false,
-        }
-    }
-    pub fn is_object(&self) -> bool {
-        match *self {
-            Value::Object { .. } => true,
-            _ => false,
-        }
-    }
-}

@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{self, Display};
 
-use crate::value::{Amap, Doc, Object, Value};
+use crate::value::{Amap, Doc, Object, Value, Key};
 
 #[derive(Copy, Clone, Debug)]
 pub enum EmitError {
@@ -55,15 +55,16 @@ impl<'a> Emitter<'a> {
     fn emit_annotations(&mut self, annotations: &Option<Amap>, is_doc: bool) -> EmitResult {
         if let Some(a) = annotations {
             for (name, args) in a.iter() {
-                write!(self.writer, " @{}", name)?;
+                write!(self.writer, " @{}", name.value())?;
                 let len = args.len();
                 if len > 0 {
                     write!(self.writer, "(")?;
-                    if len == 1 && args.get("_").is_some() {
-                        self.write_string(args.get("_").unwrap(), false)?;
+                    let anony_key = Key::create("_");
+                    if len == 1 && args.get(&anony_key).is_some() {
+                        self.write_string(args.get(&anony_key).unwrap(), false)?;
                     } else {
                         for (i, (k, v)) in args.iter().enumerate() {
-                            self.write_string(k.as_str(), false)?;
+                            self.write_string(k.value(), false)?;
                             write!(self.writer, " = ")?;
                             self.write_string(v.as_str(), true)?;
                             if i < len - 1 {
@@ -131,6 +132,7 @@ impl<'a> Emitter<'a> {
             Value::Array {
                 ref value,
                 ref annotations,
+                ..
             } => {
                 self.emit_array(value, annotations, comma)?;
                 Ok(())
@@ -138,6 +140,7 @@ impl<'a> Emitter<'a> {
             Value::Object {
                 ref value,
                 ref annotations,
+                ..
             } => {
                 self.emit_object(value, annotations, comma)?;
                 Ok(())
@@ -195,7 +198,7 @@ impl<'a> Emitter<'a> {
             self.level += 1;
             for (i, (k, v)) in o.iter().enumerate() {
                 self.write_indent()?;
-                self.write_string(k.as_str(), false)?;
+                self.write_string(k.value(), false)?;
                 write!(self.writer, ": ")?;
                 self.emit_node(v, i < o.len() - 1)?;
                 if v.is_scalar() {
