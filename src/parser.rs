@@ -1,10 +1,9 @@
-use indexmap::IndexMap;
 #[cfg(feature = "serde-support")]
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+use crate::ast::{Anno, AnnoField, AnnoFieldKey, AnnoFieldValue};
 use crate::lexer::{Lexer, Position, Token, TokenKind};
-use crate::value::Amap;
 
 /// `ParseError` is an enum which represents errors encounted during parsing an expression
 #[derive(Debug)]
@@ -92,7 +91,7 @@ pub enum Event {
     ArrayStop,
     ObjectStart,
     ObjectStop,
-    Annotations(Amap),
+    Annotations(Vec<Anno>),
 
     Null,
     Boolean(bool),
@@ -147,7 +146,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
         Err(ParseError::abort())
     }
     pub fn parse<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
-        self.parse_annotaions(recv)?;
+        // self.parse_annotaions(recv)?;
         self.parse_node(recv)?;
         let tok = self.peek_token()?;
         if let TokenKind::Eof = tok.kind {
@@ -319,7 +318,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
         Ok(())
     }
     fn parse_annotaions<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
-        let mut annotations: Amap = IndexMap::new();
+        let mut annotations = vec![];
         let pos = self.peek_token()?.position;
         while let TokenKind::At = self.peek_token()?.kind {
             self.next_token()?;
@@ -328,15 +327,19 @@ impl<T: Iterator<Item = char>> Parser<T> {
             if let TokenKind::Identifier(key) = tok.kind {
                 self.next_token()?;
                 let tok2 = self.peek_token()?;
-                let args = {
+                let fields = {
                     if let TokenKind::LeftParen = tok2.kind {
                         self.next_token()?;
-                        self.parse_annotation_args()?
+                        self.parse_annotation_fields()?
                     } else {
-                        IndexMap::new()
+                        vec![]
                     }
                 };
-                annotations.insert(key, (tok.position, args));
+                annotations.push(Anno {
+                    fields,
+                    name: key,
+                    position: tok.position,
+                });
             } else {
                 return Err(ParseError::expect(
                     &[TokenKind::Identifier("identifer".into())],
@@ -350,8 +353,8 @@ impl<T: Iterator<Item = char>> Parser<T> {
         }
         Ok(())
     }
-    fn parse_annotation_args(&mut self) -> ParseResult<IndexMap<String, (Position, String)>> {
-        let mut amap: IndexMap<String, (Position, String)> = IndexMap::new();
+    fn parse_annotation_fields(&mut self) -> ParseResult<Vec<AnnoField>> {
+        let mut fields = vec![];
         let mut allow_comma = false;
         loop {
             let tok = self.peek_token()?;
@@ -375,41 +378,69 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         if let TokenKind::Eq = tok2.kind {
                             self.next_token()?;
                             let tok3 = self.next_token()?;
-                            if tok3.is_value() {
-                                amap.insert(key.into(), (tok.position, tok3.get_value().unwrap()));
+                            if let Some(value) = token_to_annno_field_value(tok3.clone()) {
+                                fields.push(AnnoField {
+                                    key: AnnoFieldKey { value: key.into(), position: tok.position },
+                                    value,
+                                });
                                 allow_comma = true;
                             } else {
                                 return Err(ParseError::unexpect(
                                     tok3,
-                                    Some("in annotattion args".into()),
+                                    Some("in annotattion fields".into()),
                                 ));
                             }
                         } else if let TokenKind::RightParen = tok2.kind {
-                            amap.insert("_".into(), (tok.position, key.into()));
+                            if let Some(value) = token_to_annno_field_value(tok.clone()) {
+                                fields.push(AnnoField {
+                                    key: AnnoFieldKey { value: "_".into(), position: tok.position },
+                                    value,
+                                });
+                            } else {
+                                return Err(ParseError::unexpect(
+                                    tok,
+                                    Some("in annotattion fields".into()),
+                                ));
+                            }
                             continue;
                         } else {
                             return Err(ParseError::expect(
                                 &[TokenKind::Eq],
                                 tok2,
-                                "annotation args".into(),
+                                "annotation fields".into(),
                             ));
                         }
                     } else {
                         return Err(ParseError::expect(
                             &[TokenKind::Comma],
                             tok,
-                            "annotation args".into(),
+                            "annotation fields".into(),
                         ));
                     }
                 }
                 _ => {
                     return Err(ParseError::unexpect(
                         tok,
-                        Some("in annotattion args".into()),
+                        Some("in annotattion fields".into()),
                     ))
                 }
             }
         }
-        Ok(amap)
+        Ok(fields)
+    }
+}
+
+fn token_to_annno_field_value(tok: Token) -> Option<AnnoFieldValue> {
+    match tok.kind {
+        TokenKind::Identifier(v) => match v.as_str() {
+            "true" => Some(AnnoFieldValue::Bool(true)),
+            "false" => Some(AnnoFieldValue::Bool(false)),
+            "null" => Some(AnnoFieldValue::Null),
+            _ => Some(AnnoFieldValue::String(v)),
+        },
+        TokenKind::IntegerLiteral(i) => Some(AnnoFieldValue::Integer(i)),
+        TokenKind::FloatLiteral(f) => Some(AnnoFieldValue::Float(f)),
+        TokenKind::StringLiteral(s) => Some(AnnoFieldValue::String(s)),
+        _ => None,
     }
 }

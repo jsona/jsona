@@ -1,7 +1,10 @@
+
+{
+  
+@demo
 @simple
 @complete(k1 = "a", k2 = null, k3 = 3.14, k4 = true, k5 = 4)
 
-{ @demo
     null1: null,
     bool1: true,
     bool2: false,

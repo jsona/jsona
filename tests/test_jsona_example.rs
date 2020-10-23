@@ -1,7 +1,6 @@
-use jsona::emitter::Emitter;
 use jsona::lexer::{Lexer, Position};
-use jsona::loader::Loader;
 use jsona::parser::{Event, EventReceiver, Parser};
+use jsona::loader::Loader;
 
 const INPUT: &str = include_str!("spec/test_jsona_example.jsona");
 
@@ -50,26 +49,13 @@ fn test_parse() {
 }
 
 #[test]
-fn test_emit() {
-    let expect = include_str!("spec/test_jsona_example_emit.jsona");
-
-    let result = Loader::load_from_str(INPUT).unwrap();
-    let mut target = String::new();
-    {
-        let mut emitter = Emitter::new(&mut target);
-        emitter.emit(&result).unwrap();
-    }
-    assert_eq!(expect, target)
-}
-
-#[test]
 #[cfg(feature = "serde-support")]
 fn test_json() {
     let expect = include_str!("spec/test_jsona_example_value.json");
 
     let result = Loader::load_from_str(INPUT).unwrap();
     let target = serde_json::to_string_pretty(&result).unwrap();
-    println!("{}", target);
 
+    println!("{}", target);
     assert_eq!(expect, target)
 }
