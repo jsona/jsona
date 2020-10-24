@@ -118,9 +118,9 @@ impl Display for TokenKind {
 #[derive(Clone, Copy, PartialEq, Debug, Eq)]
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Position {
-    index: usize,
-    line: usize,
-    col: usize,
+    pub index: usize,
+    pub line: usize,
+    pub col: usize,
 }
 impl Default for Position {
     fn default() -> Self {
@@ -135,18 +135,6 @@ impl Default for Position {
 impl Position {
     pub fn new(index: usize, line: usize, col: usize) -> Self {
         Position { index, line, col }
-    }
-
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    pub fn col(&self) -> usize {
-        self.col
     }
 }
 

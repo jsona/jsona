@@ -77,8 +77,8 @@ impl fmt::Display for ParseError {
                 formatter,
                 "{} at line {} column {}",
                 self.info,
-                position.line(),
-                position.col(),
+                position.line,
+                position.col,
             ),
             None => write!(formatter, "{}", self.info,),
         }

@@ -1,6 +1,8 @@
 use jsona::lexer::{Lexer, Position};
-use jsona::loader::Loader;
 use jsona::parser::{Event, EventReceiver, Parser};
+
+#[cfg(feature = "serde-support")]
+use jsona::loader::Loader;
 
 const INPUT: &str = include_str!("spec/test_jsona_example.jsona");
 
