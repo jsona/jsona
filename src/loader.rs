@@ -129,7 +129,7 @@ impl EventReceiver for Loader {
             }
             Event::AnnotationEnd => {
                 let (position, name) = self.annotation_name.take().unwrap();
-                let value = self.annotation_value_stack.pop();
+                let value = self.annotation_value_stack.pop().unwrap();
                 self.insert_annotation_value(Annotation {
                     name,
                     position,

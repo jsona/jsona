@@ -86,7 +86,7 @@ pub struct Property {
 pub struct Annotation {
     pub name: string::String,
     pub position: Position,
-    pub value: Option<Value>,
+    pub value: Value,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -142,6 +142,19 @@ impl Ast {
     pub fn retrive(&self, path: &[&str]) -> Option<&Self> {
         path.iter()
             .fold(Some(self), |v, &b| v.and_then(|v| v.key(b)))
+    }
+
+    pub fn get_position(&self) -> &Position {
+        match self {
+            Ast::Null(Null { position, .. }) => position,
+            Ast::Boolean(Boolean { position, .. }) => position,
+            Ast::Integer(Integer { position, .. }) => position,
+            Ast::Float(Float { position, .. }) => position,
+            Ast::String(String { position, .. }) => position,
+            Ast::Array(Array { position, .. }) => position,
+            Ast::Object(Object { position, .. }) => position,
+        }
+
     }
     pub fn get_annotations(&self) -> &Vec<Annotation> {
         match self {

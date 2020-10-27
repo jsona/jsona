@@ -251,9 +251,11 @@ impl<T: Iterator<Item = char>> Parser<T> {
                     self.annotation_scope = true;
                     self.parse_node(recv)?;
                     let tok4 = self.next_token()?;
+                    self.annotation_scope = false;
                     recv.on_event(Event::AnnotationEnd, tok4.position);
                     self.parse_annotaions(recv)?;
                 } else {
+                    recv.on_event(Event::Null, tok2.position);
                     recv.on_event(Event::AnnotationEnd, tok2.position);
                     self.parse_annotaions(recv)?;
                 }
