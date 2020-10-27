@@ -1,9 +1,9 @@
 {
   "type": "Object",
   "value": {
-    "properties": [
+    "value": [
       {
-        "name": "nullValue",
+        "key": "nullValue",
         "position": {
           "index": 247,
           "line": 17,
@@ -22,7 +22,7 @@
         }
       },
       {
-        "name": "boolTrue",
+        "key": "boolTrue",
         "position": {
           "index": 268,
           "line": 18,
@@ -42,7 +42,7 @@
         }
       },
       {
-        "name": "boolFale",
+        "key": "boolFale",
         "position": {
           "index": 288,
           "line": 19,
@@ -62,7 +62,7 @@
         }
       },
       {
-        "name": "float",
+        "key": "float",
         "position": {
           "index": 309,
           "line": 20,
@@ -82,7 +82,7 @@
         }
       },
       {
-        "name": "floatNegative",
+        "key": "floatNegative",
         "position": {
           "index": 326,
           "line": 21,
@@ -102,7 +102,7 @@
         }
       },
       {
-        "name": "floatNegativeWithoutInteger",
+        "key": "floatNegativeWithoutInteger",
         "position": {
           "index": 352,
           "line": 22,
@@ -122,7 +122,7 @@
         }
       },
       {
-        "name": "floatNegativeWithoutDecimal",
+        "key": "floatNegativeWithoutDecimal",
         "position": {
           "index": 391,
           "line": 23,
@@ -142,7 +142,7 @@
         }
       },
       {
-        "name": "integer",
+        "key": "integer",
         "position": {
           "index": 429,
           "line": 24,
@@ -162,7 +162,7 @@
         }
       },
       {
-        "name": "hex",
+        "key": "hex",
         "position": {
           "index": 445,
           "line": 25,
@@ -182,7 +182,7 @@
         }
       },
       {
-        "name": "binary",
+        "key": "binary",
         "position": {
           "index": 460,
           "line": 26,
@@ -202,7 +202,7 @@
         }
       },
       {
-        "name": "otcal",
+        "key": "otcal",
         "position": {
           "index": 478,
           "line": 27,
@@ -222,7 +222,7 @@
         }
       },
       {
-        "name": "integerNegative",
+        "key": "integerNegative",
         "position": {
           "index": 495,
           "line": 28,
@@ -242,7 +242,7 @@
         }
       },
       {
-        "name": "stringSingleQuota",
+        "key": "stringSingleQuota",
         "position": {
           "index": 520,
           "line": 29,
@@ -262,7 +262,7 @@
         }
       },
       {
-        "name": "stringDoubleQuota",
+        "key": "stringDoubleQuota",
         "position": {
           "index": 560,
           "line": 30,
@@ -282,7 +282,7 @@
         }
       },
       {
-        "name": "stringMultipleLine",
+        "key": "stringMultipleLine",
         "position": {
           "index": 600,
           "line": 31,
@@ -302,7 +302,7 @@
         }
       },
       {
-        "name": "stringEscaple",
+        "key": "stringEscaple",
         "position": {
           "index": 651,
           "line": 33,
@@ -322,7 +322,7 @@
         }
       },
       {
-        "name": "arrayEmpty",
+        "key": "arrayEmpty",
         "position": {
           "index": 721,
           "line": 34,
@@ -331,7 +331,7 @@
         "value": {
           "type": "Array",
           "value": {
-            "elements": [],
+            "value": [],
             "annotations": [],
             "position": {
               "index": 733,
@@ -342,7 +342,7 @@
         }
       },
       {
-        "name": "arrayEmptyMultiLine",
+        "key": "arrayEmptyMultiLine",
         "position": {
           "index": 742,
           "line": 35,
@@ -351,7 +351,7 @@
         "value": {
           "type": "Array",
           "value": {
-            "elements": [],
+            "value": [],
             "annotations": [
               {
                 "name": "array",
@@ -372,7 +372,7 @@
         }
       },
       {
-        "name": "arrayEmptyWithAnnotation",
+        "key": "arrayEmptyWithAnnotation",
         "position": {
           "index": 783,
           "line": 37,
@@ -381,7 +381,7 @@
         "value": {
           "type": "Array",
           "value": {
-            "elements": [],
+            "value": [],
             "annotations": [],
             "position": {
               "index": 809,
@@ -392,7 +392,7 @@
         }
       },
       {
-        "name": "arraySimple",
+        "key": "arraySimple",
         "position": {
           "index": 828,
           "line": 38,
@@ -401,7 +401,7 @@
         "value": {
           "type": "Array",
           "value": {
-            "elements": [
+            "value": [
               {
                 "type": "String",
                 "value": {
@@ -457,7 +457,7 @@
         }
       },
       {
-        "name": "arrayOneline",
+        "key": "arrayOneline",
         "position": {
           "index": 894,
           "line": 42,
@@ -466,7 +466,7 @@
         "value": {
           "type": "Array",
           "value": {
-            "elements": [
+            "value": [
               {
                 "type": "String",
                 "value": {
@@ -512,7 +512,7 @@
         }
       },
       {
-        "name": "arrayExtraComma",
+        "key": "arrayExtraComma",
         "position": {
           "index": 931,
           "line": 43,
@@ -521,7 +521,7 @@
         "value": {
           "type": "Array",
           "value": {
-            "elements": [
+            "value": [
               {
                 "type": "String",
                 "value": {
@@ -557,7 +557,7 @@
         }
       },
       {
-        "name": "objectEmpty",
+        "key": "objectEmpty",
         "position": {
           "index": 965,
           "line": 44,
@@ -566,7 +566,7 @@
         "value": {
           "type": "Object",
           "value": {
-            "properties": [],
+            "value": [],
             "annotations": [],
             "position": {
               "index": 978,
@@ -577,7 +577,7 @@
         }
       },
       {
-        "name": "objectEmptyMultiLine",
+        "key": "objectEmptyMultiLine",
         "position": {
           "index": 986,
           "line": 45,
@@ -586,7 +586,7 @@
         "value": {
           "type": "Object",
           "value": {
-            "properties": [],
+            "value": [],
             "annotations": [
               {
                 "name": "object",
@@ -607,7 +607,7 @@
         }
       },
       {
-        "name": "objectEmptyWithAnnotation",
+        "key": "objectEmptyWithAnnotation",
         "position": {
           "index": 1029,
           "line": 47,
@@ -616,7 +616,7 @@
         "value": {
           "type": "Object",
           "value": {
-            "properties": [],
+            "value": [],
             "annotations": [
               {
                 "name": "use",
@@ -625,10 +625,7 @@
                   "line": 47,
                   "col": 37
                 },
-                "value": {
-                  "type": "String",
-                  "value": "Object4"
-                }
+                "value": "Object4"
               }
             ],
             "position": {
@@ -640,7 +637,7 @@
         }
       },
       {
-        "name": "objectSimple",
+        "key": "objectSimple",
         "position": {
           "index": 1080,
           "line": 48,
@@ -649,9 +646,9 @@
         "value": {
           "type": "Object",
           "value": {
-            "properties": [
+            "value": [
               {
-                "name": "k1",
+                "key": "k1",
                 "position": {
                   "index": 1121,
                   "line": 49,
@@ -681,7 +678,7 @@
                 }
               },
               {
-                "name": "k2",
+                "key": "k2",
                 "position": {
                   "index": 1146,
                   "line": 50,
@@ -709,10 +706,7 @@
                   "line": 48,
                   "col": 22
                 },
-                "value": {
-                  "type": "String",
-                  "value": "Object4"
-                }
+                "value": "Object4"
               }
             ],
             "position": {
@@ -724,7 +718,7 @@
         }
       },
       {
-        "name": "objectOneLine",
+        "key": "objectOneLine",
         "position": {
           "index": 1167,
           "line": 52,
@@ -733,9 +727,9 @@
         "value": {
           "type": "Object",
           "value": {
-            "properties": [
+            "value": [
               {
-                "name": "k1",
+                "key": "k1",
                 "position": {
                   "index": 1184,
                   "line": 52,
@@ -755,7 +749,7 @@
                 }
               },
               {
-                "name": "k2",
+                "key": "k2",
                 "position": {
                   "index": 1194,
                   "line": 52,
@@ -795,7 +789,7 @@
         }
       },
       {
-        "name": "objectExtraComma",
+        "key": "objectExtraComma",
         "position": {
           "index": 1218,
           "line": 53,
@@ -804,9 +798,9 @@
         "value": {
           "type": "Object",
           "value": {
-            "properties": [
+            "value": [
               {
-                "name": "k1",
+                "key": "k1",
                 "position": {
                   "index": 1238,
                   "line": 53,
@@ -826,7 +820,7 @@
                 }
               },
               {
-                "name": "k2",
+                "key": "k2",
                 "position": {
                   "index": 1248,
                   "line": 53,
@@ -882,9 +876,7 @@
           "line": 9,
           "col": 6
         },
-        "value": {
-          "type": "Null"
-        }
+        "value": null
       },
       {
         "name": "bool",
@@ -893,10 +885,7 @@
           "line": 10,
           "col": 6
         },
-        "value": {
-          "type": "Bool",
-          "value": true
-        }
+        "value": true
       },
       {
         "name": "float",
@@ -905,10 +894,7 @@
           "line": 11,
           "col": 6
         },
-        "value": {
-          "type": "Float",
-          "value": 3.14
-        }
+        "value": 3.14
       },
       {
         "name": "number",
@@ -917,10 +903,7 @@
           "line": 12,
           "col": 6
         },
-        "value": {
-          "type": "Integer",
-          "value": -3
-        }
+        "value": -3
       },
       {
         "name": "string",
@@ -929,10 +912,7 @@
           "line": 13,
           "col": 6
         },
-        "value": {
-          "type": "String",
-          "value": "abc \"def\" ghi"
-        }
+        "value": "abc \"def\" ghi"
       },
       {
         "name": "array",
@@ -941,19 +921,10 @@
           "line": 14,
           "col": 6
         },
-        "value": {
-          "type": "Array",
-          "value": [
-            {
-              "type": "Integer",
-              "value": 3
-            },
-            {
-              "type": "Integer",
-              "value": 4
-            }
-          ]
-        }
+        "value": [
+          3,
+          4
+        ]
       },
       {
         "name": "object",
@@ -963,13 +934,7 @@
           "col": 6
         },
         "value": {
-          "type": "Object",
-          "value": {
-            "k": {
-              "type": "String",
-              "value": "v"
-            }
-          }
+          "k": "v"
         }
       }
     ],

@@ -60,6 +60,6 @@ fn test_json() {
     let result = Loader::load_from_str(INPUT).unwrap();
     let target = serde_json::to_string_pretty(&result).unwrap();
 
-    println!("{}", target);
+    // println!("{}", target);
     assert_eq!(expect, target)
 }
