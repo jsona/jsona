@@ -1,947 +1,824 @@
 {
-  "type": "Object",
-  "value": {
-    "value": [
-      {
-        "key": "nullValue",
+  "properties": [
+    {
+      "key": "nullValue",
+      "position": {
+        "index": 247,
+        "line": 17,
+        "col": 5
+      },
+      "value": {
+        "annotations": [],
         "position": {
-          "index": 247,
+          "index": 258,
           "line": 17,
-          "col": 5
-        },
-        "value": {
-          "type": "Null",
-          "value": {
-            "annotations": [],
-            "position": {
-              "index": 258,
-              "line": 17,
-              "col": 16
-            }
-          }
+          "col": 16
         }
+      }
+    },
+    {
+      "key": "boolTrue",
+      "position": {
+        "index": 268,
+        "line": 18,
+        "col": 5
       },
-      {
-        "key": "boolTrue",
+      "value": {
+        "value": true,
+        "annotations": [],
         "position": {
-          "index": 268,
+          "index": 278,
           "line": 18,
-          "col": 5
-        },
-        "value": {
-          "type": "Boolean",
-          "value": {
-            "value": true,
-            "annotations": [],
-            "position": {
-              "index": 278,
-              "line": 18,
-              "col": 15
-            }
-          }
+          "col": 15
         }
+      }
+    },
+    {
+      "key": "boolFale",
+      "position": {
+        "index": 288,
+        "line": 19,
+        "col": 5
       },
-      {
-        "key": "boolFale",
+      "value": {
+        "value": false,
+        "annotations": [],
         "position": {
-          "index": 288,
+          "index": 298,
           "line": 19,
-          "col": 5
-        },
-        "value": {
-          "type": "Boolean",
-          "value": {
-            "value": false,
-            "annotations": [],
-            "position": {
-              "index": 298,
-              "line": 19,
-              "col": 15
-            }
-          }
+          "col": 15
         }
+      }
+    },
+    {
+      "key": "float",
+      "position": {
+        "index": 309,
+        "line": 20,
+        "col": 5
       },
-      {
-        "key": "float",
+      "value": {
+        "value": 3.14,
+        "annotations": [],
         "position": {
-          "index": 309,
+          "index": 316,
           "line": 20,
-          "col": 5
-        },
-        "value": {
-          "type": "Float",
-          "value": {
-            "value": 3.14,
+          "col": 12
+        }
+      }
+    },
+    {
+      "key": "floatNegative",
+      "position": {
+        "index": 326,
+        "line": 21,
+        "col": 5
+      },
+      "value": {
+        "value": -3.14,
+        "annotations": [],
+        "position": {
+          "index": 341,
+          "line": 21,
+          "col": 20
+        }
+      }
+    },
+    {
+      "key": "floatNegativeWithoutInteger",
+      "position": {
+        "index": 352,
+        "line": 22,
+        "col": 5
+      },
+      "value": {
+        "value": -0.14,
+        "annotations": [],
+        "position": {
+          "index": 381,
+          "line": 22,
+          "col": 34
+        }
+      }
+    },
+    {
+      "key": "floatNegativeWithoutDecimal",
+      "position": {
+        "index": 391,
+        "line": 23,
+        "col": 5
+      },
+      "value": {
+        "value": -3.0,
+        "annotations": [],
+        "position": {
+          "index": 420,
+          "line": 23,
+          "col": 34
+        }
+      }
+    },
+    {
+      "key": "integer",
+      "position": {
+        "index": 429,
+        "line": 24,
+        "col": 5
+      },
+      "value": {
+        "value": 3,
+        "annotations": [],
+        "position": {
+          "index": 438,
+          "line": 24,
+          "col": 14
+        }
+      }
+    },
+    {
+      "key": "hex",
+      "position": {
+        "index": 445,
+        "line": 25,
+        "col": 5
+      },
+      "value": {
+        "value": 26,
+        "annotations": [],
+        "position": {
+          "index": 450,
+          "line": 25,
+          "col": 10
+        }
+      }
+    },
+    {
+      "key": "binary",
+      "position": {
+        "index": 460,
+        "line": 26,
+        "col": 5
+      },
+      "value": {
+        "value": 1,
+        "annotations": [],
+        "position": {
+          "index": 468,
+          "line": 26,
+          "col": 13
+        }
+      }
+    },
+    {
+      "key": "otcal",
+      "position": {
+        "index": 478,
+        "line": 27,
+        "col": 5
+      },
+      "value": {
+        "value": 10,
+        "annotations": [],
+        "position": {
+          "index": 485,
+          "line": 27,
+          "col": 12
+        }
+      }
+    },
+    {
+      "key": "integerNegative",
+      "position": {
+        "index": 495,
+        "line": 28,
+        "col": 5
+      },
+      "value": {
+        "value": -3,
+        "annotations": [],
+        "position": {
+          "index": 512,
+          "line": 28,
+          "col": 22
+        }
+      }
+    },
+    {
+      "key": "stringSingleQuota",
+      "position": {
+        "index": 520,
+        "line": 29,
+        "col": 5
+      },
+      "value": {
+        "value": "abc \"def\" ghi",
+        "annotations": [],
+        "position": {
+          "index": 539,
+          "line": 29,
+          "col": 24
+        }
+      }
+    },
+    {
+      "key": "stringDoubleQuota",
+      "position": {
+        "index": 560,
+        "line": 30,
+        "col": 5
+      },
+      "value": {
+        "value": "abc 'def' ghi",
+        "annotations": [],
+        "position": {
+          "index": 579,
+          "line": 30,
+          "col": 24
+        }
+      }
+    },
+    {
+      "key": "stringMultipleLine",
+      "position": {
+        "index": 600,
+        "line": 31,
+        "col": 5
+      },
+      "value": {
+        "value": "abc \"def\" ghi \\n mij",
+        "annotations": [],
+        "position": {
+          "index": 620,
+          "line": 31,
+          "col": 25
+        }
+      }
+    },
+    {
+      "key": "stringEscaple",
+      "position": {
+        "index": 651,
+        "line": 33,
+        "col": 5
+      },
+      "value": {
+        "value": "\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029",
+        "annotations": [],
+        "position": {
+          "index": 666,
+          "line": 33,
+          "col": 20
+        }
+      }
+    },
+    {
+      "key": "arrayEmpty",
+      "position": {
+        "index": 721,
+        "line": 34,
+        "col": 5
+      },
+      "value": {
+        "elements": [],
+        "annotations": [],
+        "position": {
+          "index": 733,
+          "line": 34,
+          "col": 17
+        }
+      }
+    },
+    {
+      "key": "arrayEmptyMultiLine",
+      "position": {
+        "index": 742,
+        "line": 35,
+        "col": 5
+      },
+      "value": {
+        "elements": [],
+        "annotations": [
+          {
+            "name": "array",
+            "position": {
+              "index": 766,
+              "line": 35,
+              "col": 29
+            },
+            "value": null
+          }
+        ],
+        "position": {
+          "index": 763,
+          "line": 35,
+          "col": 26
+        }
+      }
+    },
+    {
+      "key": "arrayEmptyWithAnnotation",
+      "position": {
+        "index": 783,
+        "line": 37,
+        "col": 5
+      },
+      "value": {
+        "elements": [],
+        "annotations": [],
+        "position": {
+          "index": 809,
+          "line": 37,
+          "col": 31
+        }
+      }
+    },
+    {
+      "key": "arraySimple",
+      "position": {
+        "index": 828,
+        "line": 38,
+        "col": 5
+      },
+      "value": {
+        "elements": [
+          {
+            "value": "a",
+            "annotations": [
+              {
+                "name": "upper",
+                "position": {
+                  "index": 864,
+                  "line": 39,
+                  "col": 15
+                },
+                "value": null
+              }
+            ],
+            "position": {
+              "index": 858,
+              "line": 39,
+              "col": 9
+            }
+          },
+          {
+            "value": "b",
             "annotations": [],
             "position": {
-              "index": 316,
-              "line": 20,
-              "col": 12
+              "index": 878,
+              "line": 40,
+              "col": 9
             }
           }
-        }
-      },
-      {
-        "key": "floatNegative",
+        ],
+        "annotations": [
+          {
+            "name": "array",
+            "position": {
+              "index": 844,
+              "line": 38,
+              "col": 21
+            },
+            "value": null
+          }
+        ],
         "position": {
-          "index": 326,
-          "line": 21,
-          "col": 5
-        },
-        "value": {
-          "type": "Float",
-          "value": {
-            "value": -3.14,
+          "index": 841,
+          "line": 38,
+          "col": 18
+        }
+      }
+    },
+    {
+      "key": "arrayOneline",
+      "position": {
+        "index": 894,
+        "line": 42,
+        "col": 5
+      },
+      "value": {
+        "elements": [
+          {
+            "value": "a",
             "annotations": [],
             "position": {
-              "index": 341,
-              "line": 21,
+              "index": 909,
+              "line": 42,
               "col": 20
             }
-          }
-        }
-      },
-      {
-        "key": "floatNegativeWithoutInteger",
-        "position": {
-          "index": 352,
-          "line": 22,
-          "col": 5
-        },
-        "value": {
-          "type": "Float",
-          "value": {
-            "value": -0.14,
+          },
+          {
+            "value": "b",
             "annotations": [],
             "position": {
-              "index": 381,
-              "line": 22,
-              "col": 34
-            }
-          }
-        }
-      },
-      {
-        "key": "floatNegativeWithoutDecimal",
-        "position": {
-          "index": 391,
-          "line": 23,
-          "col": 5
-        },
-        "value": {
-          "type": "Float",
-          "value": {
-            "value": -3.0,
-            "annotations": [],
-            "position": {
-              "index": 420,
-              "line": 23,
-              "col": 34
-            }
-          }
-        }
-      },
-      {
-        "key": "integer",
-        "position": {
-          "index": 429,
-          "line": 24,
-          "col": 5
-        },
-        "value": {
-          "type": "Integer",
-          "value": {
-            "value": 3,
-            "annotations": [],
-            "position": {
-              "index": 438,
-              "line": 24,
-              "col": 14
-            }
-          }
-        }
-      },
-      {
-        "key": "hex",
-        "position": {
-          "index": 445,
-          "line": 25,
-          "col": 5
-        },
-        "value": {
-          "type": "Integer",
-          "value": {
-            "value": 26,
-            "annotations": [],
-            "position": {
-              "index": 450,
-              "line": 25,
-              "col": 10
-            }
-          }
-        }
-      },
-      {
-        "key": "binary",
-        "position": {
-          "index": 460,
-          "line": 26,
-          "col": 5
-        },
-        "value": {
-          "type": "Integer",
-          "value": {
-            "value": 1,
-            "annotations": [],
-            "position": {
-              "index": 468,
-              "line": 26,
-              "col": 13
-            }
-          }
-        }
-      },
-      {
-        "key": "otcal",
-        "position": {
-          "index": 478,
-          "line": 27,
-          "col": 5
-        },
-        "value": {
-          "type": "Integer",
-          "value": {
-            "value": 10,
-            "annotations": [],
-            "position": {
-              "index": 485,
-              "line": 27,
-              "col": 12
-            }
-          }
-        }
-      },
-      {
-        "key": "integerNegative",
-        "position": {
-          "index": 495,
-          "line": 28,
-          "col": 5
-        },
-        "value": {
-          "type": "Integer",
-          "value": {
-            "value": -3,
-            "annotations": [],
-            "position": {
-              "index": 512,
-              "line": 28,
-              "col": 22
-            }
-          }
-        }
-      },
-      {
-        "key": "stringSingleQuota",
-        "position": {
-          "index": 520,
-          "line": 29,
-          "col": 5
-        },
-        "value": {
-          "type": "String",
-          "value": {
-            "value": "abc \"def\" ghi",
-            "annotations": [],
-            "position": {
-              "index": 539,
-              "line": 29,
-              "col": 24
-            }
-          }
-        }
-      },
-      {
-        "key": "stringDoubleQuota",
-        "position": {
-          "index": 560,
-          "line": 30,
-          "col": 5
-        },
-        "value": {
-          "type": "String",
-          "value": {
-            "value": "abc 'def' ghi",
-            "annotations": [],
-            "position": {
-              "index": 579,
-              "line": 30,
-              "col": 24
-            }
-          }
-        }
-      },
-      {
-        "key": "stringMultipleLine",
-        "position": {
-          "index": 600,
-          "line": 31,
-          "col": 5
-        },
-        "value": {
-          "type": "String",
-          "value": {
-            "value": "abc \"def\" ghi \\n mij",
-            "annotations": [],
-            "position": {
-              "index": 620,
-              "line": 31,
+              "index": 914,
+              "line": 42,
               "col": 25
             }
           }
-        }
-      },
-      {
-        "key": "stringEscaple",
-        "position": {
-          "index": 651,
-          "line": 33,
-          "col": 5
-        },
-        "value": {
-          "type": "String",
-          "value": {
-            "value": "\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029",
-            "annotations": [],
+        ],
+        "annotations": [
+          {
+            "name": "array",
             "position": {
-              "index": 666,
-              "line": 33,
-              "col": 20
-            }
-          }
-        }
-      },
-      {
-        "key": "arrayEmpty",
-        "position": {
-          "index": 721,
-          "line": 34,
-          "col": 5
-        },
-        "value": {
-          "type": "Array",
-          "value": {
-            "value": [],
-            "annotations": [],
-            "position": {
-              "index": 733,
-              "line": 34,
-              "col": 17
-            }
-          }
-        }
-      },
-      {
-        "key": "arrayEmptyMultiLine",
-        "position": {
-          "index": 742,
-          "line": 35,
-          "col": 5
-        },
-        "value": {
-          "type": "Array",
-          "value": {
-            "value": [],
-            "annotations": [
-              {
-                "name": "array",
-                "position": {
-                  "index": 766,
-                  "line": 35,
-                  "col": 29
-                },
-                "value": null
-              }
-            ],
-            "position": {
-              "index": 763,
-              "line": 35,
-              "col": 26
-            }
-          }
-        }
-      },
-      {
-        "key": "arrayEmptyWithAnnotation",
-        "position": {
-          "index": 783,
-          "line": 37,
-          "col": 5
-        },
-        "value": {
-          "type": "Array",
-          "value": {
-            "value": [],
-            "annotations": [],
-            "position": {
-              "index": 809,
-              "line": 37,
-              "col": 31
-            }
-          }
-        }
-      },
-      {
-        "key": "arraySimple",
-        "position": {
-          "index": 828,
-          "line": 38,
-          "col": 5
-        },
-        "value": {
-          "type": "Array",
-          "value": {
-            "value": [
-              {
-                "type": "String",
-                "value": {
-                  "value": "a",
-                  "annotations": [
-                    {
-                      "name": "upper",
-                      "position": {
-                        "index": 864,
-                        "line": 39,
-                        "col": 15
-                      },
-                      "value": null
-                    }
-                  ],
-                  "position": {
-                    "index": 858,
-                    "line": 39,
-                    "col": 9
-                  }
-                }
-              },
-              {
-                "type": "String",
-                "value": {
-                  "value": "b",
-                  "annotations": [],
-                  "position": {
-                    "index": 878,
-                    "line": 40,
-                    "col": 9
-                  }
-                }
-              }
-            ],
-            "annotations": [
-              {
-                "name": "array",
-                "position": {
-                  "index": 844,
-                  "line": 38,
-                  "col": 21
-                },
-                "value": null
-              }
-            ],
-            "position": {
-              "index": 841,
-              "line": 38,
-              "col": 18
-            }
-          }
-        }
-      },
-      {
-        "key": "arrayOneline",
-        "position": {
-          "index": 894,
-          "line": 42,
-          "col": 5
-        },
-        "value": {
-          "type": "Array",
-          "value": {
-            "value": [
-              {
-                "type": "String",
-                "value": {
-                  "value": "a",
-                  "annotations": [],
-                  "position": {
-                    "index": 909,
-                    "line": 42,
-                    "col": 20
-                  }
-                }
-              },
-              {
-                "type": "String",
-                "value": {
-                  "value": "b",
-                  "annotations": [],
-                  "position": {
-                    "index": 914,
-                    "line": 42,
-                    "col": 25
-                  }
-                }
-              }
-            ],
-            "annotations": [
-              {
-                "name": "array",
-                "position": {
-                  "index": 921,
-                  "line": 42,
-                  "col": 32
-                },
-                "value": null
-              }
-            ],
-            "position": {
-              "index": 908,
+              "index": 921,
               "line": 42,
-              "col": 19
-            }
-          }
-        }
-      },
-      {
-        "key": "arrayExtraComma",
-        "position": {
-          "index": 931,
-          "line": 43,
-          "col": 5
-        },
-        "value": {
-          "type": "Array",
-          "value": {
-            "value": [
-              {
-                "type": "String",
-                "value": {
-                  "value": "a",
-                  "annotations": [],
-                  "position": {
-                    "index": 949,
-                    "line": 43,
-                    "col": 23
-                  }
-                }
-              },
-              {
-                "type": "String",
-                "value": {
-                  "value": "b",
-                  "annotations": [],
-                  "position": {
-                    "index": 954,
-                    "line": 43,
-                    "col": 28
-                  }
-                }
-              }
-            ],
-            "annotations": [],
-            "position": {
-              "index": 948,
-              "line": 43,
-              "col": 22
-            }
-          }
-        }
-      },
-      {
-        "key": "objectEmpty",
-        "position": {
-          "index": 965,
-          "line": 44,
-          "col": 5
-        },
-        "value": {
-          "type": "Object",
-          "value": {
-            "value": [],
-            "annotations": [],
-            "position": {
-              "index": 978,
-              "line": 44,
-              "col": 18
-            }
-          }
-        }
-      },
-      {
-        "key": "objectEmptyMultiLine",
-        "position": {
-          "index": 986,
-          "line": 45,
-          "col": 5
-        },
-        "value": {
-          "type": "Object",
-          "value": {
-            "value": [],
-            "annotations": [
-              {
-                "name": "object",
-                "position": {
-                  "index": 1011,
-                  "line": 45,
-                  "col": 30
-                },
-                "value": null
-              }
-            ],
-            "position": {
-              "index": 1008,
-              "line": 45,
-              "col": 27
-            }
-          }
-        }
-      },
-      {
-        "key": "objectEmptyWithAnnotation",
-        "position": {
-          "index": 1029,
-          "line": 47,
-          "col": 5
-        },
-        "value": {
-          "type": "Object",
-          "value": {
-            "value": [],
-            "annotations": [
-              {
-                "name": "use",
-                "position": {
-                  "index": 1061,
-                  "line": 47,
-                  "col": 37
-                },
-                "value": "Object4"
-              }
-            ],
-            "position": {
-              "index": 1056,
-              "line": 47,
               "col": 32
-            }
+            },
+            "value": null
           }
-        }
-      },
-      {
-        "key": "objectSimple",
+        ],
         "position": {
-          "index": 1080,
-          "line": 48,
-          "col": 5
-        },
-        "value": {
-          "type": "Object",
-          "value": {
-            "value": [
-              {
-                "key": "k1",
-                "position": {
-                  "index": 1121,
-                  "line": 49,
-                  "col": 9
-                },
-                "value": {
-                  "type": "String",
-                  "value": {
-                    "value": "v1",
-                    "annotations": [
-                      {
-                        "name": "upper",
-                        "position": {
-                          "index": 1132,
-                          "line": 49,
-                          "col": 20
-                        },
-                        "value": null
-                      }
-                    ],
-                    "position": {
-                      "index": 1125,
-                      "line": 49,
-                      "col": 13
-                    }
-                  }
-                }
-              },
-              {
-                "key": "k2",
-                "position": {
-                  "index": 1146,
-                  "line": 50,
-                  "col": 9
-                },
-                "value": {
-                  "type": "String",
-                  "value": {
-                    "value": "v2",
-                    "annotations": [],
-                    "position": {
-                      "index": 1150,
-                      "line": 50,
-                      "col": 13
-                    }
-                  }
-                }
-              }
-            ],
-            "annotations": [
-              {
-                "name": "save",
-                "position": {
-                  "index": 1097,
-                  "line": 48,
-                  "col": 22
-                },
-                "value": "Object4"
-              }
-            ],
-            "position": {
-              "index": 1094,
-              "line": 48,
-              "col": 19
-            }
-          }
+          "index": 908,
+          "line": 42,
+          "col": 19
         }
+      }
+    },
+    {
+      "key": "arrayExtraComma",
+      "position": {
+        "index": 931,
+        "line": 43,
+        "col": 5
       },
-      {
-        "key": "objectOneLine",
-        "position": {
-          "index": 1167,
-          "line": 52,
-          "col": 5
-        },
-        "value": {
-          "type": "Object",
-          "value": {
-            "value": [
-              {
-                "key": "k1",
-                "position": {
-                  "index": 1184,
-                  "line": 52,
-                  "col": 22
-                },
-                "value": {
-                  "type": "String",
-                  "value": {
-                    "value": "v1",
-                    "annotations": [],
-                    "position": {
-                      "index": 1188,
-                      "line": 52,
-                      "col": 26
-                    }
-                  }
-                }
-              },
-              {
-                "key": "k2",
-                "position": {
-                  "index": 1194,
-                  "line": 52,
-                  "col": 32
-                },
-                "value": {
-                  "type": "String",
-                  "value": {
-                    "value": "v2",
-                    "annotations": [],
-                    "position": {
-                      "index": 1198,
-                      "line": 52,
-                      "col": 36
-                    }
-                  }
-                }
-              }
-            ],
-            "annotations": [
-              {
-                "name": "object",
-                "position": {
-                  "index": 1207,
-                  "line": 52,
-                  "col": 45
-                },
-                "value": null
-              }
-            ],
-            "position": {
-              "index": 1182,
-              "line": 52,
-              "col": 20
-            }
-          }
-        }
-      },
-      {
-        "key": "objectExtraComma",
-        "position": {
-          "index": 1218,
-          "line": 53,
-          "col": 5
-        },
-        "value": {
-          "type": "Object",
-          "value": {
-            "value": [
-              {
-                "key": "k1",
-                "position": {
-                  "index": 1238,
-                  "line": 53,
-                  "col": 25
-                },
-                "value": {
-                  "type": "String",
-                  "value": {
-                    "value": "v1",
-                    "annotations": [],
-                    "position": {
-                      "index": 1242,
-                      "line": 53,
-                      "col": 29
-                    }
-                  }
-                }
-              },
-              {
-                "key": "k2",
-                "position": {
-                  "index": 1248,
-                  "line": 53,
-                  "col": 35
-                },
-                "value": {
-                  "type": "String",
-                  "value": {
-                    "value": "v2",
-                    "annotations": [],
-                    "position": {
-                      "index": 1252,
-                      "line": 53,
-                      "col": 39
-                    }
-                  }
-                }
-              }
-            ],
+      "value": {
+        "elements": [
+          {
+            "value": "a",
             "annotations": [],
             "position": {
-              "index": 1236,
-              "line": 53,
+              "index": 949,
+              "line": 43,
               "col": 23
             }
+          },
+          {
+            "value": "b",
+            "annotations": [],
+            "position": {
+              "index": 954,
+              "line": 43,
+              "col": 28
+            }
           }
+        ],
+        "annotations": [],
+        "position": {
+          "index": 948,
+          "line": 43,
+          "col": 22
         }
       }
-    ],
-    "annotations": [
-      {
-        "name": "foo",
-        "position": {
-          "index": 61,
-          "line": 8,
-          "col": 6
-        },
-        "value": null
+    },
+    {
+      "key": "objectEmpty",
+      "position": {
+        "index": 965,
+        "line": 44,
+        "col": 5
       },
-      {
-        "name": "optional",
+      "value": {
+        "properties": [],
+        "annotations": [],
         "position": {
-          "index": 76,
-          "line": 8,
-          "col": 21
-        },
-        "value": null
-      },
-      {
-        "name": "null",
-        "position": {
-          "index": 90,
-          "line": 9,
-          "col": 6
-        },
-        "value": null
-      },
-      {
-        "name": "bool",
-        "position": {
-          "index": 129,
-          "line": 10,
-          "col": 6
-        },
-        "value": true
-      },
-      {
-        "name": "float",
-        "position": {
-          "index": 145,
-          "line": 11,
-          "col": 6
-        },
-        "value": 3.14
-      },
-      {
-        "name": "number",
-        "position": {
-          "index": 162,
-          "line": 12,
-          "col": 6
-        },
-        "value": -3
-      },
-      {
-        "name": "string",
-        "position": {
-          "index": 178,
-          "line": 13,
-          "col": 6
-        },
-        "value": "abc \"def\" ghi"
-      },
-      {
-        "name": "array",
-        "position": {
-          "index": 207,
-          "line": 14,
-          "col": 6
-        },
-        "value": [
-          3,
-          4
-        ]
-      },
-      {
-        "name": "object",
-        "position": {
-          "index": 225,
-          "line": 15,
-          "col": 6
-        },
-        "value": {
-          "k": "v"
+          "index": 978,
+          "line": 44,
+          "col": 18
         }
       }
-    ],
-    "position": {
-      "index": 54,
-      "line": 7,
-      "col": 1
+    },
+    {
+      "key": "objectEmptyMultiLine",
+      "position": {
+        "index": 986,
+        "line": 45,
+        "col": 5
+      },
+      "value": {
+        "properties": [],
+        "annotations": [
+          {
+            "name": "object",
+            "position": {
+              "index": 1011,
+              "line": 45,
+              "col": 30
+            },
+            "value": null
+          }
+        ],
+        "position": {
+          "index": 1008,
+          "line": 45,
+          "col": 27
+        }
+      }
+    },
+    {
+      "key": "objectEmptyWithAnnotation",
+      "position": {
+        "index": 1029,
+        "line": 47,
+        "col": 5
+      },
+      "value": {
+        "properties": [],
+        "annotations": [
+          {
+            "name": "use",
+            "position": {
+              "index": 1061,
+              "line": 47,
+              "col": 37
+            },
+            "value": "Object4"
+          }
+        ],
+        "position": {
+          "index": 1056,
+          "line": 47,
+          "col": 32
+        }
+      }
+    },
+    {
+      "key": "objectSimple",
+      "position": {
+        "index": 1080,
+        "line": 48,
+        "col": 5
+      },
+      "value": {
+        "properties": [
+          {
+            "key": "k1",
+            "position": {
+              "index": 1121,
+              "line": 49,
+              "col": 9
+            },
+            "value": {
+              "value": "v1",
+              "annotations": [
+                {
+                  "name": "upper",
+                  "position": {
+                    "index": 1132,
+                    "line": 49,
+                    "col": 20
+                  },
+                  "value": null
+                }
+              ],
+              "position": {
+                "index": 1125,
+                "line": 49,
+                "col": 13
+              }
+            }
+          },
+          {
+            "key": "k2",
+            "position": {
+              "index": 1146,
+              "line": 50,
+              "col": 9
+            },
+            "value": {
+              "value": "v2",
+              "annotations": [],
+              "position": {
+                "index": 1150,
+                "line": 50,
+                "col": 13
+              }
+            }
+          }
+        ],
+        "annotations": [
+          {
+            "name": "save",
+            "position": {
+              "index": 1097,
+              "line": 48,
+              "col": 22
+            },
+            "value": "Object4"
+          }
+        ],
+        "position": {
+          "index": 1094,
+          "line": 48,
+          "col": 19
+        }
+      }
+    },
+    {
+      "key": "objectOneLine",
+      "position": {
+        "index": 1167,
+        "line": 52,
+        "col": 5
+      },
+      "value": {
+        "properties": [
+          {
+            "key": "k1",
+            "position": {
+              "index": 1184,
+              "line": 52,
+              "col": 22
+            },
+            "value": {
+              "value": "v1",
+              "annotations": [],
+              "position": {
+                "index": 1188,
+                "line": 52,
+                "col": 26
+              }
+            }
+          },
+          {
+            "key": "k2",
+            "position": {
+              "index": 1194,
+              "line": 52,
+              "col": 32
+            },
+            "value": {
+              "value": "v2",
+              "annotations": [],
+              "position": {
+                "index": 1198,
+                "line": 52,
+                "col": 36
+              }
+            }
+          }
+        ],
+        "annotations": [
+          {
+            "name": "object",
+            "position": {
+              "index": 1207,
+              "line": 52,
+              "col": 45
+            },
+            "value": null
+          }
+        ],
+        "position": {
+          "index": 1182,
+          "line": 52,
+          "col": 20
+        }
+      }
+    },
+    {
+      "key": "objectExtraComma",
+      "position": {
+        "index": 1218,
+        "line": 53,
+        "col": 5
+      },
+      "value": {
+        "properties": [
+          {
+            "key": "k1",
+            "position": {
+              "index": 1238,
+              "line": 53,
+              "col": 25
+            },
+            "value": {
+              "value": "v1",
+              "annotations": [],
+              "position": {
+                "index": 1242,
+                "line": 53,
+                "col": 29
+              }
+            }
+          },
+          {
+            "key": "k2",
+            "position": {
+              "index": 1248,
+              "line": 53,
+              "col": 35
+            },
+            "value": {
+              "value": "v2",
+              "annotations": [],
+              "position": {
+                "index": 1252,
+                "line": 53,
+                "col": 39
+              }
+            }
+          }
+        ],
+        "annotations": [],
+        "position": {
+          "index": 1236,
+          "line": 53,
+          "col": 23
+        }
+      }
     }
+  ],
+  "annotations": [
+    {
+      "name": "foo",
+      "position": {
+        "index": 61,
+        "line": 8,
+        "col": 6
+      },
+      "value": null
+    },
+    {
+      "name": "optional",
+      "position": {
+        "index": 76,
+        "line": 8,
+        "col": 21
+      },
+      "value": null
+    },
+    {
+      "name": "null",
+      "position": {
+        "index": 90,
+        "line": 9,
+        "col": 6
+      },
+      "value": null
+    },
+    {
+      "name": "bool",
+      "position": {
+        "index": 129,
+        "line": 10,
+        "col": 6
+      },
+      "value": true
+    },
+    {
+      "name": "float",
+      "position": {
+        "index": 145,
+        "line": 11,
+        "col": 6
+      },
+      "value": 3.14
+    },
+    {
+      "name": "number",
+      "position": {
+        "index": 162,
+        "line": 12,
+        "col": 6
+      },
+      "value": -3
+    },
+    {
+      "name": "string",
+      "position": {
+        "index": 178,
+        "line": 13,
+        "col": 6
+      },
+      "value": "abc \"def\" ghi"
+    },
+    {
+      "name": "array",
+      "position": {
+        "index": 207,
+        "line": 14,
+        "col": 6
+      },
+      "value": [
+        3,
+        4
+      ]
+    },
+    {
+      "name": "object",
+      "position": {
+        "index": 225,
+        "line": 15,
+        "col": 6
+      },
+      "value": {
+        "k": "v"
+      }
+    }
+  ],
+  "position": {
+    "index": 54,
+    "line": 7,
+    "col": 1
   }
 }

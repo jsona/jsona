@@ -32,12 +32,16 @@ impl Loader {
         } else {
             let parent = self.value_stack.last_mut().unwrap();
             match *parent {
-                Ast::Array(Array { ref mut value, .. }) => value.push(node),
-                Ast::Object(Object { ref mut value, .. }) => {
+                Ast::Array(Array {
+                    ref mut elements, ..
+                }) => elements.push(node),
+                Ast::Object(Object {
+                    ref mut properties, ..
+                }) => {
                     let cur_key = self.key_stack.pop().unwrap();
                     let new_key = match cur_key {
                         Some((position, key)) => {
-                            value.push(Property {
+                            properties.push(Property {
                                 key,
                                 position,
                                 value: node,
@@ -92,17 +96,21 @@ impl Loader {
     fn insert_annotation_value(&mut self, anno: Annotation) {
         let parent = self.value_stack.last_mut().unwrap();
         match *parent {
-            Ast::Array(Array { ref mut value, .. }) => {
-                if value.len() > 0 {
-                    let last_elem = value.last_mut().unwrap();
+            Ast::Array(Array {
+                ref mut elements, ..
+            }) => {
+                if elements.len() > 0 {
+                    let last_elem = elements.last_mut().unwrap();
                     last_elem.get_annotations_mut().push(anno)
                 } else {
                     parent.get_annotations_mut().push(anno);
                 }
             }
-            Ast::Object(Object { ref mut value, .. }) => {
-                if value.len() > 0 {
-                    let last_prop = value.last_mut().unwrap();
+            Ast::Object(Object {
+                ref mut properties, ..
+            }) => {
+                if properties.len() > 0 {
+                    let last_prop = properties.last_mut().unwrap();
                     last_prop.value.get_annotations_mut().push(anno)
                 } else {
                     parent.get_annotations_mut().push(anno);
@@ -131,7 +139,7 @@ impl EventReceiver for Loader {
             Event::ArrayStart => {
                 if self.annotation_name.is_none() {
                     self.value_stack.push(Ast::Array(Array {
-                        value: Vec::new(),
+                        elements: Vec::new(),
                         annotations: Vec::new(),
                         position,
                     }));
@@ -152,7 +160,7 @@ impl EventReceiver for Loader {
                 if self.annotation_name.is_none() {
                     self.key_stack.push(None);
                     self.value_stack.push(Ast::Object(Object {
-                        value: Vec::new(),
+                        properties: Vec::new(),
                         annotations: Vec::new(),
                         position,
                     }));
@@ -217,7 +225,7 @@ impl EventReceiver for Loader {
                     });
                     self.insert_ast_node(node);
                 } else {
-                    self.insert_annotation_node(Value::Bool(value));
+                    self.insert_annotation_node(Value::Boolean(value));
                 }
             }
             Event::String(value) => {

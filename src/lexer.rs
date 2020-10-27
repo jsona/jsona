@@ -116,7 +116,7 @@ impl Display for TokenKind {
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Eq)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
 pub struct Position {
     pub index: usize,
     pub line: usize,

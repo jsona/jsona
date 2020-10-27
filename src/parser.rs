@@ -6,7 +6,7 @@ use crate::lexer::{Lexer, Position, Token, TokenKind};
 
 /// `ParseError` is an enum which represents errors encounted during parsing an expression
 #[derive(Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
 pub struct ParseError {
     info: String,
     position: Option<Position>,
