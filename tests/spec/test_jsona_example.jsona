@@ -1,53 +1,54 @@
+/*
+ multiple line comment
+*/
+
+// single line comment
 
 {
-  
-@demo
-@simple
-@complete(k1 = "a", k2 = null, k3 = 3.14, k4 = true, k5 = 4)
+    @foo /* abc */ @optional
+    @null(null) // single line comment
+    @bool(true)
+    @float(3.14)
+    @number(-3)
+    @string('abc "def" ghi')
+    @array([3,4])
+    @object({k: "v"})
 
-    null1: null,
-    bool1: true,
-    bool2: false,
-    float1: 3.14,
-    float2: -3.14,
-    float3: -.14,
-    float4: -3.,
-    number1: 3,
-    number2: 0x1a,
-    number3: 0b01,
-    number4: 0o12,
-    number5: -3,
-    string1: 'abc "def" ghi',
-    string2: "abc 'def' ghi",
-    string3: 'abc "def" \
+    nullValue: null,
+    boolTrue: true,
+    boolFale: false,
+    float: 3.14,
+    floatNegative: -3.14,
+    floatNegativeWithoutInteger: -.14,
+    floatNegativeWithoutDecimal: -3.,
+    integer: 3,
+    hex: 0x1a,
+    binary: 0b01,
+    otcal: 0o12,
+    integerNegative: -3,
+    stringSingleQuota: 'abc "def" ghi',
+    stringDoubleQuota: "abc 'def' ghi",
+    stringMultipleLine: 'abc "def" \
 ghi \\n mij',
-    string4: '\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029',
-    array1: [], 
-    array2: [ @array
+    stringEscaple: '\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029',
+    arrayEmpty: [], 
+    arrayEmptyMultiLine: [ @array
     ],
-    array3: [ @array
+    arrayEmptyWithAnnotation: [],  // @array
+    arraySimple: [ @array
         "a", @upper
         "b",
     ],
-    array4: [
-        "a", @upper
-        "b"
-    ],
-    array5: ["a", "b"], @array
-    array6: ["a", "b",],
-    object1: {}, @use(Object4)
-    object2: { @object
+    arrayOneline: ["a", "b"], @array
+    arrayExtraComma: ["a", "b",],
+    objectEmpty: {},
+    objectEmptyMultiLine: { @object
     },
-    object3: { @object
+    objectEmptyWithAnnotation: {}, @use("Object4")
+    objectSimple: { @save("Object4")
         k1: "v1", @upper
         k2: "v2",
     },
-    object4: { @save(Object4)
-        k1: "v1",
-        k2: "v2"
-    },
-    object5: { k1: "v1", k2: "v2" }, @object
-    object6: { k1: "v1", k2: "v2", },
-    annotations1: null, @a1 @a2(k1 = "v1")
-                        @a3(k1 = true)
+    objectOneLine: { k1: "v1", k2: "v2" }, @object
+    objectExtraComma: { k1: "v1", k2: "v2", },
 }

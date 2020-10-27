@@ -8,9 +8,10 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1", features = ["derive"], optional=true }
+indexmap = { version = "1.6"}
 
 [features]
-serde-support = ["serde"]
+serde-support = ["serde", "indexmap/serde-1"]
 
 [dev-dependencies]
 serde_json = "1"

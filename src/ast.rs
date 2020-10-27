@@ -1,3 +1,5 @@
+use indexmap::IndexMap;
+
 use crate::lexer::Position;
 #[cfg(feature = "serde-support")]
 use serde::{Deserialize, Serialize};
@@ -18,7 +20,7 @@ pub enum Ast {
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Null {
-    pub annotations: Vec<Anno>,
+    pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
@@ -26,7 +28,7 @@ pub struct Null {
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Boolean {
     pub value: bool,
-    pub annotations: Vec<Anno>,
+    pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
@@ -34,7 +36,7 @@ pub struct Boolean {
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Integer {
     pub value: i64,
-    pub annotations: Vec<Anno>,
+    pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
@@ -42,7 +44,7 @@ pub struct Integer {
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Float {
     pub value: f64,
-    pub annotations: Vec<Anno>,
+    pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
@@ -50,7 +52,7 @@ pub struct Float {
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct AstString {
     pub value: String,
-    pub annotations: Vec<Anno>,
+    pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
@@ -58,7 +60,7 @@ pub struct AstString {
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Array {
     pub elements: Vec<Ast>,
-    pub annotations: Vec<Anno>,
+    pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
@@ -66,7 +68,7 @@ pub struct Array {
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct Object {
     pub properties: Vec<Property>,
-    pub annotations: Vec<Anno>,
+    pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
@@ -80,39 +82,27 @@ pub struct Property {
 
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
-pub struct Anno {
+pub struct Annotation {
     pub name: String,
     pub position: Position,
-    pub fields: Vec<AnnoField>,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
-pub struct AnnoField {
-    pub key: AnnoFieldKey,
-    pub value: AnnoFieldValue,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
-pub struct AnnoFieldKey {
-    pub value: String,
-    pub position: Position,
+    pub value: Option<AnnotationValue>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-support", serde(tag = "type", content = "value"))]
-pub enum AnnoFieldValue {
+pub enum AnnotationValue {
     Null,
     Bool(bool),
     Float(f64),
     Integer(i64),
     String(String),
+    Array(Vec<AnnotationValue>),
+    Object(IndexMap<String, AnnotationValue>),
 }
 
 impl Ast {
-    pub fn get_annotations_mut(&mut self) -> &mut Vec<Anno> {
+    pub fn get_annotations_mut(&mut self) -> &mut Vec<Annotation> {
         match self {
             Ast::Null(Null { annotations, .. }) => annotations,
             Ast::Boolean(Boolean { annotations, .. }) => annotations,

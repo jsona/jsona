@@ -1,3 +1,5 @@
+use indexmap::IndexMap;
+
 use crate::ast::*;
 use crate::lexer::Position;
 use crate::parser::{Event, EventReceiver, ParseResult, Parser};
@@ -5,6 +7,9 @@ use crate::parser::{Event, EventReceiver, ParseResult, Parser};
 pub struct Loader {
     value_stack: Vec<Ast>,
     key_stack: Vec<Option<(Position, String)>>,
+    annotation_name: Option<(Position, String)>,
+    annotation_value_stack: Vec<AnnotationValue>,
+    annotation_key_stack: Vec<Option<String>>,
 }
 
 impl Loader {
@@ -12,12 +17,15 @@ impl Loader {
         let mut loader = Loader {
             value_stack: Vec::new(),
             key_stack: Vec::new(),
+            annotation_name: None,
+            annotation_value_stack: Vec::new(),
+            annotation_key_stack: Vec::new(),
         };
         let mut parser = Parser::new(input.chars());
         parser.parse(&mut loader)?;
         Ok(loader.value_stack.pop().unwrap())
     }
-    fn insert_new_node(&mut self, node: Ast) {
+    fn insert_ast_node(&mut self, node: Ast) {
         if self.value_stack.is_empty() {
             self.value_stack.push(node);
         } else {
@@ -56,7 +64,36 @@ impl Loader {
             }
         }
     }
-    fn insert_annotations(&mut self, annos: Vec<Anno>) {
+    fn insert_annotation_node(&mut self, node: AnnotationValue) {
+      if self.annotation_value_stack.is_empty() {
+            self.annotation_value_stack.push(node);
+        } else {
+            let parent = self.annotation_value_stack.last_mut().unwrap();
+            match *parent {
+                AnnotationValue::Array(ref mut elements) => elements.push(node),
+                AnnotationValue::Object(ref mut properties) => {
+                    let cur_key = self.annotation_key_stack.pop().unwrap();
+                    let new_key = match cur_key {
+                        Some(key) => {
+                            properties.insert(key, node);
+                            None
+                        }
+                        None => {
+                            if let AnnotationValue::String(value) = node
+                            {
+                                Some(value)
+                            } else {
+                                unreachable!()
+                            }
+                        }
+                    };
+                    self.annotation_key_stack.push(new_key);
+                }
+                _ => unreachable!(),
+            }
+        }
+    }
+    fn insert_annotation_value(&mut self, anno: Annotation) {
         let parent = self.value_stack.last_mut().unwrap();
         match *parent {
             Ast::Array(Array {
@@ -64,9 +101,9 @@ impl Loader {
             }) => {
                 if elements.len() > 0 {
                     let last_elem = elements.last_mut().unwrap();
-                    append_annos(last_elem.get_annotations_mut(), annos)
+                    last_elem.get_annotations_mut().push(anno)
                 } else {
-                    append_annos(parent.get_annotations_mut(), annos);
+                    parent.get_annotations_mut().push(anno);
                 }
             }
             Ast::Object(Object {
@@ -74,12 +111,12 @@ impl Loader {
             }) => {
                 if properties.len() > 0 {
                     let last_prop = properties.last_mut().unwrap();
-                    append_annos(last_prop.value.get_annotations_mut(), annos)
+                    last_prop.value.get_annotations_mut().push(anno)
                 } else {
-                    append_annos(parent.get_annotations_mut(), annos);
+                    parent.get_annotations_mut().push(anno);
                 }
             }
-            _ => append_annos(parent.get_annotations_mut(), annos),
+            _ => parent.get_annotations_mut().push(anno),
         }
     }
 }
@@ -87,78 +124,117 @@ impl Loader {
 impl EventReceiver for Loader {
     fn on_event(&mut self, event: Event, position: Position) {
         match event {
+            Event::AnnotationStart(value) => {
+                self.annotation_name = Some((position, value));
+            },
+            Event::AnnotationEnd => {
+                let (position, name) = self.annotation_name.take().unwrap();
+                let value = self.annotation_value_stack.pop();
+                self.insert_annotation_value(Annotation { name, position, value });
+            },
             Event::ArrayStart => {
-                self.value_stack.push(Ast::Array(Array {
-                    elements: Vec::new(),
-                    annotations: Vec::new(),
-                    position,
-                }));
+                if self.annotation_name.is_none() {
+                    self.value_stack.push(Ast::Array(Array {
+                        elements: Vec::new(),
+                        annotations: Vec::new(),
+                        position,
+                    }));
+                } else {
+                    self.annotation_value_stack.push(AnnotationValue::Array(Vec::new()));
+                }
             }
             Event::ArrayStop => {
-                let node = self.value_stack.pop().unwrap();
-                self.insert_new_node(node);
+                if self.annotation_name.is_none() {
+                    let node = self.value_stack.pop().unwrap();
+                    self.insert_ast_node(node);
+                } else {
+                    let node = self.annotation_value_stack.pop().unwrap();
+                    self.insert_annotation_node(node);
+                }
             }
             Event::ObjectStart => {
-                self.key_stack.push(None);
-                self.value_stack.push(Ast::Object(Object {
-                    properties: Vec::new(),
-                    annotations: Vec::new(),
-                    position,
-                }));
+                if self.annotation_name.is_none() {
+                    self.key_stack.push(None);
+                    self.value_stack.push(Ast::Object(Object {
+                        properties: Vec::new(),
+                        annotations: Vec::new(),
+                        position,
+                    }));
+                } else {
+                    self.annotation_key_stack.push(None);
+                    self.annotation_value_stack.push(AnnotationValue::Object(IndexMap::new()));
+                }
             }
             Event::ObjectStop => {
-                self.key_stack.pop().unwrap();
-                let node = self.value_stack.pop().unwrap();
-                self.insert_new_node(node);
+                if self.annotation_name.is_none() {
+                    self.key_stack.pop().unwrap();
+                    let node = self.value_stack.pop().unwrap();
+                    self.insert_ast_node(node);
+                } else {
+                    self.annotation_key_stack.pop().unwrap();
+                    let node = self.annotation_value_stack.pop().unwrap();
+                    self.insert_annotation_node(node);
+                }
             }
             Event::Null => {
-                let node = Ast::Null(Null {
-                    annotations: Vec::new(),
-                    position,
-                });
-                self.insert_new_node(node);
+                if self.annotation_name.is_none() {
+                    let node = Ast::Null(Null {
+                        annotations: Vec::new(),
+                        position,
+                    });
+                    self.insert_ast_node(node);
+                } else {
+                    self.insert_annotation_node(AnnotationValue::Null);
+                }
             }
             Event::Float(value) => {
-                let node = Ast::Float(Float {
-                    value,
-                    annotations: Vec::new(),
-                    position,
-                });
-                self.insert_new_node(node);
+                if self.annotation_name.is_none() {
+                    let node = Ast::Float(Float {
+                        value,
+                        annotations: Vec::new(),
+                        position,
+                    });
+                    self.insert_ast_node(node);
+                } else {
+                    self.insert_annotation_node(AnnotationValue::Float(value));
+                }
             }
             Event::Integer(value) => {
-                let node = Ast::Integer(Integer {
-                    value,
-                    annotations: Vec::new(),
-                    position,
-                });
-                self.insert_new_node(node);
+                if self.annotation_name.is_none() {
+                    let node = Ast::Integer(Integer {
+                        value,
+                        annotations: Vec::new(),
+                        position,
+                    });
+                    self.insert_ast_node(node);
+                } else {
+                    self.insert_annotation_node(AnnotationValue::Integer(value));
+                }
             }
             Event::Boolean(value) => {
-                let node = Ast::Boolean(Boolean {
-                    value,
-                    annotations: Vec::new(),
-                    position,
-                });
-                self.insert_new_node(node);
+                if self.annotation_name.is_none() {
+                    let node = Ast::Boolean(Boolean {
+                        value,
+                        annotations: Vec::new(),
+                        position,
+                    });
+                    self.insert_ast_node(node);
+                } else {
+                    self.insert_annotation_node(AnnotationValue::Bool(value));
+                }
             }
             Event::String(value) => {
-                let node = Ast::String(AstString {
-                    value,
-                    annotations: Vec::new(),
-                    position,
-                });
-                self.insert_new_node(node);
-            }
-            Event::Annotations(annotations) => {
-                self.insert_annotations(annotations);
+                if self.annotation_name.is_none() {
+                    let node = Ast::String(AstString {
+                        value,
+                        annotations: Vec::new(),
+                        position,
+                    });
+                    self.insert_ast_node(node);
+                } else {
+                    self.insert_annotation_node(AnnotationValue::String(value));
+                }
             }
         }
-    }
-}
-
-fn append_annos(target: &mut Vec<Anno>, annos: Vec<Anno>) {
-    for anno in annos {
-        target.push(anno);
     }
 }
