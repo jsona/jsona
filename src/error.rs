@@ -3,7 +3,6 @@ use crate::lexer::{Token, TokenKind};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// `ParseError` is an enum which represents errors encounted during parsing an expression
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Error {
     pub info: String,

@@ -4,6 +4,9 @@ pub mod lexer;
 pub mod loader;
 pub mod parser;
 
-pub use crate::ast::{Annotation, Ast};
+#[doc(inline)]
+pub use crate::ast::{Annotation, Ast, Null, Boolean, Integer, Float, String, Object, Array, Position};
+#[doc(inline)]
 pub use crate::error::Error;
+#[doc(inline)]
 pub use crate::loader::Loader;
