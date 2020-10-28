@@ -109,6 +109,17 @@ pub fn $name(&self) -> bool {
     );
 );
 
+macro_rules! define_as_ref (
+    ($name:ident, $t:ty, $yt:ident) => (
+pub fn $name(&self) -> Option<$t> {
+    match self {
+        Ast::$yt(ref v) => Some(v),
+        _ => None
+    }
+}
+    );
+);
+
 impl Ast {
     define_is!(is_null, Null);
     define_is!(is_boolean, Boolean);
@@ -117,6 +128,13 @@ impl Ast {
     define_is!(is_string, String);
     define_is!(is_array, Array);
     define_is!(is_object, Object);
+
+    define_as_ref!(as_boolean, &Boolean, Boolean);
+    define_as_ref!(as_integer, &Integer, Integer);
+    define_as_ref!(as_float, &Float, Float);
+    define_as_ref!(as_string, &String, String);
+    define_as_ref!(as_array, &Array, Array);
+    define_as_ref!(as_object, &Object, Object);
 
     pub fn key(&self, key: &str) -> Option<&Self> {
         match self {
