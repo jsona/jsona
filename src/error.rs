@@ -6,11 +6,14 @@ use std::fmt;
 /// `ParseError` is an enum which represents errors encounted during parsing an expression
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Error {
-    info: String,
-    position: Option<Position>,
+    pub info: String,
+    pub position: Option<Position>,
 }
 
 impl Error {
+    pub fn new(info: String, position: Option<Position>) -> Self {
+        Self { info, position }
+    }
     pub fn expect(expect_toks: &[TokenKind], tok: Token, context: String) -> Self {
         let info = format!(
             "expected {}, got '{}' in {}",
@@ -48,22 +51,16 @@ impl Error {
     }
     pub fn unexpect(tok: Token, context: Option<String>) -> Self {
         let info = match context {
-            Some(ctx) => format!("unexpected token '{}' {}", tok, ctx),
+            Some(ctx) => format!("unexpected token '{}' in {}", tok, ctx),
             None => format!("unexpected token '{}'", tok,),
         };
         Self::new(info, Some(tok.position))
-    }
-    pub fn new(info: String, position: Option<Position>) -> Self {
-        Self { info, position }
     }
     pub fn abort() -> Self {
         Self {
             info: String::from("abort end"),
             position: None,
         }
-    }
-    pub fn position(&self) -> &Option<Position> {
-        &self.position
     }
 }
 

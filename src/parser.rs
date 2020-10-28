@@ -241,6 +241,9 @@ impl<T: Iterator<Item = char>> Parser<T> {
     fn parse_annotaions<R: EventReceiver>(&mut self, recv: &mut R) -> ParseResult<()> {
         let tok = self.peek_token()?;
         if let TokenKind::At = tok.kind {
+            if self.annotation_scope {
+                return Err(Error::unexpect(tok, Some("in annotation value".into())));
+            }
             self.next_token()?;
             let tok2 = self.peek_token()?;
             if let TokenKind::Identifier(key) = tok2.kind {
