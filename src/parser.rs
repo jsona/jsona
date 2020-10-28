@@ -1,6 +1,7 @@
 use crate::error::Error;
 
-use crate::lexer::{Lexer, Position, Token, TokenKind};
+use crate::ast::Position;
+use crate::lexer::{Lexer, Token, TokenKind};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Event {

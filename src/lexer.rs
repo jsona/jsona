@@ -1,8 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-#[cfg(feature = "serde-support")]
-use serde::{Deserialize, Serialize};
+use crate::ast::Position;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
@@ -112,29 +111,6 @@ impl Display for TokenKind {
             TokenKind::LexError(err) => write!(f, "{}", err),
             TokenKind::Eof => write!(f, "end of file"),
         }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Debug, Eq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
-pub struct Position {
-    pub index: usize,
-    pub line: usize,
-    pub col: usize,
-}
-impl Default for Position {
-    fn default() -> Self {
-        Self {
-            index: 0,
-            line: 1,
-            col: 1,
-        }
-    }
-}
-
-impl Position {
-    pub fn new(index: usize, line: usize, col: usize) -> Self {
-        Position { index, line, col }
     }
 }
 

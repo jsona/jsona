@@ -1,13 +1,9 @@
-use indexmap::IndexMap;
-
-use crate::lexer::Position;
-#[cfg(feature = "serde-support")]
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::string;
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
-#[cfg_attr(feature = "serde-support", serde(untagged))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum Ast {
     Null(Null),
     Boolean(Boolean),
@@ -18,88 +14,88 @@ pub enum Ast {
     Object(Object),
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Null {
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Boolean {
     pub value: bool,
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Integer {
     pub value: i64,
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Float {
     pub value: f64,
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct String {
     pub value: string::String,
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Array {
     pub elements: Vec<Ast>,
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Object {
     pub properties: Vec<Property>,
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Property {
     pub key: string::String,
     pub position: Position,
     pub value: Ast,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct Annotation {
     pub name: string::String,
     pub position: Position,
     pub value: Value,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
-#[cfg_attr(feature = "serde-support", serde(untagged))]
-pub enum Value {
-    Null,
-    Boolean(bool),
-    Float(f64),
-    Integer(i64),
-    String(string::String),
-    Array(Vec<Value>),
-    Object(IndexMap<string::String, Value>),
+#[derive(Clone, Copy, PartialEq, Debug, Eq, Deserialize, Serialize)]
+pub struct Position {
+    pub index: usize,
+    pub line: usize,
+    pub col: usize,
+}
+impl Default for Position {
+    fn default() -> Self {
+        Self {
+            index: 0,
+            line: 1,
+            col: 1,
+        }
+    }
+}
+
+impl Position {
+    pub fn new(index: usize, line: usize, col: usize) -> Self {
+        Position { index, line, col }
+    }
 }
 
 macro_rules! define_is (
@@ -154,7 +150,6 @@ impl Ast {
             Ast::Array(Array { position, .. }) => position,
             Ast::Object(Object { position, .. }) => position,
         }
-
     }
     pub fn get_annotations(&self) -> &Vec<Annotation> {
         match self {
@@ -184,10 +179,10 @@ impl From<Ast> for Value {
     fn from(node: Ast) -> Self {
         match node {
             Ast::Null(..) => Value::Null,
-            Ast::Boolean(Boolean { value, .. }) => Value::Boolean(value),
-            Ast::Integer(Integer { value, .. }) => Value::Integer(value),
-            Ast::Float(Float { value, .. }) => Value::Float(value),
-            Ast::String(String { value, .. }) => Value::String(value),
+            Ast::Boolean(Boolean { value, .. }) => value.into(),
+            Ast::Integer(Integer { value, .. }) => value.into(),
+            Ast::Float(Float { value, .. }) => value.into(),
+            Ast::String(String { value, .. }) => value.into(),
             Ast::Array(Array {
                 elements: value, ..
             }) => Value::Array(value.into_iter().map(|v| v.into()).collect()),
@@ -197,70 +192,8 @@ impl From<Ast> for Value {
                 value
                     .into_iter()
                     .map(|v| (v.key, v.value.into()))
-                    .collect::<IndexMap<string::String, Value>>(),
+                    .collect::<Map<string::String, Value>>(),
             ),
         }
-    }
-}
-
-macro_rules! define_value_is (
-    ($name:ident, $yt:ident) => (
-pub fn $name(&self) -> bool {
-    match self {
-        Value::$yt(..) => true,
-        _ => false
-    }
-}
-    );
-);
-
-macro_rules! define_value_as_ref (
-    ($name:ident, $t:ty, $yt:ident) => (
-pub fn $name(&self) -> Option<$t> {
-    match *self {
-        Value::$yt(ref v) => Some(v),
-        _ => None
-    }
-}
-    );
-);
-
-impl Value {
-    pub fn is_null(&self) -> bool {
-        match self {
-            Value::Null => true,
-            _ => false,
-        }
-    }
-    define_value_is!(is_boolean, Boolean);
-    define_value_is!(is_integer, Integer);
-    define_value_is!(is_float, Float);
-    define_value_is!(is_string, String);
-    define_value_is!(is_array, Array);
-    define_value_is!(is_object, Object);
-
-    define_value_as_ref!(as_boolean, &bool, Boolean);
-    define_value_as_ref!(as_integer, &i64, Integer);
-    define_value_as_ref!(as_float, &f64, Float);
-    define_value_as_ref!(as_string, &str, String);
-    define_value_as_ref!(as_array, &Vec<Value>, Array);
-    define_value_as_ref!(as_object, &IndexMap<string::String, Value>, Object);
-
-    pub fn key(&self, key: &str) -> Option<&Self> {
-        match self {
-            Value::Object(value) => value.get(key),
-            Value::Array(value) => {
-                if let Ok(idx) = key.parse::<usize>() {
-                    value.get(idx)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-    pub fn retrive(&self, path: &[&str]) -> Option<&Self> {
-        path.iter()
-            .fold(Some(self), |v, &b| v.and_then(|v| v.key(b)))
     }
 }

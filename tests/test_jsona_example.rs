@@ -1,7 +1,6 @@
-use jsona::lexer::{Lexer, Position};
+use jsona::lexer::Lexer;
 use jsona::parser::{Event, EventReceiver, Parser};
-
-#[cfg(feature = "serde-support")]
+use jsona::ast::Position;
 use jsona::loader::Loader;
 
 const INPUT: &str = include_str!("spec/test_jsona_example.jsona");
@@ -53,13 +52,12 @@ fn test_parse() {
 }
 
 #[test]
-#[cfg(feature = "serde-support")]
 fn test_json() {
     let expect = include_str!("spec/test_jsona_example_value.json");
 
     let result = Loader::load_from_str(INPUT).unwrap();
     let target = serde_json::to_string_pretty(&result).unwrap();
 
-    // println!("{}", target);
+    println!("{}", target);
     assert_eq!(expect, target)
 }

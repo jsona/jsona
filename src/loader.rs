@@ -1,8 +1,7 @@
-use indexmap::IndexMap;
+use serde_json::{Map, Value};
 use std::string;
 
 use crate::ast::*;
-use crate::lexer::Position;
 use crate::parser::{Event, EventReceiver, ParseResult, Parser};
 
 pub struct Loader {
@@ -166,8 +165,7 @@ impl EventReceiver for Loader {
                     }));
                 } else {
                     self.annotation_key_stack.push(None);
-                    self.annotation_value_stack
-                        .push(Value::Object(IndexMap::new()));
+                    self.annotation_value_stack.push(Value::Object(Map::new()));
                 }
             }
             Event::ObjectStop => {
@@ -201,7 +199,7 @@ impl EventReceiver for Loader {
                     });
                     self.insert_ast_node(node);
                 } else {
-                    self.insert_annotation_node(Value::Float(value));
+                    self.insert_annotation_node(value.into());
                 }
             }
             Event::Integer(value) => {
@@ -213,7 +211,7 @@ impl EventReceiver for Loader {
                     });
                     self.insert_ast_node(node);
                 } else {
-                    self.insert_annotation_node(Value::Integer(value));
+                    self.insert_annotation_node(value.into());
                 }
             }
             Event::Boolean(value) => {
@@ -225,7 +223,7 @@ impl EventReceiver for Loader {
                     });
                     self.insert_ast_node(node);
                 } else {
-                    self.insert_annotation_node(Value::Boolean(value));
+                    self.insert_annotation_node(value.into());
                 }
             }
             Event::String(value) => {
@@ -237,7 +235,7 @@ impl EventReceiver for Loader {
                     });
                     self.insert_ast_node(node);
                 } else {
-                    self.insert_annotation_node(Value::String(value));
+                    self.insert_annotation_node(value.into());
                 }
             }
         }

@@ -1,11 +1,10 @@
-#[cfg(feature = "serde-support")]
+use crate::ast::Position;
+use crate::lexer::{Token, TokenKind};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::lexer::{Position, TokenKind, Token};
 
 /// `ParseError` is an enum which represents errors encounted during parsing an expression
-#[derive(Debug)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize, Serialize))]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Error {
     info: String,
     position: Option<Position>,
