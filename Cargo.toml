@@ -3,6 +3,18 @@ name = "jsona"
 version = "0.1.0"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2018"
+description = """
+JSONA - JSON with annotations
+
+The JSONA Data Interchange Format (JSONA) is a superset of JSON that supports annotations. It also aims to
+alleviate some of the limitations of JSON by expanding its syntax and 
+"""
+documentation = "https://github.com/sigoden/jsona"
+repository = "https://github.com/sigoden/jsona"
+keywords = ["jsona", "parser"]
+categories = ["encoding", "parser-implementations"]
+license = "MIT"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
