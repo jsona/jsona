@@ -1,6 +1,6 @@
 [package]
 name = "jsona"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2018"
 description = """

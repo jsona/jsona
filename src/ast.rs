@@ -193,6 +193,29 @@ impl Ast {
     }
 }
 
+impl From<&Ast> for Value {
+    fn from(node: &Ast) -> Self {
+        match node {
+            Ast::Null(..) => Value::Null,
+            Ast::Boolean(Boolean { value, .. }) => value.to_owned().into(),
+            Ast::Integer(Integer { value, .. }) => value.to_owned().into(),
+            Ast::Float(Float { value, .. }) => value.to_owned().into(),
+            Ast::String(String { value, .. }) => value.to_owned().into(),
+            Ast::Array(Array {
+                elements: value, ..
+            }) => Value::Array(value.into_iter().map(|v| v.into()).collect()),
+            Ast::Object(Object {
+                properties: value, ..
+            }) => Value::Object(
+                value
+                    .into_iter()
+                    .map(|v| (v.key.to_owned(), Value::from(&v.value)))
+                    .collect::<Map<string::String, Value>>(),
+            ),
+        }
+    }
+}
+
 impl From<Ast> for Value {
     fn from(node: Ast) -> Self {
         match node {
