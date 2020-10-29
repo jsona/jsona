@@ -6,6 +6,8 @@ alleviate some of the limitations of JSON by expanding its syntax and
 ## Summary of Features
 
 ### Annotations
+- Annotation add metadata to the data
+- Annotation synatx: `@name(jsonvalue)`
 
 ### Objects
 - Object keys may be an ECMAScript IdentifierName.
@@ -18,6 +20,7 @@ alleviate some of the limitations of JSON by expanding its syntax and
 - Strings may be single quoted.
 - Strings may span multiple lines by escaping new line characters.
 - Strings may include character escapes.
+- String may be backtick quoted.
 
 ### Numbers
 - Numbers may be hexadecimal.
@@ -29,21 +32,64 @@ alleviate some of the limitations of JSON by expanding its syntax and
 ### White Space
 - Additional white space characters are allowed.
 
-## Short Example
+## Example
 ```
-@doc // doc level annotation
-@swagger(version="2") // annotation with args
+/*
+ multiple line comment
+*/
+
+// single line comment
 
 {
-  // comments
-  unquoted: 'and you can quote me on that',
-  singleQuotes: 'I can use "double quotes" here',
-  lineBreaks: "Look, Mom! \
-No \\n's!",
-  hexadecimal: 0xdecaf, @optional
-  leadingDecimalPoint: .8675309, andTrailing: 8675309.,
-  positiveSign: 1,
-  trailingComma: 'in objects', andIn: ['arrays',],
-  "backwardsCompatible": "with JSON",
+    @foo /* abc */ @optional
+    @null(null) // single line comment
+    @bool(true)
+    @float(3.14)
+    @number(-3)
+    @string('abc "def" ghi')
+    @array([3,4])
+    @object({k: "v"})
+
+    nullValue: null,
+    boolTrue: true,
+    boolFale: false,
+    float: 3.14,
+    floatNegative: -3.14,
+    floatNegativeWithoutInteger: -.14,
+    floatNegativeWithoutDecimal: -3.,
+    integer: 3,
+    hex: 0x1a,
+    binary: 0b01,
+    otcal: 0o12,
+    integerNegative: -3,
+    stringSingleQuota: 'abc "def" ghi',
+    stringDoubleQuota: "abc 'def' ghi",
+    stringMultipleLine: 'abc "def" \
+ghi \\n mij',
+    stringBacktick: `abc
+def \`
+xyz`,
+    stringEscaple: '\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029',
+    arrayEmpty: [], 
+    arrayEmptyMultiLine: [ @array
+    ],
+    arrayEmptyWithAnnotation: [],  // @array
+    arraySimple: [ @array
+        "a", @upper
+        "b",
+    ],
+    arrayOneline: ["a", "b"], @array
+    arrayExtraComma: ["a", "b",],
+    objectEmpty: {},
+    objectEmptyMultiLine: { @object
+    },
+    objectEmptyWithAnnotation: {}, @use("Object4")
+    objectSimple: { @save("Object4")
+        k1: "v1", @upper
+        k2: "v2",
+    },
+    objectOneLine: { k1: "v1", k2: "v2" }, @object
+    objectExtraComma: { k1: "v1", k2: "v2", },
 }
+
 ```
