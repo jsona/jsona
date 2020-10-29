@@ -204,7 +204,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         return Err(Error::unexpect(tok, None));
                     }
                 }
-                TokenKind::Identifier(..) | TokenKind::StringLiteral(..) => {
+                TokenKind::Identifier(..) | TokenKind::StringLiteral(..) | TokenKind::IntegerLiteral(..) => {
                     let tok = self.next_token()?;
                     let key = tok.get_value().unwrap();
                     recv.on_event(Event::String(key), tok.position);
