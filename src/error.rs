@@ -6,11 +6,11 @@ use std::fmt;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Error {
     pub message: String,
-    pub position: Option<Position>,
+    pub position: Position,
 }
 
 impl Error {
-    pub fn new(message: String, position: Option<Position>) -> Self {
+    pub fn new(message: String, position: Position) -> Self {
         Self { message, position }
     }
     pub fn expect(expect_toks: &[TokenKind], tok: Token, context: String) -> Self {
@@ -46,32 +46,33 @@ impl Error {
             tok,
             context,
         );
-        Self::new(info, Some(tok.position))
+        Self::new(info, tok.position)
     }
     pub fn unexpect(tok: Token, context: Option<String>) -> Self {
         let info = match context {
             Some(ctx) => format!("unexpected token '{}' in {}", tok, ctx),
             None => format!("unexpected token '{}'", tok,),
         };
-        Self::new(info, Some(tok.position))
+        Self::new(info, tok.position)
     }
     pub fn abort() -> Self {
         Self {
-            message: String::from("abort end"),
-            position: None,
+            message: String::from("abort"),
+            position: Position::default(),
         }
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        match self.position {
-            Some(position) => write!(
+        if self.position.index == 0 {
+            write!(formatter, "{}", self.message,)
+        } else {
+            write!(
                 formatter,
                 "{} at line {} column {}",
-                self.message, position.line, position.col,
-            ),
-            None => write!(formatter, "{}", self.message,),
+                self.message, self.position.line, self.position.col,
+            )
         }
     }
 }

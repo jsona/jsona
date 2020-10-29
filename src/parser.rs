@@ -32,7 +32,7 @@ pub struct Parser<T> {
 
 fn sanitize_token(tok: Token) -> ParseResult<Token> {
     if let TokenKind::LexError(message) = tok.kind {
-        return Err(Error::new(message, Some(tok.position)));
+        return Err(Error::new(message, tok.position));
     }
     return Ok(tok);
 }
@@ -96,7 +96,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         _ => {
                             return Err(Error::new(
                                 format!("unexpect identifier \"{}\"", v),
-                                Some(tok.position),
+                                tok.position,
                             ))
                         }
                     }
