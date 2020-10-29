@@ -30,6 +30,9 @@
     stringDoubleQuota: "abc 'def' ghi",
     stringMultipleLine: 'abc "def" \
 ghi \\n mij',
+    stringBacktick: `abc
+def \`
+xyz`,
     stringEscaple: '\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029',
     arrayEmpty: [], 
     arrayEmptyMultiLine: [ @array

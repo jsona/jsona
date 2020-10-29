@@ -271,7 +271,7 @@
       }
     },
     {
-      "key": "stringEscaple",
+      "key": "stringBacktick",
       "position": {
         "index": 651,
         "line": 33,
@@ -279,11 +279,29 @@
       },
       "value": {
         "type": "String",
+        "value": "abc\ndef `\nxyz",
+        "annotations": [],
+        "position": {
+          "index": 667,
+          "line": 33,
+          "col": 21
+        }
+      }
+    },
+    {
+      "key": "stringEscaple",
+      "position": {
+        "index": 689,
+        "line": 36,
+        "col": 5
+      },
+      "value": {
+        "type": "String",
         "value": "\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029",
         "annotations": [],
         "position": {
-          "index": 666,
-          "line": 33,
+          "index": 704,
+          "line": 36,
           "col": 20
         }
       }
@@ -291,8 +309,8 @@
     {
       "key": "arrayEmpty",
       "position": {
-        "index": 721,
-        "line": 34,
+        "index": 759,
+        "line": 37,
         "col": 5
       },
       "value": {
@@ -300,8 +318,8 @@
         "elements": [],
         "annotations": [],
         "position": {
-          "index": 733,
-          "line": 34,
+          "index": 771,
+          "line": 37,
           "col": 17
         }
       }
@@ -309,8 +327,8 @@
     {
       "key": "arrayEmptyMultiLine",
       "position": {
-        "index": 742,
-        "line": 35,
+        "index": 780,
+        "line": 38,
         "col": 5
       },
       "value": {
@@ -320,16 +338,16 @@
           {
             "name": "array",
             "position": {
-              "index": 766,
-              "line": 35,
+              "index": 804,
+              "line": 38,
               "col": 29
             },
             "value": null
           }
         ],
         "position": {
-          "index": 763,
-          "line": 35,
+          "index": 801,
+          "line": 38,
           "col": 26
         }
       }
@@ -337,8 +355,8 @@
     {
       "key": "arrayEmptyWithAnnotation",
       "position": {
-        "index": 783,
-        "line": 37,
+        "index": 821,
+        "line": 40,
         "col": 5
       },
       "value": {
@@ -346,8 +364,8 @@
         "elements": [],
         "annotations": [],
         "position": {
-          "index": 809,
-          "line": 37,
+          "index": 847,
+          "line": 40,
           "col": 31
         }
       }
@@ -355,8 +373,8 @@
     {
       "key": "arraySimple",
       "position": {
-        "index": 828,
-        "line": 38,
+        "index": 866,
+        "line": 41,
         "col": 5
       },
       "value": {
@@ -369,16 +387,16 @@
               {
                 "name": "upper",
                 "position": {
-                  "index": 864,
-                  "line": 39,
+                  "index": 902,
+                  "line": 42,
                   "col": 15
                 },
                 "value": null
               }
             ],
             "position": {
-              "index": 858,
-              "line": 39,
+              "index": 896,
+              "line": 42,
               "col": 9
             }
           },
@@ -387,8 +405,8 @@
             "value": "b",
             "annotations": [],
             "position": {
-              "index": 878,
-              "line": 40,
+              "index": 916,
+              "line": 43,
               "col": 9
             }
           }
@@ -397,16 +415,16 @@
           {
             "name": "array",
             "position": {
-              "index": 844,
-              "line": 38,
+              "index": 882,
+              "line": 41,
               "col": 21
             },
             "value": null
           }
         ],
         "position": {
-          "index": 841,
-          "line": 38,
+          "index": 879,
+          "line": 41,
           "col": 18
         }
       }
@@ -414,8 +432,8 @@
     {
       "key": "arrayOneline",
       "position": {
-        "index": 894,
-        "line": 42,
+        "index": 932,
+        "line": 45,
         "col": 5
       },
       "value": {
@@ -426,8 +444,8 @@
             "value": "a",
             "annotations": [],
             "position": {
-              "index": 909,
-              "line": 42,
+              "index": 947,
+              "line": 45,
               "col": 20
             }
           },
@@ -436,8 +454,8 @@
             "value": "b",
             "annotations": [],
             "position": {
-              "index": 914,
-              "line": 42,
+              "index": 952,
+              "line": 45,
               "col": 25
             }
           }
@@ -446,16 +464,16 @@
           {
             "name": "array",
             "position": {
-              "index": 921,
-              "line": 42,
+              "index": 959,
+              "line": 45,
               "col": 32
             },
             "value": null
           }
         ],
         "position": {
-          "index": 908,
-          "line": 42,
+          "index": 946,
+          "line": 45,
           "col": 19
         }
       }
@@ -463,8 +481,8 @@
     {
       "key": "arrayExtraComma",
       "position": {
-        "index": 931,
-        "line": 43,
+        "index": 969,
+        "line": 46,
         "col": 5
       },
       "value": {
@@ -475,8 +493,8 @@
             "value": "a",
             "annotations": [],
             "position": {
-              "index": 949,
-              "line": 43,
+              "index": 987,
+              "line": 46,
               "col": 23
             }
           },
@@ -485,16 +503,16 @@
             "value": "b",
             "annotations": [],
             "position": {
-              "index": 954,
-              "line": 43,
+              "index": 992,
+              "line": 46,
               "col": 28
             }
           }
         ],
         "annotations": [],
         "position": {
-          "index": 948,
-          "line": 43,
+          "index": 986,
+          "line": 46,
           "col": 22
         }
       }
@@ -502,8 +520,8 @@
     {
       "key": "objectEmpty",
       "position": {
-        "index": 965,
-        "line": 44,
+        "index": 1003,
+        "line": 47,
         "col": 5
       },
       "value": {
@@ -511,8 +529,8 @@
         "properties": [],
         "annotations": [],
         "position": {
-          "index": 978,
-          "line": 44,
+          "index": 1016,
+          "line": 47,
           "col": 18
         }
       }
@@ -520,8 +538,8 @@
     {
       "key": "objectEmptyMultiLine",
       "position": {
-        "index": 986,
-        "line": 45,
+        "index": 1024,
+        "line": 48,
         "col": 5
       },
       "value": {
@@ -531,16 +549,16 @@
           {
             "name": "object",
             "position": {
-              "index": 1011,
-              "line": 45,
+              "index": 1049,
+              "line": 48,
               "col": 30
             },
             "value": null
           }
         ],
         "position": {
-          "index": 1008,
-          "line": 45,
+          "index": 1046,
+          "line": 48,
           "col": 27
         }
       }
@@ -548,8 +566,8 @@
     {
       "key": "objectEmptyWithAnnotation",
       "position": {
-        "index": 1029,
-        "line": 47,
+        "index": 1067,
+        "line": 50,
         "col": 5
       },
       "value": {
@@ -559,16 +577,16 @@
           {
             "name": "use",
             "position": {
-              "index": 1061,
-              "line": 47,
+              "index": 1099,
+              "line": 50,
               "col": 37
             },
             "value": "Object4"
           }
         ],
         "position": {
-          "index": 1056,
-          "line": 47,
+          "index": 1094,
+          "line": 50,
           "col": 32
         }
       }
@@ -576,8 +594,8 @@
     {
       "key": "objectSimple",
       "position": {
-        "index": 1080,
-        "line": 48,
+        "index": 1118,
+        "line": 51,
         "col": 5
       },
       "value": {
@@ -586,8 +604,8 @@
           {
             "key": "k1",
             "position": {
-              "index": 1121,
-              "line": 49,
+              "index": 1159,
+              "line": 52,
               "col": 9
             },
             "value": {
@@ -597,16 +615,16 @@
                 {
                   "name": "upper",
                   "position": {
-                    "index": 1132,
-                    "line": 49,
+                    "index": 1170,
+                    "line": 52,
                     "col": 20
                   },
                   "value": null
                 }
               ],
               "position": {
-                "index": 1125,
-                "line": 49,
+                "index": 1163,
+                "line": 52,
                 "col": 13
               }
             }
@@ -614,8 +632,8 @@
           {
             "key": "k2",
             "position": {
-              "index": 1146,
-              "line": 50,
+              "index": 1184,
+              "line": 53,
               "col": 9
             },
             "value": {
@@ -623,8 +641,8 @@
               "value": "v2",
               "annotations": [],
               "position": {
-                "index": 1150,
-                "line": 50,
+                "index": 1188,
+                "line": 53,
                 "col": 13
               }
             }
@@ -634,16 +652,16 @@
           {
             "name": "save",
             "position": {
-              "index": 1097,
-              "line": 48,
+              "index": 1135,
+              "line": 51,
               "col": 22
             },
             "value": "Object4"
           }
         ],
         "position": {
-          "index": 1094,
-          "line": 48,
+          "index": 1132,
+          "line": 51,
           "col": 19
         }
       }
@@ -651,8 +669,8 @@
     {
       "key": "objectOneLine",
       "position": {
-        "index": 1167,
-        "line": 52,
+        "index": 1205,
+        "line": 55,
         "col": 5
       },
       "value": {
@@ -661,8 +679,8 @@
           {
             "key": "k1",
             "position": {
-              "index": 1184,
-              "line": 52,
+              "index": 1222,
+              "line": 55,
               "col": 22
             },
             "value": {
@@ -670,8 +688,8 @@
               "value": "v1",
               "annotations": [],
               "position": {
-                "index": 1188,
-                "line": 52,
+                "index": 1226,
+                "line": 55,
                 "col": 26
               }
             }
@@ -679,8 +697,8 @@
           {
             "key": "k2",
             "position": {
-              "index": 1194,
-              "line": 52,
+              "index": 1232,
+              "line": 55,
               "col": 32
             },
             "value": {
@@ -688,8 +706,8 @@
               "value": "v2",
               "annotations": [],
               "position": {
-                "index": 1198,
-                "line": 52,
+                "index": 1236,
+                "line": 55,
                 "col": 36
               }
             }
@@ -699,16 +717,16 @@
           {
             "name": "object",
             "position": {
-              "index": 1207,
-              "line": 52,
+              "index": 1245,
+              "line": 55,
               "col": 45
             },
             "value": null
           }
         ],
         "position": {
-          "index": 1182,
-          "line": 52,
+          "index": 1220,
+          "line": 55,
           "col": 20
         }
       }
@@ -716,8 +734,8 @@
     {
       "key": "objectExtraComma",
       "position": {
-        "index": 1218,
-        "line": 53,
+        "index": 1256,
+        "line": 56,
         "col": 5
       },
       "value": {
@@ -726,8 +744,8 @@
           {
             "key": "k1",
             "position": {
-              "index": 1238,
-              "line": 53,
+              "index": 1276,
+              "line": 56,
               "col": 25
             },
             "value": {
@@ -735,8 +753,8 @@
               "value": "v1",
               "annotations": [],
               "position": {
-                "index": 1242,
-                "line": 53,
+                "index": 1280,
+                "line": 56,
                 "col": 29
               }
             }
@@ -744,8 +762,8 @@
           {
             "key": "k2",
             "position": {
-              "index": 1248,
-              "line": 53,
+              "index": 1286,
+              "line": 56,
               "col": 35
             },
             "value": {
@@ -753,8 +771,8 @@
               "value": "v2",
               "annotations": [],
               "position": {
-                "index": 1252,
-                "line": 53,
+                "index": 1290,
+                "line": 56,
                 "col": 39
               }
             }
@@ -762,8 +780,8 @@
         ],
         "annotations": [],
         "position": {
-          "index": 1236,
-          "line": 53,
+          "index": 1274,
+          "line": 56,
           "col": 23
         }
       }

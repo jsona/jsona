@@ -248,6 +248,7 @@ impl<T: Iterator<Item = char>> Lexer<T> {
                     }
                 }
                 ('"', _) => return self.scan_string_literal(start_pos, '"'),
+                ('`', _) => return self.scan_string_literal(start_pos, '`'),
                 ('\'', _) => return self.scan_string_literal(start_pos, '\''),
                 ('A'..='Z', _) | ('a'..='z', _) | ('_', _) => {
                     return self.scan_identifier(start_pos, ch)
@@ -374,10 +375,14 @@ impl<T: Iterator<Item = char>> Lexer<T> {
                 }
                 // Cannot have new-lines inside string literals
                 '\n' => {
-                    return Some(Token::new(
-                        TokenKind::LexError("unterminal string literal".into()),
-                        start_pos,
-                    ));
+                    if enclosing_char == '`' {
+                        result.push('\n');
+                    } else {
+                        return Some(Token::new(
+                            TokenKind::LexError("unterminal string literal".into()),
+                            start_pos,
+                        ));
+                    }
                 }
 
                 // All other characters
