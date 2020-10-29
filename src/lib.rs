@@ -12,3 +12,7 @@ pub use crate::ast::{
 pub use crate::error::Error;
 #[doc(inline)]
 pub use crate::loader::Loader;
+
+pub fn parse(input: &str) -> Result<Ast, Error> {
+    Loader::load_from_str(input)
+}
