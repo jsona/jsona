@@ -226,11 +226,10 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         _ => {
                             return Err(Error::expect(
                                 &[
-                                    TokenKind::Identifier("identifier".into()),
-                                    TokenKind::StringLiteral("stringliteral".into()),
+                                    TokenKind::Colon,
                                 ],
                                 tok,
-                                "annotation".into(),
+                                "object properity".into(),
                             ))
                         }
                     }

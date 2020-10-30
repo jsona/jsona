@@ -5,13 +5,13 @@ use std::fmt;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Error {
-    pub message: String,
+    pub info: String,
     pub position: Position,
 }
 
 impl Error {
-    pub fn new(message: String, position: Position) -> Self {
-        Self { message, position }
+    pub fn new(info: String, position: Position) -> Self {
+        Self { info, position }
     }
     pub fn expect(expect_toks: &[TokenKind], tok: Token, context: String) -> Self {
         let info = format!(
@@ -57,7 +57,7 @@ impl Error {
     }
     pub fn abort() -> Self {
         Self {
-            message: String::from("abort"),
+            info: String::from("abort"),
             position: Position::default(),
         }
     }
@@ -66,12 +66,12 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         if self.position.index == 0 {
-            write!(formatter, "{}", self.message,)
+            write!(formatter, "{}", self.info,)
         } else {
             write!(
                 formatter,
                 "{} at line {} column {}",
-                self.message, self.position.line, self.position.col,
+                self.info, self.position.line, self.position.col,
             )
         }
     }

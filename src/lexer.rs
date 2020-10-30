@@ -109,7 +109,7 @@ impl Display for TokenKind {
             TokenKind::FloatLiteral(v) => write!(f, "{}", v),
             TokenKind::StringLiteral(s) => write!(f, "{}", s),
             TokenKind::LexError(err) => write!(f, "{}", err),
-            TokenKind::Eof => write!(f, "end of file"),
+            TokenKind::Eof => write!(f, "eof"),
         }
     }
 }
