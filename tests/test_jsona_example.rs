@@ -2,11 +2,11 @@ use jsona::ast::Position;
 use jsona::lexer::Lexer;
 use jsona::parser::{Event, EventReceiver, Parser};
 
-const INPUT: &str = include_str!("spec/test_jsona_example.jsona");
+const INPUT: &str = include_str!("spec/jsona_example.jsona");
 
 #[test]
 fn test_lex() {
-    let expect = include_str!("spec/test_jsona_example_tok.txt");
+    let expect = include_str!("spec/jsona_example_tok.txt");
     let mut target = String::new();
     let lexer = Lexer::new(INPUT.chars());
     for tok in lexer.into_iter() {
@@ -38,7 +38,7 @@ impl EventReceiver for EventCollector {
 
 #[test]
 fn test_parse() {
-    let expect = include_str!("spec/test_jsona_example_event.txt");
+    let expect = include_str!("spec/jsona_example_event.txt");
     let mut ec = EventCollector::new();
     let mut parser = Parser::new(INPUT.chars());
     parser.parse(&mut ec).unwrap();
@@ -52,7 +52,7 @@ fn test_parse() {
 
 #[test]
 fn test_json() {
-    let expect = include_str!("spec/test_jsona_example_value.json");
+    let expect = include_str!("spec/jsona_example_value.json");
 
     let result = jsona::parse(INPUT).unwrap();
     let target = serde_json::to_string_pretty(&result).unwrap();

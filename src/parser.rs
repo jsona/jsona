@@ -225,9 +225,7 @@ impl<T: Iterator<Item = char>> Parser<T> {
                         }
                         _ => {
                             return Err(Error::expect(
-                                &[
-                                    TokenKind::Colon,
-                                ],
+                                &[TokenKind::Colon],
                                 tok,
                                 "object properity".into(),
                             ))

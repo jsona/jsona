@@ -182,6 +182,19 @@ impl<T: Iterator<Item = char>> Lexer<T> {
         }
         ch
     }
+    fn next_chars_util<F: Fn(char, usize) -> bool>(&mut self, predicate: F) -> Vec<char> {
+        let mut i = 0;
+        let mut output = Vec::new();
+        while let Some(ch) = self.peek_ch() {
+            if predicate(ch, i) {
+                break;
+            }
+            output.push(ch);
+            i += 1;
+            self.next_ch();
+        }
+        output
+    }
     fn peek_ch(&mut self) -> Option<char> {
         if let Some(ch) = self.buf {
             Some(ch)
@@ -272,128 +285,154 @@ impl<T: Iterator<Item = char>> Lexer<T> {
         Some(Token::new(TokenKind::Eof, start_pos))
     }
     fn scan_string_literal(&mut self, start_pos: Position, enclosing_char: char) -> Option<Token> {
-        let mut result: Vec<char> = Vec::new();
-        let mut escape: Vec<char> = Vec::new();
+        let mut buf: Vec<u16> = Vec::new();
         loop {
-            let next_char = {
-                if let Some(ch) = self.next_ch() {
-                    ch
+            let ch = self.next_ch();
+            if ch.is_none() {
+                return Some(Token::new(TokenKind::Eof, self.pos.clone()));
+            }
+            let ch = ch.unwrap();
+            if ch == enclosing_char {
+                break;
+            }
+            if ch == '\n' {
+                if enclosing_char == '`' {
+                    buf.push(ch as u16);
+                    continue;
                 } else {
                     return Some(Token::new(
-                        TokenKind::LexError("unexpected string literal".into()),
+                        TokenKind::LexError("Unexpected line break".into()),
                         self.pos.clone(),
                     ));
                 }
+            }
+            if ch != '\\' {
+                buf.push(ch as u16);
+                continue;
+            }
+
+            let next_ch = match self.next_ch() {
+                Some(ch) => ch,
+                None => return Some(Token::new(TokenKind::Eof, self.pos.clone())),
             };
-            match next_char {
-                '\\' if escape.is_empty() => {
-                    if let Some(ch) = self.peek_ch() {
-                        if ch == '\n' {
-                            self.next_ch();
-                            continue;
-                        }
-                    }
-                    escape.push('\\');
-                }
-                't' | '\\' | '\n' | 'r' if !escape.is_empty() => {
-                    escape.clear();
-                    result.push(next_char);
-                }
-                ch @ 'x' | ch @ 'u' | ch @ 'U' if !escape.is_empty() => {
-                    let mut seq = escape.clone();
-                    escape.clear();
-                    seq.push(ch);
-                    let mut out_val: u32 = 0;
-                    let len = match ch {
-                        'x' => 2,
-                        'u' => 4,
-                        'U' => 8,
-                        _ => unreachable!(),
-                    };
-                    for _ in 0..len {
-                        let c = {
-                            if let Some(c) = self.peek_ch() {
-                                c
-                            } else {
-                                return Some(Token::new(
-                                    TokenKind::LexError("unexpected escape string literal".into()),
-                                    start_pos,
-                                ));
-                            }
-                        };
 
-                        seq.push(c);
-                        self.next_ch();
-
-                        out_val *= 16;
-                        let val = {
-                            if let Some(val) = c.to_digit(16) {
-                                val
-                            } else {
-                                let seq: String = seq.iter().collect();
-                                return Some(Token::new(
-                                    TokenKind::LexError(format!(
-                                        "unexpected escape string literal {}",
-                                        seq
-                                    )),
-                                    start_pos,
-                                ));
-                            }
-                        };
-                        out_val += val;
-                    }
-                    let c = {
-                        if let Some(cc) = std::char::from_u32(out_val) {
-                            cc
-                        } else {
-                            let seq: String = seq.iter().collect();
-                            return Some(Token::new(
-                                TokenKind::LexError(format!(
-                                    "unexpected escape string literal {}",
-                                    seq
-                                )),
-                                start_pos,
-                            ));
-                        }
-                    };
-                    result.push(c);
-                }
-                ch if enclosing_char == ch && !escape.is_empty() => {
-                    escape.clear();
-                    result.push(ch)
-                }
-
-                ch if enclosing_char == ch && escape.is_empty() => break,
-
-                ch if !escape.is_empty() => {
-                    escape.push(ch);
-                    let escape: String = escape.iter().collect();
-                    return Some(Token::new(
-                        TokenKind::LexError(format!("unexpected escape string literal {}", escape)),
-                        start_pos,
-                    ));
-                }
-                // Cannot have new-lines inside string literals
-                '\n' => {
-                    if enclosing_char == '`' {
-                        result.push('\n');
-                    } else {
+            match next_ch {
+                'b' => buf.push(8),
+                'f' => buf.push(12),
+                'n' => buf.push('\n' as u16),
+                'r' => buf.push('\r' as u16),
+                't' => buf.push(9),
+                'v' => buf.push(11),
+                '\'' => buf.push('\'' as u16),
+                '\"' => buf.push('\"' as u16),
+                'x' => {
+                    // \xXX (where XX is 2 hex digits; range of 0x00–0xFF)
+                    let chars = self.next_chars_util(|c, i| i > 1 || !is_hex_char(c));
+                    if chars.len() != 2 {
                         return Some(Token::new(
-                            TokenKind::LexError("unterminal string literal".into()),
-                            start_pos,
+                            TokenKind::LexError("invalid hexadecimal escape sequence".into()),
+                            self.pos.clone(),
                         ));
                     }
+                    buf.push(
+                        u16::from_str_radix(chars.iter().collect::<String>().as_str(), 16).unwrap(),
+                    )
                 }
+                'u' => {
+                    match self.peek_ch() {
+                        // Support \u{X..X} (Unicode Codepoint)
+                        Some('{') => {
+                            self.next_ch();
+                            let chars = self.next_chars_util(|c, _| c == '}');
+                            if let Some('}') = self.next_ch() {
+                                let code_point = match u32::from_str_radix(
+                                    &chars.iter().collect::<String>().as_str(),
+                                    16,
+                                ) {
+                                    Err(_) => {
+                                        return Some(Token::new(
+                                            TokenKind::LexError(
+                                                "malformed Unicode character escape sequence"
+                                                    .into(),
+                                            ),
+                                            self.pos.clone(),
+                                        ));
+                                    }
+                                    Ok(v) => v,
+                                };
 
-                // All other characters
-                ch => {
-                    escape.clear();
-                    result.push(ch);
+                                // UTF16Encoding of a numeric code point value
+                                if code_point > 0x10_FFFF {
+                                    return Some(Token::new(TokenKind::LexError("Unicode codepoint must not be greater than 0x10FFFF in escape sequence".into()), self.pos.clone()));
+                                } else if code_point <= 65535 {
+                                    buf.push(code_point as u16);
+                                } else {
+                                    let cu1 = ((code_point - 65536) / 1024 + 0xD800) as u16;
+                                    let cu2 = ((code_point - 65536) % 1024 + 0xDC00) as u16;
+                                    buf.push(cu1);
+                                    buf.push(cu2);
+                                }
+                            } else {
+                                return Some(Token::new(
+                                    TokenKind::LexError("invalid Unicode escape sequence".into()),
+                                    self.pos.clone(),
+                                ));
+                            }
+                        }
+                        Some(_) => {
+                            // Collect each character after \u e.g \uD83D will give "D83D"
+                            let chars = self.next_chars_util(|_, i| i > 3);
+                            // Convert to u16
+                            let code_point = match u16::from_str_radix(
+                                &chars.iter().collect::<String>().as_str(),
+                                16,
+                            ) {
+                                Err(_) => {
+                                    return Some(Token::new(
+                                        TokenKind::LexError(
+                                            "malformed Unicode character escape sequence".into(),
+                                        ),
+                                        self.pos.clone(),
+                                    ));
+                                }
+                                Ok(v) => v,
+                            };
+                            buf.push(code_point);
+                        }
+                        None => {
+                            return Some(Token::new(
+                                TokenKind::LexError("Unexpected line break".into()),
+                                self.pos.clone(),
+                            ))
+                        }
+                    }
+                }
+                _ => {
+                    if is_octal_char(next_ch) {
+                        // \XXX (where XXX is 1–3 octal digits; range of 0–377)
+                        let mut chars = self.next_chars_util(|c, i| i > 1 || !is_octal_char(c));
+                        chars.insert(0, next_ch);
+                        buf.push(
+                            u16::from_str_radix(&chars.iter().collect::<String>().as_str(), 8)
+                                .unwrap(),
+                        );
+                    } else {
+                        if next_ch.len_utf16() == 1 {
+                            buf.push(next_ch as u16);
+                        } else {
+                            let mut code_point_bytes_buf = [0u16; 2];
+                            let code_point_bytes = next_ch.encode_utf16(&mut code_point_bytes_buf);
+
+                            buf.extend(code_point_bytes.iter());
+                        }
+                    }
                 }
             }
         }
-        let s = result.iter().collect::<String>();
-        Some(Token::new(TokenKind::StringLiteral(s), start_pos))
+        Some(Token::new(
+            TokenKind::StringLiteral(String::from_utf16_lossy(buf.as_slice())),
+            start_pos,
+        ))
     }
     fn scan_number_literal(
         &mut self,
@@ -515,5 +554,28 @@ impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         self.scan_next_token()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_escape() {
+        let input = "\\0\\b\\f\\n\\r\\t\\u000b\\'\\\\\\xA9\\u00A9\\u{2F804}\"";
+        let mut lexer = Lexer::new(input.chars());
+        let token = lexer.scan_string_literal(Position::default(), '"');
+        assert_eq!(
+            token,
+            Some(Token::new(
+                TokenKind::StringLiteral("\u{0}\u{8}\u{c}\n\r\t\u{b}\'\\©©你".into()),
+                Position {
+                    index: 0,
+                    line: 1,
+                    col: 1
+                }
+            ))
+        );
     }
 }

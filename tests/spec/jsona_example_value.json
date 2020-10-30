@@ -253,7 +253,7 @@
       }
     },
     {
-      "key": "stringMultipleLine",
+      "key": "stringBacktick",
       "position": {
         "index": 600,
         "line": 31,
@@ -261,55 +261,73 @@
       },
       "value": {
         "type": "String",
-        "value": "abc \"def\" ghi \\n mij",
-        "annotations": [],
-        "position": {
-          "index": 620,
-          "line": 31,
-          "col": 25
-        }
-      }
-    },
-    {
-      "key": "stringBacktick",
-      "position": {
-        "index": 651,
-        "line": 33,
-        "col": 5
-      },
-      "value": {
-        "type": "String",
         "value": "abc\ndef `\nxyz",
         "annotations": [],
         "position": {
-          "index": 667,
-          "line": 33,
+          "index": 616,
+          "line": 31,
           "col": 21
         }
       }
     },
     {
-      "key": "stringEscaple",
+      "key": "stringEscaple1",
       "position": {
-        "index": 689,
+        "index": 638,
+        "line": 34,
+        "col": 5
+      },
+      "value": {
+        "type": "String",
+        "value": "\u0000\b\f\n\r\t\u000b'\\©©你",
+        "annotations": [],
+        "position": {
+          "index": 654,
+          "line": 34,
+          "col": 21
+        }
+      }
+    },
+    {
+      "key": "stringEscaple2",
+      "position": {
+        "index": 703,
+        "line": 35,
+        "col": 5
+      },
+      "value": {
+        "type": "String",
+        "value": "\u0000\b\f\n\r\t\u000b'\\©©你",
+        "annotations": [],
+        "position": {
+          "index": 719,
+          "line": 35,
+          "col": 21
+        }
+      }
+    },
+    {
+      "key": "stringEscaple3",
+      "position": {
+        "index": 768,
         "line": 36,
         "col": 5
       },
       "value": {
         "type": "String",
-        "value": "\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029",
+        "value": "\u0000\b\f\n\r\t\u000b'\\©©你",
         "annotations": [],
         "position": {
-          "index": 704,
+          "index": 784,
           "line": 36,
-          "col": 20
+          "col": 21
         }
       }
     },
     {
       "key": "arrayEmpty",
       "position": {
-        "index": 759,
+        "index": 833,
         "line": 37,
         "col": 5
       },
@@ -318,7 +336,7 @@
         "elements": [],
         "annotations": [],
         "position": {
-          "index": 771,
+          "index": 845,
           "line": 37,
           "col": 17
         }
@@ -327,7 +345,7 @@
     {
       "key": "arrayEmptyMultiLine",
       "position": {
-        "index": 780,
+        "index": 854,
         "line": 38,
         "col": 5
       },
@@ -338,7 +356,7 @@
           {
             "name": "array",
             "position": {
-              "index": 804,
+              "index": 878,
               "line": 38,
               "col": 29
             },
@@ -346,7 +364,7 @@
           }
         ],
         "position": {
-          "index": 801,
+          "index": 875,
           "line": 38,
           "col": 26
         }
@@ -355,7 +373,7 @@
     {
       "key": "arrayEmptyWithAnnotation",
       "position": {
-        "index": 821,
+        "index": 895,
         "line": 40,
         "col": 5
       },
@@ -364,7 +382,7 @@
         "elements": [],
         "annotations": [],
         "position": {
-          "index": 847,
+          "index": 921,
           "line": 40,
           "col": 31
         }
@@ -373,7 +391,7 @@
     {
       "key": "arraySimple",
       "position": {
-        "index": 866,
+        "index": 940,
         "line": 41,
         "col": 5
       },
@@ -387,7 +405,7 @@
               {
                 "name": "upper",
                 "position": {
-                  "index": 902,
+                  "index": 976,
                   "line": 42,
                   "col": 15
                 },
@@ -395,7 +413,7 @@
               }
             ],
             "position": {
-              "index": 896,
+              "index": 970,
               "line": 42,
               "col": 9
             }
@@ -405,7 +423,7 @@
             "value": "b",
             "annotations": [],
             "position": {
-              "index": 916,
+              "index": 990,
               "line": 43,
               "col": 9
             }
@@ -415,7 +433,7 @@
           {
             "name": "array",
             "position": {
-              "index": 882,
+              "index": 956,
               "line": 41,
               "col": 21
             },
@@ -423,7 +441,7 @@
           }
         ],
         "position": {
-          "index": 879,
+          "index": 953,
           "line": 41,
           "col": 18
         }
@@ -432,7 +450,7 @@
     {
       "key": "arrayOneline",
       "position": {
-        "index": 932,
+        "index": 1006,
         "line": 45,
         "col": 5
       },
@@ -444,7 +462,7 @@
             "value": "a",
             "annotations": [],
             "position": {
-              "index": 947,
+              "index": 1021,
               "line": 45,
               "col": 20
             }
@@ -454,7 +472,7 @@
             "value": "b",
             "annotations": [],
             "position": {
-              "index": 952,
+              "index": 1026,
               "line": 45,
               "col": 25
             }
@@ -464,7 +482,7 @@
           {
             "name": "array",
             "position": {
-              "index": 959,
+              "index": 1033,
               "line": 45,
               "col": 32
             },
@@ -472,7 +490,7 @@
           }
         ],
         "position": {
-          "index": 946,
+          "index": 1020,
           "line": 45,
           "col": 19
         }
@@ -481,7 +499,7 @@
     {
       "key": "arrayExtraComma",
       "position": {
-        "index": 969,
+        "index": 1043,
         "line": 46,
         "col": 5
       },
@@ -493,7 +511,7 @@
             "value": "a",
             "annotations": [],
             "position": {
-              "index": 987,
+              "index": 1061,
               "line": 46,
               "col": 23
             }
@@ -503,7 +521,7 @@
             "value": "b",
             "annotations": [],
             "position": {
-              "index": 992,
+              "index": 1066,
               "line": 46,
               "col": 28
             }
@@ -511,7 +529,7 @@
         ],
         "annotations": [],
         "position": {
-          "index": 986,
+          "index": 1060,
           "line": 46,
           "col": 22
         }
@@ -520,7 +538,7 @@
     {
       "key": "objectEmpty",
       "position": {
-        "index": 1003,
+        "index": 1077,
         "line": 47,
         "col": 5
       },
@@ -529,7 +547,7 @@
         "properties": [],
         "annotations": [],
         "position": {
-          "index": 1016,
+          "index": 1090,
           "line": 47,
           "col": 18
         }
@@ -538,7 +556,7 @@
     {
       "key": "objectEmptyMultiLine",
       "position": {
-        "index": 1024,
+        "index": 1098,
         "line": 48,
         "col": 5
       },
@@ -549,7 +567,7 @@
           {
             "name": "object",
             "position": {
-              "index": 1049,
+              "index": 1123,
               "line": 48,
               "col": 30
             },
@@ -557,7 +575,7 @@
           }
         ],
         "position": {
-          "index": 1046,
+          "index": 1120,
           "line": 48,
           "col": 27
         }
@@ -566,7 +584,7 @@
     {
       "key": "objectEmptyWithAnnotation",
       "position": {
-        "index": 1067,
+        "index": 1141,
         "line": 50,
         "col": 5
       },
@@ -577,7 +595,7 @@
           {
             "name": "use",
             "position": {
-              "index": 1099,
+              "index": 1173,
               "line": 50,
               "col": 37
             },
@@ -585,7 +603,7 @@
           }
         ],
         "position": {
-          "index": 1094,
+          "index": 1168,
           "line": 50,
           "col": 32
         }
@@ -594,7 +612,7 @@
     {
       "key": "objectSimple",
       "position": {
-        "index": 1118,
+        "index": 1192,
         "line": 51,
         "col": 5
       },
@@ -604,7 +622,7 @@
           {
             "key": "k1",
             "position": {
-              "index": 1159,
+              "index": 1233,
               "line": 52,
               "col": 9
             },
@@ -615,7 +633,7 @@
                 {
                   "name": "upper",
                   "position": {
-                    "index": 1170,
+                    "index": 1244,
                     "line": 52,
                     "col": 20
                   },
@@ -623,7 +641,7 @@
                 }
               ],
               "position": {
-                "index": 1163,
+                "index": 1237,
                 "line": 52,
                 "col": 13
               }
@@ -632,7 +650,7 @@
           {
             "key": "k2",
             "position": {
-              "index": 1184,
+              "index": 1258,
               "line": 53,
               "col": 9
             },
@@ -641,7 +659,7 @@
               "value": "v2",
               "annotations": [],
               "position": {
-                "index": 1188,
+                "index": 1262,
                 "line": 53,
                 "col": 13
               }
@@ -652,7 +670,7 @@
           {
             "name": "save",
             "position": {
-              "index": 1135,
+              "index": 1209,
               "line": 51,
               "col": 22
             },
@@ -660,7 +678,7 @@
           }
         ],
         "position": {
-          "index": 1132,
+          "index": 1206,
           "line": 51,
           "col": 19
         }
@@ -669,7 +687,7 @@
     {
       "key": "objectOneLine",
       "position": {
-        "index": 1205,
+        "index": 1279,
         "line": 55,
         "col": 5
       },
@@ -679,7 +697,7 @@
           {
             "key": "k1",
             "position": {
-              "index": 1222,
+              "index": 1296,
               "line": 55,
               "col": 22
             },
@@ -688,7 +706,7 @@
               "value": "v1",
               "annotations": [],
               "position": {
-                "index": 1226,
+                "index": 1300,
                 "line": 55,
                 "col": 26
               }
@@ -697,7 +715,7 @@
           {
             "key": "k2",
             "position": {
-              "index": 1232,
+              "index": 1306,
               "line": 55,
               "col": 32
             },
@@ -706,7 +724,7 @@
               "value": "v2",
               "annotations": [],
               "position": {
-                "index": 1236,
+                "index": 1310,
                 "line": 55,
                 "col": 36
               }
@@ -717,7 +735,7 @@
           {
             "name": "object",
             "position": {
-              "index": 1245,
+              "index": 1319,
               "line": 55,
               "col": 45
             },
@@ -725,7 +743,7 @@
           }
         ],
         "position": {
-          "index": 1220,
+          "index": 1294,
           "line": 55,
           "col": 20
         }
@@ -734,7 +752,7 @@
     {
       "key": "objectExtraComma",
       "position": {
-        "index": 1256,
+        "index": 1330,
         "line": 56,
         "col": 5
       },
@@ -744,7 +762,7 @@
           {
             "key": "k1",
             "position": {
-              "index": 1276,
+              "index": 1350,
               "line": 56,
               "col": 25
             },
@@ -753,7 +771,7 @@
               "value": "v1",
               "annotations": [],
               "position": {
-                "index": 1280,
+                "index": 1354,
                 "line": 56,
                 "col": 29
               }
@@ -762,7 +780,7 @@
           {
             "key": "k2",
             "position": {
-              "index": 1286,
+              "index": 1360,
               "line": 56,
               "col": 35
             },
@@ -771,7 +789,7 @@
               "value": "v2",
               "annotations": [],
               "position": {
-                "index": 1290,
+                "index": 1364,
                 "line": 56,
                 "col": 39
               }
@@ -780,7 +798,7 @@
         ],
         "annotations": [],
         "position": {
-          "index": 1274,
+          "index": 1348,
           "line": 56,
           "col": 23
         }
