@@ -64,12 +64,12 @@ alleviate some of the limitations of JSON by expanding its syntax and
     integerNegative: -3,
     stringSingleQuota: 'abc "def" ghi',
     stringDoubleQuota: "abc 'def' ghi",
-    stringMultipleLine: 'abc "def" \
-ghi \\n mij',
     stringBacktick: `abc
 def \`
 xyz`,
-    stringEscaple: '\\b\\f\\n\\r\\t\\v\\0\\x0f\\u01fF\\u2028\\u2029',
+    stringEscaple1: '\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}',
+    stringEscaple2: "\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}",
+    stringEscaple3: `\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}`,
     arrayEmpty: [], 
     arrayEmptyMultiLine: [ @array
     ],
