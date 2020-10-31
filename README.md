@@ -93,3 +93,8 @@ xyz`,
 }
 
 ```
+
+## Releated project
+
+- [vscode-jsona](https://github.com/sigoden/vscode-jsona) Vscode syntax highlighting of JSONA files
+- [jsona-openapi](https://github.com/sigoden/jsona-openapi) Openapi dsl in jsona
