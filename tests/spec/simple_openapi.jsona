@@ -1,0 +1,18 @@
+{ @openapi
+  createUser: { @endpoint({summary: "create a user"})
+    route: "POST /users",
+    req: {
+      body: {
+        firstName: "foo",
+        lastName: "bar",
+      }
+    },
+    res: {
+      200: {
+        firstName: "foo",
+        lastName: "bar",
+        role: "user",
+      }
+    }
+  }
+}

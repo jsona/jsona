@@ -1,0 +1,236 @@
+{
+  "type": "Object",
+  "properties": [
+    {
+      "key": "createUser",
+      "position": {
+        "index": 13,
+        "line": 2,
+        "col": 3
+      },
+      "value": {
+        "type": "Object",
+        "properties": [
+          {
+            "key": "route",
+            "position": {
+              "index": 69,
+              "line": 3,
+              "col": 5
+            },
+            "value": {
+              "type": "String",
+              "value": "POST /users",
+              "annotations": [],
+              "position": {
+                "index": 76,
+                "line": 3,
+                "col": 12
+              }
+            }
+          },
+          {
+            "key": "req",
+            "position": {
+              "index": 95,
+              "line": 4,
+              "col": 5
+            },
+            "value": {
+              "type": "Object",
+              "properties": [
+                {
+                  "key": "body",
+                  "position": {
+                    "index": 108,
+                    "line": 5,
+                    "col": 7
+                  },
+                  "value": {
+                    "type": "Object",
+                    "properties": [
+                      {
+                        "key": "firstName",
+                        "position": {
+                          "index": 124,
+                          "line": 6,
+                          "col": 9
+                        },
+                        "value": {
+                          "type": "String",
+                          "value": "foo",
+                          "annotations": [],
+                          "position": {
+                            "index": 135,
+                            "line": 6,
+                            "col": 20
+                          }
+                        }
+                      },
+                      {
+                        "key": "lastName",
+                        "position": {
+                          "index": 150,
+                          "line": 7,
+                          "col": 9
+                        },
+                        "value": {
+                          "type": "String",
+                          "value": "bar",
+                          "annotations": [],
+                          "position": {
+                            "index": 160,
+                            "line": 7,
+                            "col": 19
+                          }
+                        }
+                      }
+                    ],
+                    "annotations": [],
+                    "position": {
+                      "index": 114,
+                      "line": 5,
+                      "col": 13
+                    }
+                  }
+                }
+              ],
+              "annotations": [],
+              "position": {
+                "index": 100,
+                "line": 4,
+                "col": 10
+              }
+            }
+          },
+          {
+            "key": "res",
+            "position": {
+              "index": 186,
+              "line": 10,
+              "col": 5
+            },
+            "value": {
+              "type": "Object",
+              "properties": [
+                {
+                  "key": "200",
+                  "position": {
+                    "index": 199,
+                    "line": 11,
+                    "col": 7
+                  },
+                  "value": {
+                    "type": "Object",
+                    "properties": [
+                      {
+                        "key": "firstName",
+                        "position": {
+                          "index": 214,
+                          "line": 12,
+                          "col": 9
+                        },
+                        "value": {
+                          "type": "String",
+                          "value": "foo",
+                          "annotations": [],
+                          "position": {
+                            "index": 225,
+                            "line": 12,
+                            "col": 20
+                          }
+                        }
+                      },
+                      {
+                        "key": "lastName",
+                        "position": {
+                          "index": 240,
+                          "line": 13,
+                          "col": 9
+                        },
+                        "value": {
+                          "type": "String",
+                          "value": "bar",
+                          "annotations": [],
+                          "position": {
+                            "index": 250,
+                            "line": 13,
+                            "col": 19
+                          }
+                        }
+                      },
+                      {
+                        "key": "role",
+                        "position": {
+                          "index": 265,
+                          "line": 14,
+                          "col": 9
+                        },
+                        "value": {
+                          "type": "String",
+                          "value": "user",
+                          "annotations": [],
+                          "position": {
+                            "index": 271,
+                            "line": 14,
+                            "col": 15
+                          }
+                        }
+                      }
+                    ],
+                    "annotations": [],
+                    "position": {
+                      "index": 204,
+                      "line": 11,
+                      "col": 12
+                    }
+                  }
+                }
+              ],
+              "annotations": [],
+              "position": {
+                "index": 191,
+                "line": 10,
+                "col": 10
+              }
+            }
+          }
+        ],
+        "annotations": [
+          {
+            "name": "endpoint",
+            "position": {
+              "index": 28,
+              "line": 2,
+              "col": 18
+            },
+            "value": {
+              "summary": "create a user"
+            }
+          }
+        ],
+        "position": {
+          "index": 25,
+          "line": 2,
+          "col": 15
+        }
+      }
+    }
+  ],
+  "annotations": [
+    {
+      "name": "openapi",
+      "position": {
+        "index": 3,
+        "line": 1,
+        "col": 4
+      },
+      "value": null
+    }
+  ],
+  "position": {
+    "index": 0,
+    "line": 1,
+    "col": 1
+  }
+}

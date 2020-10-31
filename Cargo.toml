@@ -1,6 +1,6 @@
 [package]
 name = "jsona-js"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2018"
 description = "JSONA - JSON with annotations"
@@ -29,6 +29,7 @@ console_error_panic_hook = { version = "0.1.6", optional = true }
 #
 # Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = { version = "0.4.5", optional = true }
+serde_json = "1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
