@@ -1,6 +1,5 @@
 mod utils;
 
-use jsona::Loader;
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
@@ -10,18 +9,18 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen(js_name = parseAst)]
-pub fn parse_ast(data: String) -> Result<JsValue, JsValue> {
-    match Loader::load_from_str(data.as_str()) {
-        Ok(ast) => Ok(JsValue::from_serde(&ast).unwrap()),
+#[wasm_bindgen(js_name = parseJsona)]
+pub fn parse_jsona(data: String) -> Result<JsValue, JsValue> {
+    match jsona::from_str(data.as_str()) {
+        Ok(value) => Ok(JsValue::from_serde(&value).unwrap()),
         Err(err) => Err(JsValue::from_serde(&err).unwrap()),
     }
 }
 
 #[wasm_bindgen(js_name = parseJson)]
 pub fn parse_json(data: String) -> Result<JsValue, JsValue> {
-    match Loader::load_from_str(data.as_str()) {
-        Ok(ast) => Ok(JsValue::from_serde(&Value::from(ast)).unwrap()),
+    match jsona::from_str(data.as_str()) {
+        Ok(value) => Ok(JsValue::from_serde(&Value::from(value)).unwrap()),
         Err(err) => Err(JsValue::from_serde(&err).unwrap()),
     }
 }

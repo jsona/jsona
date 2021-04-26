@@ -6,3 +6,7 @@ dependencies = ["clean"]
 [tasks.clean]
 command = "rm"
 args = ["-rf", "pkg"]
+
+[tasks.test]
+command = "node"
+args = ["./tests/test.js"]
