@@ -4,7 +4,7 @@ use std::string;
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-pub enum Ast {
+pub enum Jsona {
     Null(Null),
     Boolean(Boolean),
     Integer(Integer),
@@ -50,7 +50,7 @@ pub struct String {
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Array {
-    pub elements: Vec<Ast>,
+    pub elements: Vec<Jsona>,
     pub annotations: Vec<Annotation>,
     pub position: Position,
 }
@@ -66,7 +66,7 @@ pub struct Object {
 pub struct Property {
     pub key: string::String,
     pub position: Position,
-    pub value: Ast,
+    pub value: Jsona,
 }
 
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
@@ -102,7 +102,7 @@ macro_rules! define_is (
     ($name:ident, $yt:ident) => (
 pub fn $name(&self) -> bool {
     match self {
-        Ast::$yt($yt { .. }) => true,
+        Jsona::$yt($yt { .. }) => true,
         _ => false
     }
 }
@@ -113,14 +113,14 @@ macro_rules! define_as_ref (
     ($name:ident, $t:ty, $yt:ident) => (
 pub fn $name(&self) -> Option<$t> {
     match self {
-        Ast::$yt(ref v) => Some(v),
+        Jsona::$yt(ref v) => Some(v),
         _ => None
     }
 }
     );
 );
 
-impl Ast {
+impl Jsona {
     define_is!(is_null, Null);
     define_is!(is_boolean, Boolean);
     define_is!(is_integer, Integer);
@@ -138,10 +138,10 @@ impl Ast {
 
     pub fn key(&self, key: &str) -> Option<&Self> {
         match self {
-            Ast::Object(Object {
+            Jsona::Object(Object {
                 properties: value, ..
             }) => value.iter().find(|p| p.key == key).map(|v| &v.value),
-            Ast::Array(Array {
+            Jsona::Array(Array {
                 elements: value, ..
             }) => {
                 if let Ok(idx) = key.parse::<usize>() {
@@ -160,51 +160,51 @@ impl Ast {
 
     pub fn get_position(&self) -> &Position {
         match self {
-            Ast::Null(Null { position, .. }) => position,
-            Ast::Boolean(Boolean { position, .. }) => position,
-            Ast::Integer(Integer { position, .. }) => position,
-            Ast::Float(Float { position, .. }) => position,
-            Ast::String(String { position, .. }) => position,
-            Ast::Array(Array { position, .. }) => position,
-            Ast::Object(Object { position, .. }) => position,
+            Jsona::Null(Null { position, .. }) => position,
+            Jsona::Boolean(Boolean { position, .. }) => position,
+            Jsona::Integer(Integer { position, .. }) => position,
+            Jsona::Float(Float { position, .. }) => position,
+            Jsona::String(String { position, .. }) => position,
+            Jsona::Array(Array { position, .. }) => position,
+            Jsona::Object(Object { position, .. }) => position,
         }
     }
     pub fn get_annotations(&self) -> &Vec<Annotation> {
         match self {
-            Ast::Null(Null { annotations, .. }) => annotations,
-            Ast::Boolean(Boolean { annotations, .. }) => annotations,
-            Ast::Integer(Integer { annotations, .. }) => annotations,
-            Ast::Float(Float { annotations, .. }) => annotations,
-            Ast::String(String { annotations, .. }) => annotations,
-            Ast::Array(Array { annotations, .. }) => annotations,
-            Ast::Object(Object { annotations, .. }) => annotations,
+            Jsona::Null(Null { annotations, .. }) => annotations,
+            Jsona::Boolean(Boolean { annotations, .. }) => annotations,
+            Jsona::Integer(Integer { annotations, .. }) => annotations,
+            Jsona::Float(Float { annotations, .. }) => annotations,
+            Jsona::String(String { annotations, .. }) => annotations,
+            Jsona::Array(Array { annotations, .. }) => annotations,
+            Jsona::Object(Object { annotations, .. }) => annotations,
         }
     }
     pub fn get_annotations_mut(&mut self) -> &mut Vec<Annotation> {
         match self {
-            Ast::Null(Null { annotations, .. }) => annotations,
-            Ast::Boolean(Boolean { annotations, .. }) => annotations,
-            Ast::Integer(Integer { annotations, .. }) => annotations,
-            Ast::Float(Float { annotations, .. }) => annotations,
-            Ast::String(String { annotations, .. }) => annotations,
-            Ast::Array(Array { annotations, .. }) => annotations,
-            Ast::Object(Object { annotations, .. }) => annotations,
+            Jsona::Null(Null { annotations, .. }) => annotations,
+            Jsona::Boolean(Boolean { annotations, .. }) => annotations,
+            Jsona::Integer(Integer { annotations, .. }) => annotations,
+            Jsona::Float(Float { annotations, .. }) => annotations,
+            Jsona::String(String { annotations, .. }) => annotations,
+            Jsona::Array(Array { annotations, .. }) => annotations,
+            Jsona::Object(Object { annotations, .. }) => annotations,
         }
     }
 }
 
-impl From<&Ast> for Value {
-    fn from(node: &Ast) -> Self {
+impl From<&Jsona> for Value {
+    fn from(node: &Jsona) -> Self {
         match node {
-            Ast::Null(..) => Value::Null,
-            Ast::Boolean(Boolean { value, .. }) => value.to_owned().into(),
-            Ast::Integer(Integer { value, .. }) => value.to_owned().into(),
-            Ast::Float(Float { value, .. }) => value.to_owned().into(),
-            Ast::String(String { value, .. }) => value.to_owned().into(),
-            Ast::Array(Array {
+            Jsona::Null(..) => Value::Null,
+            Jsona::Boolean(Boolean { value, .. }) => value.to_owned().into(),
+            Jsona::Integer(Integer { value, .. }) => value.to_owned().into(),
+            Jsona::Float(Float { value, .. }) => value.to_owned().into(),
+            Jsona::String(String { value, .. }) => value.to_owned().into(),
+            Jsona::Array(Array {
                 elements: value, ..
             }) => Value::Array(value.into_iter().map(|v| v.into()).collect()),
-            Ast::Object(Object {
+            Jsona::Object(Object {
                 properties: value, ..
             }) => Value::Object(
                 value
@@ -216,18 +216,18 @@ impl From<&Ast> for Value {
     }
 }
 
-impl From<Ast> for Value {
-    fn from(node: Ast) -> Self {
+impl From<Jsona> for Value {
+    fn from(node: Jsona) -> Self {
         match node {
-            Ast::Null(..) => Value::Null,
-            Ast::Boolean(Boolean { value, .. }) => value.into(),
-            Ast::Integer(Integer { value, .. }) => value.into(),
-            Ast::Float(Float { value, .. }) => value.into(),
-            Ast::String(String { value, .. }) => value.into(),
-            Ast::Array(Array {
+            Jsona::Null(..) => Value::Null,
+            Jsona::Boolean(Boolean { value, .. }) => value.into(),
+            Jsona::Integer(Integer { value, .. }) => value.into(),
+            Jsona::Float(Float { value, .. }) => value.into(),
+            Jsona::String(String { value, .. }) => value.into(),
+            Jsona::Array(Array {
                 elements: value, ..
             }) => Value::Array(value.into_iter().map(|v| v.into()).collect()),
-            Ast::Object(Object {
+            Jsona::Object(Object {
                 properties: value, ..
             }) => Value::Object(
                 value

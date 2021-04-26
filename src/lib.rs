@@ -1,18 +1,12 @@
-pub mod ast;
+pub mod syntax;
 pub mod error;
 pub mod lexer;
 pub mod loader;
 pub mod parser;
 
-#[doc(inline)]
-pub use crate::ast::{
-    Annotation, Array, Ast, Boolean, Float, Integer, Null, Object, Position, String,
-};
-#[doc(inline)]
-pub use crate::error::Error;
-#[doc(inline)]
-pub use crate::loader::Loader;
+pub use syntax::Jsona;
+pub use error::Error;
 
-pub fn parse(input: &str) -> Result<Ast, Error> {
-    Loader::load_from_str(input)
+pub fn from_str(input: &str) -> Result<Jsona, Error> {
+    loader::Loader::load_from_str(input)
 }

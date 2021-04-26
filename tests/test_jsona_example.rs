@@ -1,4 +1,4 @@
-use jsona::ast::Position;
+use jsona::syntax::Position;
 use jsona::lexer::Lexer;
 use jsona::parser::{Event, EventReceiver, Parser};
 
@@ -54,7 +54,7 @@ fn test_parse() {
 fn test_json() {
     let expect = include_str!("spec/jsona_example_value.json");
 
-    let result = jsona::parse(INPUT).unwrap();
+    let result = jsona::from_str(INPUT).unwrap();
     let target = serde_json::to_string_pretty(&result).unwrap();
 
     println!("{}", target);

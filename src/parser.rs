@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-use crate::ast::Position;
+use crate::syntax::Position;
 use crate::lexer::{Lexer, Token, TokenKind};
 
 #[derive(Clone, PartialEq, Debug)]

@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use crate::ast::Position;
+use crate::syntax::Position;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {

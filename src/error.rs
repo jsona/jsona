@@ -1,4 +1,4 @@
-use crate::ast::Position;
+use crate::syntax::Position;
 use crate::lexer::{Token, TokenKind};
 use serde::{Deserialize, Serialize};
 use std::fmt;
