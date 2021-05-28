@@ -9,16 +9,16 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen(js_name = parseJsona)]
-pub fn parse_jsona(data: String) -> Result<JsValue, JsValue> {
+#[wasm_bindgen]
+pub fn parse(data: String) -> Result<JsValue, JsValue> {
     match jsona::from_str(data.as_str()) {
         Ok(value) => Ok(JsValue::from_serde(&value).unwrap()),
         Err(err) => Err(JsValue::from_serde(&err).unwrap()),
     }
 }
 
-#[wasm_bindgen(js_name = parseJson)]
-pub fn parse_json(data: String) -> Result<JsValue, JsValue> {
+#[wasm_bindgen(js_name = parseAsJSON)]
+pub fn parse_as_json(data: String) -> Result<JsValue, JsValue> {
     match jsona::from_str(data.as_str()) {
         Ok(value) => Ok(JsValue::from_serde(&Value::from(value)).unwrap()),
         Err(err) => Err(JsValue::from_serde(&err).unwrap()),
