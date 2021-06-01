@@ -1,7 +1,7 @@
 # JSONA - JSON with annotations
 
 The JSONA Data Interchange Format (JSONA) is a superset of [JSON] that supports annotations. It also aims to
-alleviate some of the limitations of JSON by expanding its syntax and 
+alleviate some of the limitations of JSON by expanding its syntax.
 
 ## Summary of Features
 
