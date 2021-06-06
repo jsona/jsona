@@ -1,0 +1,20 @@
+{
+  "name": "jsona-js",
+  "collaborators": [
+    "sigoden <sigoden@gmail.com>"
+  ],
+  "description": "JSONA - JSON with annotations",
+  "version": "__VERSION__",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sigoden/jsona"
+  },
+  "files": [
+    "jsona_js_bg.wasm",
+    "jsona_js.js",
+    "jsona_js_bg.js",
+    "jsona_js.d.ts"
+  ],
+  "main": "jsona_js.js",
+  "types": "jsona_js.d.ts"
+}

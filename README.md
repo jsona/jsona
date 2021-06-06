@@ -4,7 +4,7 @@ A jsona parser
 
 
 ```
-npm i jsona
+npm i jsona-js
 ```
 
 ```js
@@ -31,5 +31,5 @@ const text = `
 }
 `;
 
-parse(text); // jsona ast 
+const { jsona, error } = parse(text);
 ```
