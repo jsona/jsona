@@ -1,6 +1,6 @@
 [package]
 name = "jsona-js"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2018"
 description = "JSONA - JSON with annotations"
