@@ -1,14 +1,9 @@
 [package]
 name = "jsona"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2018"
-description = """
-JSONA - JSON with annotations
-
-The JSONA Data Interchange Format (JSONA) is a superset of JSON that supports annotations. It also aims to
-alleviate some of the limitations of JSON by expanding its syntax and 
-"""
+description = "JSONA is JSON superset, means JSON (less grammatical restrictions) + Annotation."
 documentation = "https://github.com/sigoden/jsona"
 repository = "https://github.com/sigoden/jsona"
 keywords = ["jsona", "parser"]
