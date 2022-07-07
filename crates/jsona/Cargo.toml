@@ -1,0 +1,18 @@
+[package]
+name = "jsona"
+version = "0.3.0"
+authors = ["sigoden <sigoden@gmail.com>"]
+edition = "2018"
+description = "JSONA is JSON superset. JSONA = JSON (less grammatical restrictions) + Annotation."
+documentation = "https://github.com/sigoden/jsona"
+repository = "https://github.com/sigoden/jsona"
+keywords = ["jsona", "parser"]
+categories = ["encoding", "parser-implementations"]
+license = "MIT"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+logos = "0.12.1"
+rowan = "0.15.5"
