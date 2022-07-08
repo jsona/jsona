@@ -1,8 +1,10 @@
 //! JSONA document to syntax tree parsing.
 
 use crate::syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode};
+use crate::util::escape::check_escape;
 use logos::{Lexer, Logos};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
+use std::convert::TryInto;
 
 macro_rules! with_node {
     ($builder:expr, $kind:ident, $($content:tt)*) => {
@@ -199,7 +201,25 @@ impl<'p> Parser<'p> {
                         }
                     }
                 };
-                self.consume_current_token()
+                match check_escape(self.lexer.slice()) {
+                    Ok(_) => self.consume_current_token(),
+                    Err(err_indices) => {
+                        for e in err_indices {
+                            self.add_error(&Error {
+                                range: TextRange::new(
+                                    (self.lexer.span().start + e).try_into().unwrap(),
+                                    (self.lexer.span().start + e).try_into().unwrap(),
+                                ),
+                                message: "invalid escape sequence".into(),
+                            });
+                        }
+
+                        // We proceed normally even if
+                        // the string contains invalid escapes.
+                        // It shouldn't affect the rest of the parsing.
+                        self.consume_current_token()
+                    }
+                }
             }
             BACKTICK_QUOTE => {
                 match allowed_chars::backtick_string(self.lexer.slice()) {
@@ -236,8 +256,8 @@ impl<'p> Parser<'p> {
         if !is_comma && !is_end {
             self.add_error(&Error {
                 range: TextRange::new(
-                        TextSize::from(span.start as u32),
-                        TextSize::from(span.end as u32),
+                    TextSize::from(span.start as u32),
+                    TextSize::from(span.end as u32),
                 ),
                 message: r#"expect ",""#.into(),
             })
@@ -282,7 +302,11 @@ impl<'p> Parser<'p> {
                     self.parse_annos()?;
                 }
                 _ => {
-                    let _ = with_node!(self.builder, VALUE, self.parse_value_with_annos(BRACKET_END));
+                    let _ = with_node!(
+                        self.builder,
+                        VALUE,
+                        self.parse_value_with_annos(BRACKET_END)
+                    );
                 }
             }
         }
@@ -312,8 +336,8 @@ impl<'p> Parser<'p> {
                             let span = self.lexer.span();
                             self.add_error(&Error {
                                 range: TextRange::new(
-                                        TextSize::from((span.start + e) as u32),
-                                        TextSize::from((span.start + e) as u32),
+                                    TextSize::from((span.start + e) as u32),
+                                    TextSize::from((span.start + e) as u32),
                                 ),
                                 message: "invalid control character in string".into(),
                             });
@@ -335,7 +359,6 @@ impl<'p> Parser<'p> {
         }
     }
 
-
     fn must_peek_token(&mut self) -> ParserResult<SyntaxKind> {
         match self.peek_token() {
             Ok(t) => Ok(t),
@@ -354,15 +377,12 @@ impl<'p> Parser<'p> {
                 self.add_error(&err);
                 Err(())
             }
-            Err(_) => {
-                Ok(())
-            }
+            Err(_) => Ok(()),
         }
     }
 
-
     fn must_token_or(&mut self, kind: SyntaxKind, message: &str) -> ParserResult<()> {
-       let t =  self.must_peek_token()?;
+        let t = self.must_peek_token()?;
         if kind == t {
             self.consume_current_token()
         } else {
@@ -371,7 +391,6 @@ impl<'p> Parser<'p> {
             Err(())
         }
     }
-
 
     fn consume_current_token(&mut self) -> ParserResult<()> {
         match self.peek_token() {
