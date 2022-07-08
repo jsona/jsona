@@ -75,7 +75,7 @@ impl<'p> Parser<'p> {
     }
 
     fn parse(mut self) -> Parse {
-        let _ = with_node!(self.builder, ROOT, self.parse_root());
+        let _ = with_node!(self.builder, VALUE, self.parse_root());
 
         Parse {
             green_node: self.builder.finish(),
@@ -84,8 +84,8 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_root(&mut self) -> ParserResult<()> {
+        self.parse_value()?;
         self.parse_annos()?;
-        with_node!(self.builder, VALUE, self.parse_value())?;
         self.must_peek_eof()
     }
 
@@ -201,25 +201,18 @@ impl<'p> Parser<'p> {
                         }
                     }
                 };
-                match check_escape(self.lexer.slice()) {
-                    Ok(_) => self.consume_current_token(),
-                    Err(err_indices) => {
-                        for e in err_indices {
-                            self.add_error(&Error {
-                                range: TextRange::new(
-                                    (self.lexer.span().start + e).try_into().unwrap(),
-                                    (self.lexer.span().start + e).try_into().unwrap(),
-                                ),
-                                message: "invalid escape sequence".into(),
-                            });
-                        }
-
-                        // We proceed normally even if
-                        // the string contains invalid escapes.
-                        // It shouldn't affect the rest of the parsing.
-                        self.consume_current_token()
+                if let Err(err_indices) = check_escape(self.lexer.slice()) {
+                    for e in err_indices {
+                        self.add_error(&Error {
+                            range: TextRange::new(
+                                (self.lexer.span().start + e).try_into().unwrap(),
+                                (self.lexer.span().start + e).try_into().unwrap(),
+                            ),
+                            message: "invalid escape sequence".into(),
+                        });
                     }
-                }
+                };
+                self.consume_current_token()
             }
             BACKTICK_QUOTE => {
                 match allowed_chars::backtick_string(self.lexer.slice()) {

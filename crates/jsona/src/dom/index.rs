@@ -1,4 +1,4 @@
-use super::key::KeyOrIndex;
+use super::keys::KeyOrIndex;
 use super::node::{DomNode, Node};
 use crate::private::Sealed;
 

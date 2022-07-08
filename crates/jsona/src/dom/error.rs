@@ -1,4 +1,4 @@
-use super::key::Key;
+use super::node::Key;
 use crate::syntax::SyntaxElement;
 use thiserror::Error;
 

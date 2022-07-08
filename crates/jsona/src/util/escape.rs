@@ -13,6 +13,9 @@ use logos::{Lexer, Logos};
 /// \UXXXXXXXX - unicode         (U+XXXXXXXX)
 #[derive(Logos, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Escape {
+    #[token(r#"\0"#)]
+    Null,
+
     #[token(r#"\b"#)]
     Backspace,
 
@@ -32,17 +35,23 @@ pub enum Escape {
     CarriageReturn,
 
     #[token(r#"\""#)]
-    Quote,
+    DoubleQuote,
+
+    #[token(r#"\'"#)]
+    SingleQuote,
 
     #[token(r#"\\"#)]
     Backslash,
+
+    #[regex(r#"\\x[0-9A-Fa-f_][0-9A-Fa-f_]"#)]
+    Hex,
 
     // Same thing repeated 4 times, but the {n} repetition syntax is not supported by Logos
     #[regex(r#"\\u[0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_]"#)]
     Unicode,
 
     // Same thing repeated 8 times, but the {n} repetition syntax is not supported by Logos
-    #[regex(r#"\\U[0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_][0-9A-Fa-f_]"#)]
+    #[regex(r#"\\u\{([0-9A-Fa-f_])+\}"#)]
     UnicodeLarge,
 
     #[regex(r#"\\."#)]
@@ -62,15 +71,17 @@ pub fn unescape(s: &str) -> Result<String, usize> {
 
     while let Some(t) = lexer.next() {
         match t {
+            Null => new_s += "\u{0000}",
             Backspace => new_s += "\u{0008}",
             Tab => new_s += "\u{0009}",
             LineFeed => new_s += "\u{000A}",
             FormFeed => new_s += "\u{000C}",
             CarriageReturn => new_s += "\u{000D}",
-            Quote => new_s += "\u{0022}",
+            DoubleQuote => new_s += "\u{0022}",
+            SingleQuote => new_s += "\u{0027}",
             Backslash => new_s += "\u{005C}",
             Newline => {}
-            Unicode => {
+            Hex | Unicode => {
                 new_s += &std::char::from_u32(
                     u32::from_str_radix(&lexer.slice()[2..], 16).map_err(|_| lexer.span().start)?,
                 )
@@ -79,7 +90,7 @@ pub fn unescape(s: &str) -> Result<String, usize> {
             }
             UnicodeLarge => {
                 new_s += &std::char::from_u32(
-                    u32::from_str_radix(&lexer.slice()[2..], 16).map_err(|_| lexer.span().start)?,
+                    u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16).map_err(|_| lexer.span().start)?,
                 )
                 .ok_or(lexer.span().start)?
                 .to_string();
@@ -102,15 +113,17 @@ pub fn check_escape(s: &str) -> Result<(), Vec<usize>> {
 
     while let Some(t) = lexer.next() {
         match t {
+            Null => {}
             Backspace => {}
             Tab => {}
             LineFeed => {}
             FormFeed => {}
             CarriageReturn => {}
-            Quote => {}
+            SingleQuote => {}
+            DoubleQuote => {}
             Backslash => {}
             Newline => {}
-            Unicode => {
+            Hex | Unicode => {
                 let char_val = match u32::from_str_radix(&lexer.slice()[2..], 16) {
                     Ok(v) => v,
                     Err(_) => {
@@ -127,7 +140,7 @@ pub fn check_escape(s: &str) -> Result<(), Vec<usize>> {
                 };
             }
             UnicodeLarge => {
-                let char_val = match u32::from_str_radix(&lexer.slice()[2..], 16) {
+                let char_val = match u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16) {
                     Ok(v) => v,
                     Err(_) => {
                         invalid.push(lexer.span().start);
