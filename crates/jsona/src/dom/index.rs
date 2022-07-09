@@ -19,10 +19,13 @@ impl Index for KeyOrIndex {
                     None
                 }
             }
-            KeyOrIndex::AnnoKey(k) => {
-                let entries = v.annos().read();
-                entries.lookup.get(k).cloned()
-            }
+            KeyOrIndex::AnnoKey(k) => match v.annos() {
+                Some(annos) => {
+                    let entries = annos.entries().read();
+                    entries.lookup.get(k).cloned()
+                }
+                None => None,
+            },
         }
     }
 }

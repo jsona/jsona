@@ -88,6 +88,7 @@ pub enum SyntaxKind {
     ENTRY,
     OBJECT,
     ARRAY,
+    ANNO_VALUE,
 
     #[error]
     ERROR,
@@ -133,7 +134,7 @@ pub fn write_syntax<T: std::io::Write>(
     indent: usize,
     element: SyntaxElement,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let kind: SyntaxKind = element.kind().into();
+    let kind: SyntaxKind = element.kind();
     write!(w, "{:indent$}", "", indent = indent)?;
     match element {
         rowan::NodeOrToken::Node(node) => {

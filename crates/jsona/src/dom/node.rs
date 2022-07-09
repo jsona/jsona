@@ -5,10 +5,10 @@ use crate::util::escape::unescape;
 use crate::util::shared::Shared;
 
 use logos::Lexer;
-use rowan::NodeOrToken;
-use std::fmt::Write;
 use once_cell::unsync::OnceCell;
+use rowan::NodeOrToken;
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
@@ -34,8 +34,8 @@ macro_rules! wrap_node {
                 &self.inner.errors
             }
 
-            fn annos(&self) -> &$crate::util::shared::Shared<$crate::dom::node::Entries> {
-                &self.inner.annos
+            fn annos(&self) -> &Option<$crate::dom::node::Annos> {
+                self.get_annos()
             }
 
             fn validate_node(&self) -> Result<(), &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>>> {
@@ -63,7 +63,7 @@ macro_rules! wrap_node {
 pub trait DomNode: Sized + Sealed {
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
-    fn annos(&self) -> &Shared<Entries>;
+    fn annos(&self) -> &Option<Annos>;
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>>;
     fn is_valid_node(&self) -> bool {
         self.validate_node().is_ok()
@@ -110,7 +110,7 @@ impl DomNode for Node {
         }
     }
 
-    fn annos(&self) -> &Shared<Entries> {
+    fn annos(&self) -> &Option<Annos> {
         match self {
             Node::Null(n) => n.annos(),
             Node::Bool(n) => n.annos(),
@@ -371,12 +371,13 @@ impl From<Invalid> for Node {
     }
 }
 
-
 #[derive(Debug)]
 pub(crate) struct NullInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
+    pub(crate) annos: Option<Annos>,
+    /// For tag anno like `@optional`
+    pub(crate) is_omitted: bool,
 }
 
 wrap_node! {
@@ -385,6 +386,21 @@ wrap_node! {
 }
 
 impl Null {
+    pub fn new(is_omitted: bool) -> Self {
+        NullInner {
+            errors: Default::default(),
+            syntax: None,
+            is_omitted,
+            annos: None,
+        }
+        .wrap()
+    }
+    pub fn is_omitted(&self) -> bool {
+        self.inner.is_omitted
+    }
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
+    }
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -398,7 +414,7 @@ impl Null {
 pub(crate) struct BoolInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
+    pub(crate) annos: Option<Annos>,
     pub(crate) value: OnceCell<bool>,
 }
 
@@ -418,6 +434,10 @@ impl Bool {
         })
     }
 
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
+    }
+
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -431,7 +451,7 @@ impl Bool {
 pub(crate) struct IntegerInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
+    pub(crate) annos: Option<Annos>,
     pub(crate) repr: IntegerRepr,
     pub(crate) value: OnceCell<IntegerValue>,
 }
@@ -473,6 +493,10 @@ impl Integer {
                 IntegerValue::Positive(0)
             }
         })
+    }
+
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -543,7 +567,7 @@ impl core::fmt::Display for IntegerValue {
 pub(crate) struct FloatInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
+    pub(crate) annos: Option<Annos>,
     pub(crate) value: OnceCell<f64>,
 }
 
@@ -564,6 +588,10 @@ impl Float {
         })
     }
 
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
+    }
+
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         let _ = self.value();
         if self.errors().read().as_ref().is_empty() {
@@ -578,7 +606,7 @@ impl Float {
 pub(crate) struct StrInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
+    pub(crate) annos: Option<Annos>,
     pub(crate) repr: StrRepr,
     pub(crate) value: OnceCell<String>,
 }
@@ -626,17 +654,21 @@ impl Str {
                     }
                     StrRepr::Backtick => {
                         let string = s.as_token().unwrap().text();
-                        let string = string.strip_prefix(r#"`"#).unwrap_or(string);
+                        let string = string.strip_prefix('`').unwrap_or(string);
                         let string = match string.strip_prefix("\r\n") {
                             Some(s) => s,
                             None => string.strip_prefix('\n').unwrap_or(string),
                         };
-                        let string = string.strip_suffix(r#"`"#).unwrap_or(string);
+                        let string = string.strip_suffix('`').unwrap_or(string);
                         string.to_string()
                     }
                 })
                 .unwrap_or_default()
         })
+    }
+
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -660,8 +692,7 @@ pub enum StrRepr {
 pub(crate) struct ArrayInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
-    pub(crate) kind: ArrayKind,
+    pub(crate) annos: Option<Annos>,
     pub(crate) items: Shared<Vec<Node>>,
 }
 
@@ -675,8 +706,8 @@ impl Array {
         &self.inner.items
     }
 
-    pub fn kind(&self) -> ArrayKind {
-        self.inner.kind
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -688,34 +719,11 @@ impl Array {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ArrayKind {
-    Multiline,
-    Inline,
-}
-
-impl ArrayKind {
-    /// Returns `true` if the array kind is [`Multiline`].
-    ///
-    /// [`Multiline`]: ArrayKind::Multiline
-    pub fn is_tables(&self) -> bool {
-        matches!(self, Self::Multiline)
-    }
-
-    /// Returns `true` if the array kind is [`Inline`].
-    ///
-    /// [`Inline`]: ArrayKind::Inline
-    pub fn is_inline(&self) -> bool {
-        matches!(self, Self::Inline)
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct ObjectInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
-    pub(crate) kind: ObjectKind,
+    pub(crate) annos: Option<Annos>,
     pub(crate) entries: Shared<Entries>,
 }
 
@@ -735,24 +743,8 @@ impl Object {
         &self.inner.entries
     }
 
-    pub fn kind(&self) -> ObjectKind {
-        self.inner.kind
-    }
-
-    /// Add an entry and also collect errors on conflicts.
-    pub(crate) fn add_entry(&self, key: Key, node: Node) {
-        self.inner.entries.update(|entries| {
-            if let Some((existing_key, value)) = entries.lookup.get_key_value(&key) {
-                self.inner.errors.update(|errors| {
-                    errors.push(Error::ConflictingKeys {
-                        key: key.clone(),
-                        other: existing_key.clone(),
-                    })
-                });
-            }
-
-            entries.add(key, node);
-        });
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -764,17 +756,11 @@ impl Object {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ObjectKind {
-    Multiline,
-    Inline,
-}
-
 #[derive(Debug)]
 pub(crate) struct InvalidInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
+    pub(crate) annos: Option<Annos>,
 }
 
 wrap_node! {
@@ -783,6 +769,10 @@ wrap_node! {
 }
 
 impl Invalid {
+    fn get_annos(&self) -> &Option<Annos> {
+        &self.inner.annos
+    }
+
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -796,7 +786,6 @@ impl Invalid {
 pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Shared<Entries>,
     pub(crate) is_valid: bool,
     pub(crate) value: OnceCell<String>,
 }
@@ -805,7 +794,6 @@ wrap_node! {
     #[derive(Debug, Clone)]
     pub struct Key { inner: KeyInner }
 }
-
 
 impl<S> From<S> for Key
 where
@@ -826,7 +814,6 @@ impl Key {
         KeyInner {
             errors: Default::default(),
             syntax: None,
-            annos: Default::default(),
             is_valid: true,
             value: OnceCell::from(key.into()),
         }
@@ -867,6 +854,10 @@ impl Key {
                 })
                 .unwrap_or_default()
         })
+    }
+
+    fn get_annos(&self) -> &Option<Annos> {
+        &None
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -970,5 +961,41 @@ impl FromIterator<(Key, Node)> for Entries {
         }
 
         Self { lookup, all }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct AnnosInner {
+    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) entries: Shared<Entries>,
+}
+
+wrap_node! {
+    #[derive(Debug, Clone)]
+    pub struct Annos { inner: AnnosInner }
+}
+
+impl Annos {
+    pub fn get(&self, key: impl Into<Key>) -> Option<Node> {
+        let key = key.into();
+        let entries = self.inner.entries.read();
+        entries.lookup.get(&key).cloned()
+    }
+
+    pub fn entries(&self) -> &Shared<Entries> {
+        &self.inner.entries
+    }
+
+    fn get_annos(&self) -> &Option<Annos> {
+        &None
+    }
+
+    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
+        if self.errors().read().as_ref().is_empty() {
+            Ok(())
+        } else {
+            Err(self.errors())
+        }
     }
 }

@@ -104,7 +104,7 @@ impl<'p> Parser<'p> {
         self.must_token_or(AT, r#"expected "@""#)?;
         with_node!(self.builder, KEY, self.parse_key())?;
         if let Ok(PARENTHESES_START) = self.peek_token() {
-            with_node!(self.builder, VALUE, self.parse_anno_value())?;
+            with_node!(self.builder, ANNO_VALUE, self.parse_anno_value())?;
         }
         Ok(())
     }
@@ -312,13 +312,13 @@ impl<'p> Parser<'p> {
 
         match t {
             IDENT => self.consume_current_token(),
-            NULL | BOOL => self.consume_current_token(),
-            INTEGER_HEX | INTEGER_BIN | INTEGER_OCT => self.consume_current_token(),
+            NULL | BOOL => self.consume_current_token_as(IDENT),
+            INTEGER_HEX | INTEGER_BIN | INTEGER_OCT => self.consume_current_token_as(IDENT),
             INTEGER => {
                 if self.lexer.slice().starts_with('+') {
                     Err(())
                 } else {
-                    self.consume_current_token()
+                    self.consume_current_token_as(IDENT)
                 }
             }
             SINGLE_QUOTE | DOUBLE_QUOTE => {
@@ -337,7 +337,7 @@ impl<'p> Parser<'p> {
                         }
                     }
                 };
-                self.consume_current_token()
+                self.consume_current_token_as(IDENT)
             }
             FLOAT => {
                 if self.lexer.slice().starts_with('0') {
@@ -345,7 +345,7 @@ impl<'p> Parser<'p> {
                 } else if self.lexer.slice().starts_with('+') {
                     Err(())
                 } else {
-                    self.consume_current_token()
+                    self.consume_current_token_as(IDENT)
                 }
             }
             _ => self.consume_error_token("expected identifier"),
@@ -358,7 +358,7 @@ impl<'p> Parser<'p> {
             Err(_) => {
                 let err = self.build_error("unexpected EOF");
                 self.add_error(&err);
-                return Err(());
+                Err(())
             }
         }
     }
@@ -390,6 +390,16 @@ impl<'p> Parser<'p> {
             Err(_) => Err(()),
             Ok(token) => {
                 self.consume_token(token, self.lexer.slice());
+                Ok(())
+            }
+        }
+    }
+
+    fn consume_current_token_as(&mut self, kind: SyntaxKind) -> ParserResult<()> {
+        match self.peek_token() {
+            Err(_) => Err(()),
+            Ok(_) => {
+                self.consume_token(kind, self.lexer.slice());
                 Ok(())
             }
         }
@@ -531,10 +541,8 @@ pub(crate) mod allowed_chars {
                 if c != '\t' && c != '\n' && c != '\r' && c.is_control() {
                     err_indices.push(i);
                 }
-            } else {
-                if c != '\t' && c.is_control() {
-                    err_indices.push(i);
-                }
+            } else if c != '\t' && c.is_control() {
+                err_indices.push(i);
             }
         }
 

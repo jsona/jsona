@@ -90,7 +90,8 @@ pub fn unescape(s: &str) -> Result<String, usize> {
             }
             UnicodeLarge => {
                 new_s += &std::char::from_u32(
-                    u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16).map_err(|_| lexer.span().start)?,
+                    u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16)
+                        .map_err(|_| lexer.span().start)?,
                 )
                 .ok_or(lexer.span().start)?
                 .to_string();
@@ -140,13 +141,14 @@ pub fn check_escape(s: &str) -> Result<(), Vec<usize>> {
                 };
             }
             UnicodeLarge => {
-                let char_val = match u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16) {
-                    Ok(v) => v,
-                    Err(_) => {
-                        invalid.push(lexer.span().start);
-                        continue;
-                    }
-                };
+                let char_val =
+                    match u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16) {
+                        Ok(v) => v,
+                        Err(_) => {
+                            invalid.push(lexer.span().start);
+                            continue;
+                        }
+                    };
 
                 match std::char::from_u32(char_val) {
                     None => {
