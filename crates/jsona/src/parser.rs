@@ -54,7 +54,6 @@ pub fn parse(source: &str) -> Parse {
 /// a Rowan green tree from them.
 pub(crate) struct Parser<'p> {
     current_token: Option<SyntaxKind>,
-
     lexer: Lexer<'p, SyntaxKind>,
     builder: GreenNodeBuilder<'p>,
     errors: Vec<Error>,
@@ -71,6 +70,15 @@ impl<'p> Parser<'p> {
             lexer: SyntaxKind::lexer(source),
             builder: Default::default(),
             errors: Default::default(),
+        }
+    }
+
+    pub(crate) fn parse_keys_only(mut self) -> Parse {
+        let _ = with_node!(self.builder, KEY, self.parse_keys());
+
+        Parse {
+            green_node: self.builder.finish(),
+            errors: self.errors,
         }
     }
 
@@ -102,7 +110,7 @@ impl<'p> Parser<'p> {
 
     fn parse_anno_entry(&mut self) -> ParserResult<()> {
         self.must_token_or(AT, r#"expected "@""#)?;
-        with_node!(self.builder, KEY, self.parse_key())?;
+        let _ = with_node!(self.builder, KEY, self.parse_key());
         if let Ok(PARENTHESES_START) = self.peek_token() {
             with_node!(self.builder, ANNO_VALUE, self.parse_anno_value())?;
         }
@@ -117,7 +125,7 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_entry(&mut self) -> ParserResult<()> {
-        with_node!(self.builder, KEY, self.parse_key())?;
+        let _ = with_node!(self.builder, KEY, self.parse_key());
         self.must_token_or(COLON, r#"expected ":""#)?;
         with_node!(self.builder, VALUE, self.parse_value_with_annos(BRACE_END))?;
         Ok(())
@@ -307,6 +315,53 @@ impl<'p> Parser<'p> {
         Ok(())
     }
 
+    fn parse_keys(&mut self) -> ParserResult<()> {
+        let mut start = true;
+        let mut after_delimiter = false;
+        loop {
+            let t = match self.peek_token() {
+                Ok(token) => token,
+                Err(_) => {
+                    if !after_delimiter {
+                        return Ok(());
+                    }
+                    return self.consume_error_token("unexpected EOF");
+                }
+            };
+
+            match t {
+                AT => {
+                    if after_delimiter {
+                        return self.consume_error_token(r#"unexpected "@""#);
+                    } else {
+                        self.consume_current_token()?;
+                        after_delimiter = true;
+                    }
+                }
+                PERIOD => {
+                    if after_delimiter || start {
+                        return self.consume_error_token(r#"unexpected ".""#);
+                    } else {
+                        self.consume_current_token()?;
+                        after_delimiter = true;
+                    }
+                }
+                _ => {
+                    if after_delimiter || start {
+                        match self.parse_key() {
+                            Ok(_) => {}
+                            Err(_) => return self.report_error("expected identifier"),
+                        }
+                        after_delimiter = false;
+                        start = false;
+                    } else {
+                        return self.consume_error_token("unexpected identifier");
+                    }
+                }
+            };
+        }
+    }
+
     fn parse_key(&mut self) -> ParserResult<()> {
         let t = self.must_peek_token()?;
 
@@ -365,11 +420,7 @@ impl<'p> Parser<'p> {
 
     fn must_peek_eof(&mut self) -> ParserResult<()> {
         match self.peek_token() {
-            Ok(_) => {
-                let err = self.build_error("expected EOF");
-                self.add_error(&err);
-                Err(())
-            }
+            Ok(_) => self.report_error("expected EOF"),
             Err(_) => Ok(()),
         }
     }
@@ -379,9 +430,7 @@ impl<'p> Parser<'p> {
         if kind == t {
             self.consume_current_token()
         } else {
-            let err = self.build_error(message);
-            self.add_error(&err);
-            Err(())
+            self.report_error(message)
         }
     }
 
@@ -472,6 +521,12 @@ impl<'p> Parser<'p> {
     fn consume_token(&mut self, kind: SyntaxKind, text: &str) {
         self.builder.token(kind.into(), text);
         self.current_token = None;
+    }
+
+    fn report_error(&mut self, message: &str) -> ParserResult<()> {
+        let err = self.build_error(message);
+        self.add_error(&err);
+        Err(())
     }
 
     fn build_error(&mut self, message: &str) -> Error {

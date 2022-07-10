@@ -23,6 +23,9 @@ pub enum SyntaxKind {
     #[regex(r"[A-Za-z0-9_-]+", priority = 2)]
     IDENT,
 
+    #[token(".")]
+    PERIOD,
+
     #[token(",")]
     COMMA,
 

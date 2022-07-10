@@ -1,9 +1,10 @@
 use super::{
     error::Error,
+    keys::KeyOrIndex,
     node::{
-        Annos, AnnosInner, Array, ArrayInner, Bool, BoolInner, DomNode, Entries, Float, FloatInner,
-        Integer, IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node, Null,
-        NullInner, Object, ObjectInner, Str, StrInner, StrRepr,
+        Annos, AnnosInner, Array, ArrayInner, Bool, BoolInner, Comment, DomNode, Entries, Float,
+        FloatInner, Integer, IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node,
+        Null, NullInner, Object, ObjectInner, Str, StrInner, StrRepr,
     },
 };
 
@@ -11,6 +12,7 @@ use crate::{
     syntax::{SyntaxElement, SyntaxKind::*, SyntaxNode},
     util::shared::Shared,
 };
+use either::Either;
 
 pub fn from_syntax(syntax: SyntaxElement) -> Node {
     if syntax.kind() != VALUE {
@@ -35,6 +37,51 @@ pub fn from_syntax(syntax: SyntaxElement) -> Node {
             OBJECT => object_from_syntax(syntax, annos).into(),
             _ => invalid_from_syntax(syntax, None).into(),
         },
+    }
+}
+
+pub(crate) fn keys_from_syntax(
+    syntax: &SyntaxElement,
+) -> impl ExactSizeIterator<Item = KeyOrIndex> {
+    assert!(syntax.kind() == KEY);
+
+    syntax
+        .as_node()
+        .map(|syntax| {
+            let mut keys = vec![];
+            let mut at_token = false;
+            for child in syntax.children_with_tokens() {
+                match child.kind() {
+                    AT => at_token = true,
+                    PERIOD => at_token = false,
+                    IDENT => {
+                        let key = KeyInner {
+                            errors: Shared::default(),
+                            syntax: Some(child),
+                            annos: None,
+                            is_valid: true,
+                            value: Default::default(),
+                        }
+                        .wrap();
+
+                        if at_token {
+                            keys.push(KeyOrIndex::new_anno_key(key));
+                        } else {
+                            keys.push(KeyOrIndex::new_key(key));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Either::Left(keys.into_iter())
+        })
+        .unwrap_or_else(|| Either::Right(core::iter::empty()))
+}
+
+pub(crate) fn comment_from_syntax(syntax: SyntaxElement) -> Comment {
+    Comment {
+        syntax: Some(syntax),
+        value: Default::default(),
     }
 }
 
@@ -259,6 +306,7 @@ fn annos_from_syntax(syntax: SyntaxElement) -> Annos {
     AnnosInner {
         errors: errors.into(),
         entries: entries.into(),
+        annos: None,
         syntax: Some(syntax.into()),
     }
     .wrap()
@@ -300,6 +348,7 @@ fn key_from_syntax(syntax: SyntaxElement) -> Key {
         KeyInner {
             errors: Shared::default(),
             syntax: Some(syntax),
+            annos: None,
             is_valid: true,
             value: Default::default(),
         }
@@ -309,6 +358,7 @@ fn key_from_syntax(syntax: SyntaxElement) -> Key {
             errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
                 syntax: syntax.clone().into(),
             }])),
+            annos: None,
             is_valid: false,
             value: Default::default(),
             syntax: Some(syntax.into()),

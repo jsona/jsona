@@ -1,15 +1,18 @@
-use super::error::Error;
+use super::error::{Error, QueryError};
+use super::from_syntax::comment_from_syntax;
+use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
 use crate::syntax::{SyntaxElement, SyntaxKind};
 use crate::util::escape::unescape;
 use crate::util::shared::Shared;
 
+use either::Either;
 use logos::Lexer;
 use once_cell::unsync::OnceCell;
-use rowan::NodeOrToken;
+use rowan::{NodeOrToken, TextRange};
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::iter::FromIterator;
+use std::iter::{empty, once, FromIterator};
 use std::sync::Arc;
 
 macro_rules! wrap_node {
@@ -35,7 +38,7 @@ macro_rules! wrap_node {
             }
 
             fn annos(&self) -> &Option<$crate::dom::node::Annos> {
-                self.get_annos()
+                &self.inner.annos
             }
 
             fn validate_node(&self) -> Result<(), &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>>> {
@@ -133,6 +136,399 @@ impl DomNode for Node {
             Node::Array(n) => n.validate_node(),
             Node::Object(n) => n.validate_node(),
             Node::Invalid(n) => n.validate_node(),
+        }
+    }
+}
+impl Node {
+    pub fn path(&self, keys: &Keys) -> Option<Node> {
+        let mut node = self.clone();
+        for key in keys.iter() {
+            node = node.get(key);
+        }
+        if node.is_invalid() {
+            None
+        } else {
+            Some(node)
+        }
+    }
+
+    pub fn get(&self, idx: &KeyOrIndex) -> Node {
+        self.get_impl(idx).unwrap_or_else(|| {
+            Node::from(
+                InvalidInner {
+                    errors: Shared::from(Vec::from([Error::Query(QueryError::NotFound)])),
+                    syntax: None,
+                    annos: None,
+                }
+                .wrap(),
+            )
+        })
+    }
+
+    pub fn try_get(&self, idx: &KeyOrIndex) -> Result<Node, Error> {
+        self.get_impl(idx).ok_or(Error::Query(QueryError::NotFound))
+    }
+
+    pub fn validate(&self) -> Result<(), impl Iterator<Item = Error> + core::fmt::Debug> {
+        let mut errors = Vec::new();
+        self.validate_all_impl(&mut errors);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.into_iter())
+        }
+    }
+
+    pub fn flat_iter(&self) -> impl DoubleEndedIterator<Item = (Keys, Node)> {
+        let mut all = Vec::new();
+
+        match self {
+            Node::Object(t) => {
+                let entries = t.inner.entries.read();
+                for (key, entry) in &entries.all {
+                    entry.collect_flat(Keys::new(once(KeyOrIndex::new_key(key.clone()))), &mut all);
+                }
+            }
+            Node::Array(arr) => {
+                let items = arr.inner.items.read();
+                for (idx, item) in items.iter().enumerate() {
+                    item.collect_flat(Keys::from(idx), &mut all);
+                }
+            }
+            _ => {}
+        }
+
+        if let Some(annos) = self.annos() {
+            let entries = annos.inner.entries.read();
+            for (key, entry) in &entries.all {
+                entry.collect_flat(Keys::new(once(KeyOrIndex::new_key(key.clone()))), &mut all);
+            }
+        }
+
+        all.into_iter()
+    }
+
+    pub fn find_all_matches(
+        &self,
+        keys: Keys,
+        include_children: bool,
+    ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, Error> {
+        let mut all: Vec<(Keys, Node)> = self.flat_iter().collect();
+
+        let mut err: Option<Error> = None;
+
+        all.retain(|(k, _)| {
+            if k.len() < keys.len() {
+                return false;
+            }
+
+            let search_keys = keys.clone();
+            let keys = k.clone();
+
+            for (search_key, key) in search_keys.iter().zip(keys.iter()) {
+                match search_key {
+                    KeyOrIndex::Key(search_key) => {
+                        let glob = match globset::Glob::new(search_key.value()) {
+                            Ok(g) => g.compile_matcher(),
+                            Err(glob_err) => {
+                                err = Some(QueryError::from(glob_err).into());
+                                return true;
+                            }
+                        };
+
+                        match key {
+                            KeyOrIndex::Key(key) => {
+                                if !glob.is_match(key.value()) {
+                                    return false;
+                                }
+                            }
+                            KeyOrIndex::AnnoKey(_) => {
+                                return false;
+                            }
+                            KeyOrIndex::Index(idx) => {
+                                if !glob.is_match(&idx.to_string()) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    KeyOrIndex::AnnoKey(search_key) => {
+                        let glob = match globset::Glob::new(search_key.value()) {
+                            Ok(g) => g.compile_matcher(),
+                            Err(glob_err) => {
+                                err = Some(QueryError::from(glob_err).into());
+                                return true;
+                            }
+                        };
+
+                        match key {
+                            KeyOrIndex::Key(_) => {
+                                return false;
+                            }
+                            KeyOrIndex::AnnoKey(key) => {
+                                if !glob.is_match(key.value()) {
+                                    return false;
+                                }
+                            }
+                            KeyOrIndex::Index(_) => {
+                                return false;
+                            }
+                        }
+                    }
+                    KeyOrIndex::Index(search_idx) => match key {
+                        KeyOrIndex::Key(_) => {
+                            return false;
+                        }
+                        KeyOrIndex::AnnoKey(_) => {
+                            return false;
+                        }
+                        KeyOrIndex::Index(idx) => {
+                            if idx != search_idx {
+                                return false;
+                            }
+                        }
+                    },
+                }
+            }
+
+            true
+        });
+
+        if !include_children {
+            all.retain(|(k, _)| k.len() == keys.len());
+        }
+
+        if let Some(err) = err {
+            return Err(err);
+        }
+
+        Ok(all.into_iter())
+    }
+
+    pub fn text_ranges(&self) -> impl ExactSizeIterator<Item = TextRange> {
+        let mut ranges = Vec::with_capacity(1);
+
+        match self {
+            Node::Object(v) => {
+                let entries = v.entries().read();
+
+                for (k, entry) in entries.iter() {
+                    ranges.extend(k.text_ranges());
+                    ranges.extend(entry.text_ranges());
+                }
+
+                if let Some(mut r) = v.syntax().map(|s| s.text_range()) {
+                    for range in &ranges {
+                        r = r.cover(*range);
+                    }
+
+                    ranges.insert(0, r);
+                }
+            }
+            Node::Array(v) => {
+                let items = v.items().read();
+                for item in items.iter() {
+                    ranges.extend(item.text_ranges());
+                }
+
+                if let Some(mut r) = v.syntax().map(|s| s.text_range()) {
+                    for range in &ranges {
+                        r = r.cover(*range);
+                    }
+
+                    ranges.insert(0, r);
+                }
+            }
+            Node::Bool(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+            Node::Str(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+            Node::Integer(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+            Node::Float(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+            Node::Null(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+            Node::Invalid(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+        }
+
+        if let Some(v) = self.annos() {
+            let entries = v.entries().read();
+
+            for (k, entry) in entries.iter() {
+                ranges.extend(k.text_ranges());
+                ranges.extend(entry.text_ranges());
+            }
+
+            if let Some(mut r) = v.syntax().map(|s| s.text_range()) {
+                for range in &ranges {
+                    r = r.cover(*range);
+                }
+
+                ranges.insert(0, r);
+            }
+        }
+
+        ranges.into_iter()
+    }
+
+    /// All the comments in the tree, including header comments returned from [`Self::header_comments`].
+    pub fn comments(&self) -> impl Iterator<Item = Comment> {
+        if let Some(syntax) = self.syntax().cloned().and_then(|s| s.into_node()) {
+            Either::Left(
+                syntax
+                    .descendants_with_tokens()
+                    .filter(|t| {
+                        t.kind() == SyntaxKind::COMMENT_BLOCK
+                            || t.kind() == SyntaxKind::COMMENT_LINE
+                    })
+                    .map(comment_from_syntax),
+            )
+        } else {
+            Either::Right(empty())
+        }
+    }
+
+    /// Comments before the first item in the file.
+    ///
+    /// These are always counted from the root and the same
+    /// values are returned from every node in the same tree.
+    pub fn header_comments(&self) -> impl Iterator<Item = Comment> {
+        let first_item = self
+            .syntax()
+            .and_then(|syntax| syntax.ancestors().last())
+            .and_then(|root| root.descendants().nth(1));
+
+        match first_item {
+            Some(it) => Either::Left(self.comments().take_while(move |c| {
+                c.syntax.as_ref().unwrap().text_range().end() <= it.text_range().start()
+            })),
+            None => Either::Right(self.comments()),
+        }
+    }
+
+    fn get_impl(&self, idx: &KeyOrIndex) -> Option<Node> {
+        match idx {
+            KeyOrIndex::Index(v) => {
+                if let Node::Array(arr) = self {
+                    let items = arr.items().read();
+                    items.get(*v).cloned()
+                } else {
+                    None
+                }
+            }
+            KeyOrIndex::Key(k) => {
+                if let Node::Object(obj) = self {
+                    obj.get(k.clone())
+                } else {
+                    None
+                }
+            }
+            KeyOrIndex::AnnoKey(k) => {
+                if let Some(annos) = self.annos() {
+                    annos.get(k.clone())
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    fn collect_flat(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {
+        match self {
+            Node::Object(t) => {
+                all.push((parent.clone(), self.clone()));
+                let entries = t.inner.entries.read();
+                for (key, entry) in &entries.all {
+                    entry.collect_flat(parent.join(KeyOrIndex::new_key(key.clone())), all);
+                }
+            }
+            Node::Array(arr) => {
+                all.push((parent.clone(), self.clone()));
+                let items = arr.inner.items.read();
+                for (idx, item) in items.iter().enumerate() {
+                    item.collect_flat(parent.join(idx), all);
+                }
+            }
+            _ => {
+                all.push((parent.clone(), self.clone()));
+            }
+        }
+
+        if let Some(annos) = self.annos() {
+            all.push((parent.clone(), self.clone()));
+            let entries = annos.inner.entries.read();
+            for (key, entry) in &entries.all {
+                entry.collect_flat(parent.join(KeyOrIndex::new_key(key.clone())), all);
+            }
+        }
+    }
+
+    fn validate_all_impl(&self, errors: &mut Vec<Error>) {
+        match self {
+            Node::Object(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+
+                let items = v.inner.entries.read();
+                for (k, entry) in items.as_ref().all.iter() {
+                    if let Err(errs) = k.validate_node() {
+                        errors.extend(errs.read().as_ref().iter().cloned())
+                    }
+                    entry.validate_all_impl(errors);
+                }
+            }
+            Node::Array(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+
+                let items = v.inner.items.read();
+                for item in &**items.as_ref() {
+                    if let Err(errs) = item.validate_node() {
+                        errors.extend(errs.read().as_ref().iter().cloned())
+                    }
+                }
+            }
+            Node::Bool(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+            }
+            Node::Str(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+            }
+            Node::Integer(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+            }
+            Node::Float(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+            }
+            Node::Null(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+            }
+            Node::Invalid(v) => {
+                if let Err(errs) = v.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+            }
+        }
+        if let Some(v) = self.annos() {
+            if let Err(errs) = v.validate_node() {
+                errors.extend(errs.read().as_ref().iter().cloned())
+            }
+
+            let items = v.inner.entries.read();
+            for (k, entry) in items.as_ref().all.iter() {
+                if let Err(errs) = k.validate_node() {
+                    errors.extend(errs.read().as_ref().iter().cloned())
+                }
+                entry.validate_all_impl(errors);
+            }
         }
     }
 }
@@ -398,9 +794,6 @@ impl Null {
     pub fn is_omitted(&self) -> bool {
         self.inner.is_omitted
     }
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
-    }
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -432,10 +825,6 @@ impl Bool {
                 .and_then(|s| s.text().parse().ok())
                 .unwrap_or_default()
         })
-    }
-
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -493,10 +882,6 @@ impl Integer {
                 IntegerValue::Positive(0)
             }
         })
-    }
-
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -588,10 +973,6 @@ impl Float {
         })
     }
 
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
-    }
-
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         let _ = self.value();
         if self.errors().read().as_ref().is_empty() {
@@ -667,10 +1048,6 @@ impl Str {
         })
     }
 
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
-    }
-
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         let _ = self.value();
         if self.errors().read().as_ref().is_empty() {
@@ -706,10 +1083,6 @@ impl Array {
         &self.inner.items
     }
 
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
-    }
-
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -743,10 +1116,6 @@ impl Object {
         &self.inner.entries
     }
 
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
-    }
-
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -769,10 +1138,6 @@ wrap_node! {
 }
 
 impl Invalid {
-    fn get_annos(&self) -> &Option<Annos> {
-        &self.inner.annos
-    }
-
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -786,6 +1151,7 @@ impl Invalid {
 pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) annos: Option<Annos>,
     pub(crate) is_valid: bool,
     pub(crate) value: OnceCell<String>,
 }
@@ -814,6 +1180,7 @@ impl Key {
         KeyInner {
             errors: Default::default(),
             syntax: None,
+            annos: None,
             is_valid: true,
             value: OnceCell::from(key.into()),
         }
@@ -856,8 +1223,14 @@ impl Key {
         })
     }
 
-    fn get_annos(&self) -> &Option<Annos> {
-        &None
+    pub fn text_range(&self) -> Option<TextRange> {
+        self.syntax().map(|v| v.text_range())
+    }
+
+    pub fn text_ranges(&self) -> impl ExactSizeIterator<Item = TextRange> {
+        self.text_range()
+            .map(|v| Either::Left(once(v)))
+            .unwrap_or_else(|| Either::Right(empty()))
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -890,9 +1263,9 @@ impl core::fmt::Display for Key {
             Lexer::<SyntaxKind>::new(self.value()).next(),
             Some(SyntaxKind::IDENT) | None
         ) {
-            f.write_char('\'')?;
+            f.write_char('\"')?;
             self.value().fmt(f)?;
-            f.write_char('\'')?;
+            f.write_char('\"')?;
             return Ok(());
         }
 
@@ -968,6 +1341,7 @@ impl FromIterator<(Key, Node)> for Entries {
 pub(crate) struct AnnosInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) annos: Option<Annos>,
     pub(crate) entries: Shared<Entries>,
 }
 
@@ -987,15 +1361,123 @@ impl Annos {
         &self.inner.entries
     }
 
-    fn get_annos(&self) -> &Option<Annos> {
-        &None
-    }
-
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
         } else {
             Err(self.errors())
         }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Comment {
+    pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) value: OnceCell<CommentValue>,
+}
+
+impl Comment {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self {
+            syntax: None,
+            value: OnceCell::from(CommentValue::Comment(value.into())),
+        }
+    }
+
+    pub fn new_directive(name: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            syntax: None,
+            value: OnceCell::from(CommentValue::Directive {
+                name: name.into(),
+                value: value.into(),
+            }),
+        }
+    }
+
+    pub fn is_directive(&self) -> bool {
+        self.value_internal().is_directive()
+    }
+
+    pub fn directive(&self) -> Option<&str> {
+        if let CommentValue::Directive { name, .. } = self.value_internal() {
+            Some(name)
+        } else {
+            None
+        }
+    }
+
+    pub fn value(&self) -> &str {
+        match self.value_internal() {
+            CommentValue::Comment(s) => s,
+            CommentValue::Directive { value, .. } => value,
+        }
+    }
+
+    fn value_internal(&self) -> &CommentValue {
+        self.value
+            .get_or_init(|| match self.syntax.as_ref().and_then(|s| s.as_token()) {
+                Some(t) => {
+                    let text = t.text();
+
+                    if let Some(directive_content) = text.strip_prefix("#:") {
+                        let mut directive_content = directive_content.split_whitespace();
+                        let directive_name = directive_content.next().unwrap_or("");
+                        let directive_value = directive_content.next().unwrap_or("");
+                        return CommentValue::Directive {
+                            name: directive_name.into(),
+                            value: directive_value.into(),
+                        };
+                    }
+
+                    if let Some(comment_content) = text.strip_prefix('#') {
+                        return CommentValue::Comment(comment_content.into());
+                    }
+
+                    Default::default()
+                }
+                None => Default::default(),
+            })
+    }
+}
+
+impl core::fmt::Display for Comment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(s) = &self.syntax {
+            s.fmt(f)
+        } else {
+            match self.value_internal() {
+                CommentValue::Comment(c) => {
+                    f.write_str("#")?;
+                    c.fmt(f)
+                }
+                CommentValue::Directive { name, value } => {
+                    f.write_str("#:")?;
+                    name.fmt(f)?;
+                    f.write_str(" ")?;
+                    value.fmt(f)
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CommentValue {
+    Comment(String),
+    Directive { name: String, value: String },
+}
+
+impl CommentValue {
+    /// Returns `true` if the comment value is [`Directive`].
+    ///
+    /// [`Directive`]: CommentValue::Directive
+    fn is_directive(&self) -> bool {
+        matches!(self, Self::Directive { .. })
+    }
+}
+
+impl Default for CommentValue {
+    fn default() -> Self {
+        Self::Comment(String::new())
     }
 }

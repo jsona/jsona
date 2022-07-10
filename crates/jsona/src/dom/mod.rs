@@ -1,6 +1,9 @@
 pub mod error;
-mod from_syntax;
-pub mod index;
 pub mod keys;
 pub mod node;
+
+mod from_syntax;
+
+pub use error::Error;
 pub use from_syntax::from_syntax;
+pub use node::*;
