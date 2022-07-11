@@ -1,6 +1,9 @@
+mod to_jsona;
+
 use crate::dom::{DomNode, Node};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Formatter, Write};
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -18,6 +21,7 @@ pub enum Value {
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Null {
+    pub value: (),
     pub annotations: IndexMap<String, Value>,
 }
 
@@ -243,7 +247,11 @@ impl From<&Node> for Value {
             }
         }
         match node {
-            Node::Null(_) => Null { annotations }.into(),
+            Node::Null(_) => Null {
+                value: (),
+                annotations,
+            }
+            .into(),
             Node::Bool(v) => Bool {
                 value: v.value(),
                 annotations,
@@ -277,7 +285,11 @@ impl From<&Node> for Value {
                     .collect();
                 Object { value, annotations }.into()
             }
-            Node::Invalid(_) => Null { annotations }.into(),
+            Node::Invalid(_) => Null {
+                value: (),
+                annotations,
+            }
+            .into(),
         }
     }
 }

@@ -978,15 +978,7 @@ impl Str {
                         let string = s.as_token().unwrap().text();
                         let string = string.strip_prefix('\'').unwrap_or(string);
                         let string = string.strip_suffix('\'').unwrap_or(string);
-                        match unescape(string) {
-                            Ok(s) => s,
-                            Err(_) => {
-                                self.inner.errors.update(|errors| {
-                                    errors.push(Error::InvalidEscapeSequence { string: s.clone() })
-                                });
-                                String::new()
-                            }
-                        }
+                        string.to_string()
                     }
                     StrRepr::Backtick => {
                         let string = s.as_token().unwrap().text();
