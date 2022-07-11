@@ -10,8 +10,7 @@ fn main() {
     for err in &parse_result.errors {
         eprintln!("{}", err);
     }
-    let syntax = parse_result.into_syntax();
-    let node = jsona::dom::from_syntax(syntax.into());
+    let node = parse_result.into_dom();
     if let Err(errs) = node.validate() {
         for err in errs {
             eprintln!("{}", err);

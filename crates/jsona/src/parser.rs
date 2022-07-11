@@ -1,5 +1,6 @@
 //! JSONA document to syntax tree parsing.
 
+use crate::dom;
 use crate::syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode};
 use crate::util::escape::check_escape;
 use logos::{Lexer, Logos};
@@ -588,6 +589,13 @@ impl Parse {
     /// Turn the parse into a syntax node.
     pub fn into_syntax(self) -> SyntaxNode {
         SyntaxNode::new_root(self.green_node)
+    }
+    /// Turn the parse into a DOM tree.
+    ///
+    /// Any semantic errors that occur will be collected
+    /// in the returned DOM node.
+    pub fn into_dom(self) -> dom::Node {
+        dom::from_syntax(self.into_syntax().into())
     }
 }
 

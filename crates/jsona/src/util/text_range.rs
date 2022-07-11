@@ -16,12 +16,3 @@ pub fn try_join_ranges<I: IntoIterator<Item = TextRange>>(ranges: I) -> Option<T
         None => Some(range),
     })
 }
-
-pub fn overlaps(range: TextRange, other: TextRange) -> bool {
-    range.contains_range(other)
-        || other.contains_range(range)
-        || range.contains(other.start())
-        || range.contains(other.end())
-        || other.contains(range.start())
-        || other.contains(range.end())
-}
