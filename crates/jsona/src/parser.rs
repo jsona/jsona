@@ -93,13 +93,13 @@ impl<'p> Parser<'p> {
 
     fn parse_root(&mut self) -> ParserResult<()> {
         self.parse_value()?;
-        self.parse_annos()?;
+        self.parse_annotations()?;
         self.must_peek_eof()
     }
 
-    fn parse_annos(&mut self) -> ParserResult<()> {
+    fn parse_annotations(&mut self) -> ParserResult<()> {
         if let Ok(AT) = self.peek_token() {
-            self.builder.start_node(ANNOS.into());
+            self.builder.start_node(ANNOTATIONS.into());
             while let Ok(AT) = self.peek_token() {
                 with_node!(self.builder, ENTRY, self.parse_anno_entry())?;
             }
@@ -112,7 +112,7 @@ impl<'p> Parser<'p> {
         self.must_token_or(AT, r#"expected "@""#)?;
         let _ = with_node!(self.builder, KEY, self.parse_key());
         if let Ok(PARENTHESES_START) = self.peek_token() {
-            with_node!(self.builder, ANNO_VALUE, self.parse_anno_value())?;
+            with_node!(self.builder, ANNOTATION_VALUE, self.parse_anno_value())?;
         }
         Ok(())
     }
@@ -127,7 +127,7 @@ impl<'p> Parser<'p> {
     fn parse_entry(&mut self) -> ParserResult<()> {
         let _ = with_node!(self.builder, KEY, self.parse_key());
         self.must_token_or(COLON, r#"expected ":""#)?;
-        with_node!(self.builder, VALUE, self.parse_value_with_annos(BRACE_END))?;
+        with_node!(self.builder, VALUE, self.parse_value_with_annotations(BRACE_END))?;
         Ok(())
     }
 
@@ -244,7 +244,7 @@ impl<'p> Parser<'p> {
         }
     }
 
-    fn parse_value_with_annos(&mut self, kind: SyntaxKind) -> ParserResult<()> {
+    fn parse_value_with_annotations(&mut self, kind: SyntaxKind) -> ParserResult<()> {
         self.parse_value()?;
         let span = self.lexer.span();
         let mut is_comma = false;
@@ -252,7 +252,7 @@ impl<'p> Parser<'p> {
             is_comma = true;
             self.consume_current_token()?;
         }
-        self.parse_annos()?;
+        self.parse_annotations()?;
         let is_end = self.peek_token()? == kind;
         if !is_comma && !is_end {
             self.add_error(&Error {
@@ -268,7 +268,7 @@ impl<'p> Parser<'p> {
 
     fn parse_object(&mut self) -> ParserResult<()> {
         self.must_token_or(BRACE_START, r#"expected "{""#)?;
-        self.parse_annos()?;
+        self.parse_annotations()?;
 
         while let Ok(t) = self.must_peek_token() {
             match t {
@@ -278,7 +278,7 @@ impl<'p> Parser<'p> {
                 AT => {
                     let err = self.build_error(r#"unexpected "@""#);
                     self.add_error(&err);
-                    self.parse_annos()?;
+                    self.parse_annotations()?;
                 }
                 _ => {
                     let _ = with_node!(self.builder, ENTRY, self.parse_entry());
@@ -290,7 +290,7 @@ impl<'p> Parser<'p> {
 
     fn parse_array(&mut self) -> ParserResult<()> {
         self.must_token_or(BRACKET_START, r#"expected "[""#)?;
-        let _ = self.parse_annos();
+        let _ = self.parse_annotations();
 
         while let Ok(t) = self.must_peek_token() {
             match t {
@@ -300,13 +300,13 @@ impl<'p> Parser<'p> {
                 AT => {
                     let err = self.build_error(r#"unexpected "@""#);
                     self.add_error(&err);
-                    self.parse_annos()?;
+                    self.parse_annotations()?;
                 }
                 _ => {
                     let _ = with_node!(
                         self.builder,
                         VALUE,
-                        self.parse_value_with_annos(BRACKET_END)
+                        self.parse_value_with_annotations(BRACKET_END)
                     );
                 }
             }

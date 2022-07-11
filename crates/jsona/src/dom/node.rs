@@ -37,8 +37,8 @@ macro_rules! wrap_node {
                 &self.inner.errors
             }
 
-            fn annos(&self) -> &Option<$crate::dom::node::Annos> {
-                &self.inner.annos
+            fn annotations(&self) -> &Option<$crate::dom::node::Annotations> {
+                &self.inner.annotations
             }
 
             fn validate_node(&self) -> Result<(), &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>>> {
@@ -66,7 +66,7 @@ macro_rules! wrap_node {
 pub trait DomNode: Sized + Sealed {
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
-    fn annos(&self) -> &Option<Annos>;
+    fn annotations(&self) -> &Option<Annotations>;
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>>;
     fn is_valid_node(&self) -> bool {
         self.validate_node().is_ok()
@@ -113,16 +113,16 @@ impl DomNode for Node {
         }
     }
 
-    fn annos(&self) -> &Option<Annos> {
+    fn annotations(&self) -> &Option<Annotations> {
         match self {
-            Node::Null(n) => n.annos(),
-            Node::Bool(n) => n.annos(),
-            Node::Integer(n) => n.annos(),
-            Node::Float(n) => n.annos(),
-            Node::Str(n) => n.annos(),
-            Node::Array(n) => n.annos(),
-            Node::Object(n) => n.annos(),
-            Node::Invalid(n) => n.annos(),
+            Node::Null(n) => n.annotations(),
+            Node::Bool(n) => n.annotations(),
+            Node::Integer(n) => n.annotations(),
+            Node::Float(n) => n.annotations(),
+            Node::Str(n) => n.annotations(),
+            Node::Array(n) => n.annotations(),
+            Node::Object(n) => n.annotations(),
+            Node::Invalid(n) => n.annotations(),
         }
     }
 
@@ -158,7 +158,7 @@ impl Node {
                 InvalidInner {
                     errors: Shared::from(Vec::from([Error::Query(QueryError::NotFound)])),
                     syntax: None,
-                    annos: None,
+                    annotations: None,
                 }
                 .wrap(),
             )
@@ -198,8 +198,8 @@ impl Node {
             _ => {}
         }
 
-        if let Some(annos) = self.annos() {
-            let entries = annos.inner.entries.read();
+        if let Some(annotations) = self.annotations() {
+            let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
                 entry.collect_flat(Keys::new(once(KeyOrIndex::new_key(key.clone()))), &mut all);
             }
@@ -347,7 +347,7 @@ impl Node {
             Node::Invalid(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
         }
 
-        if let Some(v) = self.annos() {
+        if let Some(v) = self.annotations() {
             let entries = v.entries().read();
 
             for (k, entry) in entries.iter() {
@@ -420,8 +420,8 @@ impl Node {
                 }
             }
             KeyOrIndex::AnnoKey(k) => {
-                if let Some(annos) = self.annos() {
-                    annos.get(k.clone())
+                if let Some(annotations) = self.annotations() {
+                    annotations.get(k.clone())
                 } else {
                     None
                 }
@@ -450,9 +450,9 @@ impl Node {
             }
         }
 
-        if let Some(annos) = self.annos() {
+        if let Some(annotations) = self.annotations() {
             all.push((parent.clone(), self.clone()));
-            let entries = annos.inner.entries.read();
+            let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
                 entry.collect_flat(parent.join(KeyOrIndex::new_key(key.clone())), all);
             }
@@ -517,7 +517,7 @@ impl Node {
                 }
             }
         }
-        if let Some(v) = self.annos() {
+        if let Some(v) = self.annotations() {
             if let Err(errs) = v.validate_node() {
                 errors.extend(errs.read().as_ref().iter().cloned())
             }
@@ -771,7 +771,7 @@ impl From<Invalid> for Node {
 pub(crate) struct NullInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     /// For tag anno like `@optional`
     pub(crate) is_omitted: bool,
 }
@@ -787,7 +787,7 @@ impl Null {
             errors: Default::default(),
             syntax: None,
             is_omitted,
-            annos: None,
+            annotations: None,
         }
         .wrap()
     }
@@ -807,7 +807,7 @@ impl Null {
 pub(crate) struct BoolInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<bool>,
 }
 
@@ -840,7 +840,7 @@ impl Bool {
 pub(crate) struct IntegerInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: IntegerRepr,
     pub(crate) value: OnceCell<IntegerValue>,
 }
@@ -952,7 +952,7 @@ impl core::fmt::Display for IntegerValue {
 pub(crate) struct FloatInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<f64>,
 }
 
@@ -987,7 +987,7 @@ impl Float {
 pub(crate) struct StrInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: StrRepr,
     pub(crate) value: OnceCell<String>,
 }
@@ -1069,7 +1069,7 @@ pub enum StrRepr {
 pub(crate) struct ArrayInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) items: Shared<Vec<Node>>,
 }
 
@@ -1096,7 +1096,7 @@ impl Array {
 pub(crate) struct ObjectInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) entries: Shared<Entries>,
 }
 
@@ -1129,7 +1129,7 @@ impl Object {
 pub(crate) struct InvalidInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
 }
 
 wrap_node! {
@@ -1151,7 +1151,7 @@ impl Invalid {
 pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) is_valid: bool,
     pub(crate) value: OnceCell<String>,
 }
@@ -1180,7 +1180,7 @@ impl Key {
         KeyInner {
             errors: Default::default(),
             syntax: None,
-            annos: None,
+            annotations: None,
             is_valid: true,
             value: OnceCell::from(key.into()),
         }
@@ -1338,19 +1338,19 @@ impl FromIterator<(Key, Node)> for Entries {
 }
 
 #[derive(Debug)]
-pub(crate) struct AnnosInner {
+pub(crate) struct AnnotationsInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annos: Option<Annos>,
+    pub(crate) annotations: Option<Annotations>,
     pub(crate) entries: Shared<Entries>,
 }
 
 wrap_node! {
     #[derive(Debug, Clone)]
-    pub struct Annos { inner: AnnosInner }
+    pub struct Annotations { inner: AnnotationsInner }
 }
 
-impl Annos {
+impl Annotations {
     pub fn get(&self, key: impl Into<Key>) -> Option<Node> {
         let key = key.into();
         let entries = self.inner.entries.read();

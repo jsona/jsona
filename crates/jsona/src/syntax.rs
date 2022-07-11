@@ -91,12 +91,12 @@ pub enum SyntaxKind {
     ENTRY,
     OBJECT,
     ARRAY,
-    ANNO_VALUE,
+    ANNOTATION_VALUE,
 
     #[error]
     ERROR,
 
-    ANNOS,
+    ANNOTATIONS,
     VALUE,
 }
 

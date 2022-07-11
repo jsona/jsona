@@ -2,7 +2,7 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annos, AnnosInner, Array, ArrayInner, Bool, BoolInner, Comment, DomNode, Entries, Float,
+        Annotations, AnnotationsInner, Array, ArrayInner, Bool, BoolInner, Comment, DomNode, Entries, Float,
         FloatInner, Integer, IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node,
         Null, NullInner, Object, ObjectInner, Str, StrInner, StrRepr,
     },
@@ -19,22 +19,22 @@ pub fn from_syntax(syntax: SyntaxElement) -> Node {
         return invalid_from_syntax(syntax, None).into();
     }
     let syntax = syntax.into_node().unwrap();
-    let annos = syntax
+    let annotations = syntax
         .children_with_tokens()
-        .find(|v| v.kind() == ANNOS)
-        .map(annos_from_syntax);
+        .find(|v| v.kind() == ANNOTATIONS)
+        .map(annotations_from_syntax);
     match first_none_empty_child(&syntax) {
         None => invalid_from_syntax(syntax.into(), None).into(),
         Some(syntax) => match syntax.kind() {
-            NULL => null_from_syntax(syntax, annos).into(),
-            BOOL => bool_from_syntax(syntax, annos).into(),
+            NULL => null_from_syntax(syntax, annotations).into(),
+            BOOL => bool_from_syntax(syntax, annotations).into(),
             INTEGER | INTEGER_HEX | INTEGER_OCT | INTEGER_BIN => {
-                integer_from_syntax(syntax, annos).into()
+                integer_from_syntax(syntax, annotations).into()
             }
-            FLOAT => float_from_syntax(syntax, annos).into(),
-            SINGLE_QUOTE | DOUBLE_QUOTE | BACKTICK_QUOTE => str_from_syntax(syntax, annos).into(),
-            ARRAY => array_from_syntax(syntax, annos).into(),
-            OBJECT => object_from_syntax(syntax, annos).into(),
+            FLOAT => float_from_syntax(syntax, annotations).into(),
+            SINGLE_QUOTE | DOUBLE_QUOTE | BACKTICK_QUOTE => str_from_syntax(syntax, annotations).into(),
+            ARRAY => array_from_syntax(syntax, annotations).into(),
+            OBJECT => object_from_syntax(syntax, annotations).into(),
             _ => invalid_from_syntax(syntax, None).into(),
         },
     }
@@ -58,7 +58,7 @@ pub(crate) fn keys_from_syntax(
                         let key = KeyInner {
                             errors: Shared::default(),
                             syntax: Some(child),
-                            annos: None,
+                            annotations: None,
                             is_valid: true,
                             value: Default::default(),
                         }
@@ -85,35 +85,35 @@ pub(crate) fn comment_from_syntax(syntax: SyntaxElement) -> Comment {
     }
 }
 
-fn null_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Null {
+fn null_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Null {
     assert!(syntax.kind() == NULL);
     NullInner {
         errors: Default::default(),
         syntax: Some(syntax),
-        annos,
+        annotations,
         is_omitted: false,
     }
     .into()
 }
 
-fn bool_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Bool {
+fn bool_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Bool {
     assert!(syntax.kind() == BOOL);
     BoolInner {
         errors: Default::default(),
         syntax: Some(syntax),
-        annos,
+        annotations,
         value: Default::default(),
     }
     .into()
 }
 
-fn integer_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Integer {
+fn integer_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Integer {
     let mut errors = Vec::new();
     match syntax.kind() {
         INTEGER => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            annos,
+            annotations,
             value: Default::default(),
             repr: IntegerRepr::Dec,
         }
@@ -121,7 +121,7 @@ fn integer_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Integer {
         INTEGER_BIN => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            annos,
+            annotations,
             value: Default::default(),
             repr: IntegerRepr::Bin,
         }
@@ -129,7 +129,7 @@ fn integer_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Integer {
         INTEGER_HEX => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            annos,
+            annotations,
             value: Default::default(),
             repr: IntegerRepr::Hex,
         }
@@ -137,7 +137,7 @@ fn integer_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Integer {
         INTEGER_OCT => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            annos,
+            annotations,
             value: Default::default(),
             repr: IntegerRepr::Oct,
         }
@@ -149,7 +149,7 @@ fn integer_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Integer {
             IntegerInner {
                 errors: errors.into(),
                 syntax: Some(syntax),
-                annos,
+                annotations,
                 value: Default::default(),
                 repr: IntegerRepr::Dec,
             }
@@ -158,24 +158,24 @@ fn integer_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Integer {
     }
 }
 
-fn float_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Float {
+fn float_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Float {
     assert!(syntax.kind() == FLOAT);
     FloatInner {
         errors: Default::default(),
         syntax: Some(syntax),
-        annos,
+        annotations,
         value: Default::default(),
     }
     .into()
 }
 
-fn str_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Str {
+fn str_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Str {
     let mut errors = Vec::new();
     match syntax.kind() {
         SINGLE_QUOTE => StrInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            annos,
+            annotations,
             repr: StrRepr::Single,
             value: Default::default(),
         }
@@ -183,7 +183,7 @@ fn str_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Str {
         DOUBLE_QUOTE => StrInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            annos,
+            annotations,
             repr: StrRepr::Double,
             value: Default::default(),
         }
@@ -191,7 +191,7 @@ fn str_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Str {
         BACKTICK_QUOTE => StrInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            annos,
+            annotations,
             repr: StrRepr::Backtick,
             value: Default::default(),
         }
@@ -203,7 +203,7 @@ fn str_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Str {
             StrInner {
                 errors: errors.into(),
                 syntax: Some(syntax),
-                annos,
+                annotations,
                 repr: StrRepr::Double,
                 value: Default::default(),
             }
@@ -212,25 +212,25 @@ fn str_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Str {
     }
 }
 
-fn array_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Array {
+fn array_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Array {
     assert!(syntax.kind() == ARRAY);
     let syntax = syntax.into_node().unwrap();
     let mut errors = Vec::new();
-    if let Some(annos) = annos {
-        if let Some(syntax) = annos.syntax() {
+    if let Some(annotations) = annotations {
+        if let Some(syntax) = annotations.syntax() {
             errors.push(Error::UnexpectedSyntax {
                 syntax: syntax.clone(),
             });
         }
     };
-    let annos = syntax
+    let annotations = syntax
         .children_with_tokens()
-        .find(|v| v.kind() == ANNOS)
-        .map(annos_from_syntax);
+        .find(|v| v.kind() == ANNOTATIONS)
+        .map(annotations_from_syntax);
     ArrayInner {
         errors: errors.into(),
         syntax: Some(syntax.clone().into()),
-        annos,
+        annotations,
         items: Shared::new(
             syntax
                 .children()
@@ -242,21 +242,21 @@ fn array_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Array {
     .into()
 }
 
-fn object_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Object {
+fn object_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Object {
     assert!(syntax.kind() == OBJECT);
     let syntax = syntax.into_node().unwrap();
     let mut errors = Vec::new();
-    if let Some(annos) = annos {
-        if let Some(syntax) = annos.syntax() {
+    if let Some(annotations) = annotations {
+        if let Some(syntax) = annotations.syntax() {
             errors.push(Error::UnexpectedSyntax {
                 syntax: syntax.clone(),
             });
         }
     };
-    let annos = syntax
+    let annotations = syntax
         .children_with_tokens()
-        .find(|v| v.kind() == ANNOS)
-        .map(annos_from_syntax);
+        .find(|v| v.kind() == ANNOTATIONS)
+        .map(annotations_from_syntax);
 
     let mut entries = Entries::default();
     for child in syntax.children().filter(|v| v.kind() == ENTRY) {
@@ -265,7 +265,7 @@ fn object_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Object {
     ObjectInner {
         errors: errors.into(),
         syntax: Some(syntax.into()),
-        annos,
+        annotations,
         entries: entries.into(),
     }
     .into()
@@ -295,18 +295,18 @@ fn object_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors
     add_entry(entries, errors, key, value);
 }
 
-fn annos_from_syntax(syntax: SyntaxElement) -> Annos {
-    assert!(syntax.kind() == ANNOS);
+fn annotations_from_syntax(syntax: SyntaxElement) -> Annotations {
+    assert!(syntax.kind() == ANNOTATIONS);
     let syntax = syntax.into_node().unwrap();
     let mut errors: Vec<Error> = vec![];
     let mut entries = Entries::default();
     for child in syntax.children() {
         anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
     }
-    AnnosInner {
+    AnnotationsInner {
         errors: errors.into(),
         entries: entries.into(),
-        annos: None,
+        annotations: None,
         syntax: Some(syntax.into()),
     }
     .wrap()
@@ -324,7 +324,7 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
             return;
         }
     };
-    let value = match syntax.children().find(|v| v.kind() == ANNO_VALUE) {
+    let value = match syntax.children().find(|v| v.kind() == ANNOTATION_VALUE) {
         Some(anno_value) => match anno_value.children().find(|v| v.kind() == VALUE) {
             Some(value) => from_syntax(value.into()),
             None => {
@@ -348,7 +348,7 @@ fn key_from_syntax(syntax: SyntaxElement) -> Key {
         KeyInner {
             errors: Shared::default(),
             syntax: Some(syntax),
-            annos: None,
+            annotations: None,
             is_valid: true,
             value: Default::default(),
         }
@@ -358,7 +358,7 @@ fn key_from_syntax(syntax: SyntaxElement) -> Key {
             errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
                 syntax: syntax.clone().into(),
             }])),
-            annos: None,
+            annotations: None,
             is_valid: false,
             value: Default::default(),
             syntax: Some(syntax.into()),
@@ -367,14 +367,14 @@ fn key_from_syntax(syntax: SyntaxElement) -> Key {
     }
 }
 
-fn invalid_from_syntax(syntax: SyntaxElement, annos: Option<Annos>) -> Invalid {
+fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Invalid {
     let errors = Vec::from([Error::UnexpectedSyntax {
         syntax: syntax.clone(),
     }]);
     InvalidInner {
         errors: errors.into(),
         syntax: Some(syntax),
-        annos,
+        annotations,
     }
     .into()
 }
