@@ -17,9 +17,12 @@ readme = "README.md"
 arc-swap = "1.5"
 either = "1.7"
 globset = "0.4"
-indexmap = { version = "1.9", features = ["serde"] }
+indexmap = { version = "1.9"}
 logos = "0.12"
 once_cell = "1.13"
 rowan = "0.15"
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
+
+[features]
+default = ["serde", "indexmap/serde"]

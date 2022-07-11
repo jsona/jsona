@@ -12,5 +12,11 @@ fn main() {
     }
     let syntax = parse_result.into_syntax();
     let node = jsona::dom::from_syntax(syntax.into());
-    println!("{:#?}", node);
+    if let Err(errs) = node.validate() {
+        for err in errs {
+            eprintln!("{}", err);
+        }
+    }
+    let value = jsona::value::Value::from(&node);
+    println!("{:#?}", value);
 }
