@@ -5,6 +5,7 @@ use crate::private::Sealed;
 use crate::syntax::{SyntaxElement, SyntaxKind};
 use crate::util::escape::unescape;
 use crate::util::shared::Shared;
+use crate::value::IntegerValue;
 
 use either::Either;
 use logos::Lexer;
@@ -139,6 +140,7 @@ impl DomNode for Node {
         }
     }
 }
+
 impl Node {
     pub fn path(&self, keys: &Keys) -> Option<Node> {
         let mut node = self.clone();
@@ -899,53 +901,6 @@ pub enum IntegerRepr {
     Bin,
     Oct,
     Hex,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IntegerValue {
-    Negative(i64),
-    Positive(u64),
-}
-
-impl IntegerValue {
-    /// Returns `true` if the integer value is [`Negative`].
-    ///
-    /// [`Negative`]: IntegerValue::Negative
-    pub fn is_negative(&self) -> bool {
-        matches!(self, Self::Negative(..))
-    }
-
-    /// Returns `true` if the integer value is [`Positive`].
-    ///
-    /// [`Positive`]: IntegerValue::Positive
-    pub fn is_positive(&self) -> bool {
-        matches!(self, Self::Positive(..))
-    }
-
-    pub fn as_negative(&self) -> Option<i64> {
-        if let Self::Negative(v) = self {
-            Some(*v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_positive(&self) -> Option<u64> {
-        if let Self::Positive(v) = self {
-            Some(*v)
-        } else {
-            None
-        }
-    }
-}
-
-impl core::fmt::Display for IntegerValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            IntegerValue::Negative(v) => v.fmt(f),
-            IntegerValue::Positive(v) => v.fmt(f),
-        }
-    }
 }
 
 #[derive(Debug)]

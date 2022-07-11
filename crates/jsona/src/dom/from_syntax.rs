@@ -2,9 +2,9 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annotations, AnnotationsInner, Array, ArrayInner, Bool, BoolInner, Comment,
-        Entries, Float, FloatInner, Integer, IntegerInner, IntegerRepr, Invalid, InvalidInner, Key,
-        KeyInner, Node, Null, NullInner, Object, ObjectInner, Str, StrInner, StrRepr,
+        Annotations, AnnotationsInner, Array, ArrayInner, Bool, BoolInner, Comment, Entries, Float,
+        FloatInner, Integer, IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node,
+        Null, NullInner, Object, ObjectInner, Str, StrInner, StrRepr,
     },
 };
 
