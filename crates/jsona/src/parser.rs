@@ -127,7 +127,11 @@ impl<'p> Parser<'p> {
     fn parse_entry(&mut self) -> ParserResult<()> {
         let _ = with_node!(self.builder, KEY, self.parse_key());
         self.must_token_or(COLON, r#"expected ":""#)?;
-        with_node!(self.builder, VALUE, self.parse_value_with_annotations(BRACE_END))?;
+        with_node!(
+            self.builder,
+            VALUE,
+            self.parse_value_with_annotations(BRACE_END)
+        )?;
         Ok(())
     }
 

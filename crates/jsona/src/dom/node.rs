@@ -1343,6 +1343,7 @@ pub(crate) struct AnnotationsInner {
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) entries: Shared<Entries>,
+    pub(crate) is_composed: bool,
 }
 
 wrap_node! {
@@ -1359,6 +1360,10 @@ impl Annotations {
 
     pub fn entries(&self) -> &Shared<Entries> {
         &self.inner.entries
+    }
+
+    pub fn is_composed(&self) -> bool {
+        self.inner.is_composed
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
