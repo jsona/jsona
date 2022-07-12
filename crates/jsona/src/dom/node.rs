@@ -978,7 +978,15 @@ impl Str {
                         let string = s.as_token().unwrap().text();
                         let string = string.strip_prefix('\'').unwrap_or(string);
                         let string = string.strip_suffix('\'').unwrap_or(string);
-                        string.to_string()
+                        match unescape(string) {
+                            Ok(s) => s,
+                            Err(_) => {
+                                self.inner.errors.update(|errors| {
+                                    errors.push(Error::InvalidEscapeSequence { string: s.clone() })
+                                });
+                                String::new()
+                            }
+                        }
                     }
                     StrRepr::Backtick => {
                         let string = s.as_token().unwrap().text();
@@ -988,7 +996,15 @@ impl Str {
                             None => string.strip_prefix('\n').unwrap_or(string),
                         };
                         let string = string.strip_suffix('`').unwrap_or(string);
-                        string.to_string()
+                        match unescape(string) {
+                            Ok(s) => s,
+                            Err(_) => {
+                                self.inner.errors.update(|errors| {
+                                    errors.push(Error::InvalidEscapeSequence { string: s.clone() })
+                                });
+                                String::new()
+                            }
+                        }
                     }
                 })
                 .unwrap_or_default()
@@ -1146,7 +1162,17 @@ impl Key {
                         let string = s.text();
                         let string = string.strip_prefix('\'').unwrap_or(string);
                         let string = string.strip_suffix('\'').unwrap_or(string);
-                        string.to_string()
+                        match unescape(string) {
+                            Ok(s) => s,
+                            Err(_) => {
+                                self.inner.errors.update(|errors| {
+                                    errors.push(Error::InvalidEscapeSequence {
+                                        string: s.clone().into(),
+                                    })
+                                });
+                                String::new()
+                            }
+                        }
                     } else if s.text().starts_with('"') {
                         let string = s.text();
                         let string = string.strip_prefix('"').unwrap_or(string);

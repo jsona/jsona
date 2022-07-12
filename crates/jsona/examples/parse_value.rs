@@ -17,5 +17,5 @@ fn main() {
         }
     }
     let value = jsona::value::Value::from(&node);
-    println!("{}", value.to_jsona(true));
+    println!("{}", value.to_jsona(false));
 }

@@ -12,7 +12,7 @@ use logos::{Lexer, Logos};
 /// \uXXXX     - unicode         (U+XXXX)
 /// \UXXXXXXXX - unicode         (U+XXXXXXXX)
 #[derive(Logos, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Escape {
+enum Escape {
     #[token(r#"\0"#)]
     Null,
 
@@ -39,6 +39,9 @@ pub enum Escape {
 
     #[token(r#"\'"#)]
     SingleQuote,
+
+    #[token(r#"\`"#)]
+    BacktickQuote,
 
     #[token(r#"\\"#)]
     Backslash,
@@ -79,6 +82,7 @@ pub fn unescape(s: &str) -> Result<String, usize> {
             CarriageReturn => new_s += "\u{000D}",
             DoubleQuote => new_s += "\u{0022}",
             SingleQuote => new_s += "\u{0027}",
+            BacktickQuote => new_s += "\u{0060}",
             Backslash => new_s += "\u{005C}",
             Newline => {}
             Hex | Unicode => {
@@ -122,6 +126,7 @@ pub fn check_escape(s: &str) -> Result<(), Vec<usize>> {
             CarriageReturn => {}
             SingleQuote => {}
             DoubleQuote => {}
+            BacktickQuote => {}
             Backslash => {}
             Newline => {}
             Hex | Unicode => {

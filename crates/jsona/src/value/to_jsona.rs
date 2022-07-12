@@ -1,3 +1,5 @@
+use crate::util::quote::{check_quote, quote};
+
 use super::*;
 use std::fmt::{Display, Result};
 
@@ -49,7 +51,8 @@ impl Value {
                 write_annotations(f, annotations, inline, level)?;
             }
             Value::Str(Str { value, annotations }) => {
-                write!(f, "{}", normalize_str(value))?;
+                let quote_type = check_quote(value);
+                write!(f, "{}", quote(value, quote_type.quote(inline)))?;
                 if comma {
                     f.write_char(',')?;
                 }
@@ -84,7 +87,8 @@ impl Value {
                         f.write_char('\n')?;
                         write_ident(f, level + 1)?;
                     }
-                    write!(f, "{}:", normalize_str(k))?;
+                    let quote_type = check_quote(k);
+                    write!(f, "{}:", quote(k, quote_type.ident()))?;
                     if !inline {
                         f.write_char(' ')?;
                     }
@@ -155,22 +159,4 @@ fn write_ident(f: &mut impl Write, level: usize) -> Result {
         write!(f, "{}", "  ".repeat(level))?;
     }
     Ok(())
-}
-
-fn normalize_str(s: &str) -> String {
-    if need_quote(s) {
-        format!("\"{}\"", s.escape_debug())
-    } else {
-        s.to_string()
-    }
-}
-
-fn need_quote(s: &str) -> bool {
-    for c in s.chars() {
-        if c.is_alphanumeric() {
-            continue;
-        }
-        return true;
-    }
-    false
 }
