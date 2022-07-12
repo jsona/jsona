@@ -1,5 +1,3 @@
-use std::iter::repeat;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -115,17 +113,6 @@ create_options!(
     #[derive(Debug, Clone, Eq, PartialEq)]
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct Options {
-        /// Automatically expand arrays/objects to multiple lines
-        /// if they're too long.
-        pub auto_expand: bool,
-
-        /// Automatically collapse arrays/objects if they
-        /// fit in one line.
-        ///
-        /// The array won't be collapsed if it
-        /// contains a comment or annotation.
-        pub auto_collapse: bool,
-
         /// Target maximum column width after which
         /// arrays are expanded into new lines.
         ///
@@ -141,9 +128,6 @@ create_options!(
 
         /// Add trailing newline to the source.
         pub trailing_newline: bool,
-
-        /// The maximum amount of consecutive blank lines allowed.
-        pub allowed_blank_lines: usize,
 
         /// Use CRLF line endings
         pub crlf: bool,
@@ -181,13 +165,10 @@ impl std::error::Error for OptionParseError {}
 impl Default for Options {
     fn default() -> Self {
         Options {
-            auto_collapse: true,
-            auto_expand: true,
             column_width: 80,
             indent_string: "  ".into(),
             trailing_comma: true,
             trailing_newline: true,
-            allowed_blank_lines: 2,
             crlf: false,
         }
     }
@@ -200,9 +181,5 @@ impl Options {
         } else {
             "\n"
         }
-    }
-
-    pub(crate) fn newlines(&self, count: usize) -> impl Iterator<Item = &'static str> {
-        repeat(self.newline()).take(usize::min(count, self.allowed_blank_lines + 1))
     }
 }

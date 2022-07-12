@@ -505,15 +505,7 @@ impl<'p> Parser<'p> {
                     self.consume_token(token, self.lexer.slice());
                 }
                 ERROR => {
-                    self.consume_token(token, self.lexer.slice());
-                    let span = self.lexer.span();
-                    self.add_error(&Error {
-                        range: TextRange::new(
-                            TextSize::from(span.start as u32),
-                            TextSize::from(span.end as u32),
-                        ),
-                        message: "unexpected token".into(),
-                    })
+                    let _ = self.consume_error_token("unexpected token");
                 }
                 _ => {
                     self.current_token = Some(token);

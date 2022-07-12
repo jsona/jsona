@@ -100,6 +100,25 @@ pub enum SyntaxKind {
     VALUE,
 }
 
+impl SyntaxKind {
+    pub fn is_scalar(self) -> bool {
+        use SyntaxKind::*;
+        matches!(
+            self,
+            SINGLE_QUOTE
+                | DOUBLE_QUOTE
+                | BACKTICK_QUOTE
+                | INTEGER
+                | INTEGER_BIN
+                | INTEGER_HEX
+                | INTEGER_OCT
+                | FLOAT
+                | BOOL
+                | NULL
+        )
+    }
+}
+
 impl From<SyntaxKind> for rowan::SyntaxKind {
     fn from(kind: SyntaxKind) -> Self {
         Self(kind as u16)
