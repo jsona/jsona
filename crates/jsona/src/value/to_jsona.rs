@@ -116,7 +116,7 @@ impl Display for Value {
 
 fn write_annotations(
     f: &mut impl Write,
-    annotations: &IndexMap<String, Value>,
+    annotations: &IndexMap<String, AnnotaionValue>,
     inline: bool,
     level: usize,
 ) -> Result {
@@ -132,7 +132,7 @@ fn write_annotations(
                     f.write_char(' ')?;
                 }
             } else {
-                write!(f, "@{}({})", k, v)?;
+                write!(f, "@{}({})", k, Value::from(v.clone()))?;
             }
         }
     } else {
@@ -143,7 +143,7 @@ fn write_annotations(
                 write!(f, "@{}", k)?;
             } else {
                 write!(f, "@{}(", k)?;
-                v.to_jsona_impl(f, inline, level, false)?;
+                Value::from(v.clone()).to_jsona_impl(f, inline, level, false)?;
                 f.write_str(")")?;
             }
             if i < len - 1 {

@@ -2,7 +2,7 @@
 
 #![allow(non_camel_case_types)]
 
-use logos::Logos;
+use logos::{Lexer, Logos};
 
 /// Enum containing all the tokens in a syntax tree.
 #[derive(Logos, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -35,13 +35,13 @@ pub enum SyntaxKind {
     #[token("@")]
     AT,
 
-    #[regex(r#"'(?:[^']|\\')*'"#)]
+    #[regex(r#"'"#, lex_single_quote)]
     SINGLE_QUOTE,
 
-    #[regex(r#""(?:[^"]|\\")*""#)]
+    #[regex(r#"""#, lex_double_quote)]
     DOUBLE_QUOTE,
 
-    #[regex(r#"`(?:[^`]|\\`)*`"#)]
+    #[regex(r#"`"#, lex_backtick_quote)]
     BACKTICK_QUOTE,
 
     #[regex(r"[+-]?[0-9_]+", priority = 4)]
@@ -91,6 +91,8 @@ pub enum SyntaxKind {
     ENTRY,
     OBJECT,
     ARRAY,
+    
+    ANNOTATION_ENTRY,
     ANNOTATION_VALUE,
 
     #[error]
@@ -171,6 +173,42 @@ pub fn write_syntax<T: std::io::Write>(
         }
     }
     Ok(())
+}
+
+fn lex_backtick_quote(lex: &mut Lexer<SyntaxKind>) -> bool {
+    lex_string(lex, '`')
+}
+
+fn lex_single_quote(lex: &mut Lexer<SyntaxKind>) -> bool {
+    lex_string(lex, '\'')
+}
+
+fn lex_double_quote(lex: &mut Lexer<SyntaxKind>) -> bool {
+    lex_string(lex, '"')
+}
+
+fn lex_string(lex: &mut Lexer<SyntaxKind>, quote: char) -> bool {
+    let remainder: &str = lex.remainder();
+    let mut escaped = false;
+
+    let mut total_len = 0;
+
+    for c in remainder.chars() {
+        total_len += c.len_utf8();
+
+        if c == '\\' {
+            escaped = !escaped;
+            continue;
+        }
+
+        if c == quote && !escaped {
+            lex.bump(remainder[0..total_len].as_bytes().len());
+            return true;
+        }
+
+        escaped = false;
+    }
+    false
 }
 
 #[cfg(test)]

@@ -320,7 +320,7 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
 }
 
 fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: &mut Vec<Error>) {
-    assert!(syntax.kind() == ENTRY);
+    assert!(syntax.kind() == ANNOTATION_ENTRY);
     let syntax = syntax.into_node().unwrap();
     let key = match syntax.children().find(|v| v.kind() == KEY) {
         Some(key) => key_from_syntax(key.into()),

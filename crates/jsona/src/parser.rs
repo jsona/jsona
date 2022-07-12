@@ -58,6 +58,7 @@ pub(crate) struct Parser<'p> {
     lexer: Lexer<'p, SyntaxKind>,
     builder: GreenNodeBuilder<'p>,
     errors: Vec<Error>,
+    annotation_scope: bool,
 }
 
 /// This is just a convenience type during parsing.
@@ -71,6 +72,7 @@ impl<'p> Parser<'p> {
             lexer: SyntaxKind::lexer(source),
             builder: Default::default(),
             errors: Default::default(),
+            annotation_scope: false,
         }
     }
 
@@ -102,7 +104,7 @@ impl<'p> Parser<'p> {
         if let Ok(AT) = self.peek_token() {
             self.builder.start_node(ANNOTATIONS.into());
             while let Ok(AT) = self.peek_token() {
-                with_node!(self.builder, ENTRY, self.parse_anno_entry())?;
+                let _ = with_node!(self.builder, ANNOTATION_ENTRY, self.parse_anno_entry());
             }
             self.builder.finish_node();
         }
@@ -111,22 +113,29 @@ impl<'p> Parser<'p> {
 
     fn parse_anno_entry(&mut self) -> ParserResult<()> {
         self.must_token_or(AT, r#"expected "@""#)?;
+        if self.annotation_scope {
+            let err = self.build_error("nexted annotation");
+            self.add_error(&err);
+        }
         let _ = with_node!(self.builder, KEY, self.parse_key());
         if let Ok(PARENTHESES_START) = self.peek_token() {
-            with_node!(self.builder, ANNOTATION_VALUE, self.parse_anno_value())?;
+            self.annotation_scope = true;
+            let ret = with_node!(self.builder, ANNOTATION_VALUE, self.parse_anno_value());
+            self.annotation_scope = false;
+            ret?;
         }
         Ok(())
     }
 
     fn parse_anno_value(&mut self) -> ParserResult<()> {
         self.must_token_or(PARENTHESES_START, r#"expected "(""#)?;
-        with_node!(self.builder, VALUE, self.parse_value())?;
+        let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations(PARENTHESES_END));
         self.must_token_or(PARENTHESES_END, r#"expected ")""#)?;
-        Ok(())
+        ret
     }
 
     fn parse_entry(&mut self) -> ParserResult<()> {
-        let _ = with_node!(self.builder, KEY, self.parse_key());
+        with_node!(self.builder, KEY, self.parse_key())?;
         self.must_token_or(COLON, r#"expected ":""#)?;
         with_node!(
             self.builder,
@@ -265,7 +274,7 @@ impl<'p> Parser<'p> {
                     TextSize::from(span.start as u32),
                     TextSize::from(span.end as u32),
                 ),
-                message: r#"expect ",""#.into(),
+                message: r#"expected ",""#.into(),
             })
         }
         Ok(())
@@ -611,15 +620,12 @@ pub(crate) mod allowed_chars {
             Err(err_indices)
         }
     }
+
     pub(crate) fn string(s: &str) -> Result<(), Vec<usize>> {
         let mut err_indices = Vec::new();
 
         for (i, c) in s.chars().enumerate() {
-            if c != '\t'
-                && (('\u{0000}'..='\u{0008}').contains(&c)
-                    || ('\u{000A}'..='\u{001F}').contains(&c)
-                    || c == '\u{007F}')
-            {
+            if c != '\t' && c.is_ascii_control() {
                 err_indices.push(i);
             }
         }
@@ -630,17 +636,12 @@ pub(crate) mod allowed_chars {
             Err(err_indices)
         }
     }
+
     pub(crate) fn backtick_string(s: &str) -> Result<(), Vec<usize>> {
         let mut err_indices = Vec::new();
 
         for (i, c) in s.chars().enumerate() {
-            if c != '\t'
-                && c != '\n'
-                && c != '\r'
-                && (('\u{0000}'..='\u{0008}').contains(&c)
-                    || ('\u{000A}'..='\u{001F}').contains(&c)
-                    || c == '\u{007F}')
-            {
+            if c != '\t' && c != '\n' && c != '\r' && c.is_ascii_control() {
                 err_indices.push(i);
             }
         }
