@@ -1,5 +1,4 @@
-use rowan::TextRange;
-use std::iter::{repeat, FromIterator};
+use std::iter::repeat;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -111,33 +110,11 @@ macro_rules! create_options {
     };
 }
 
-#[derive(Debug, Clone, Default)]
-/// Scoped formatter options based on text ranges.
-pub(crate) struct ScopedOptions(Vec<(TextRange, OptionsIncomplete)>);
-
-impl ScopedOptions {
-    pub(crate) fn iter(&self) -> impl Iterator<Item = &(TextRange, OptionsIncomplete)> {
-        self.0.iter()
-    }
-}
-
-impl FromIterator<(TextRange, OptionsIncomplete)> for ScopedOptions {
-    fn from_iter<T: IntoIterator<Item = (TextRange, OptionsIncomplete)>>(iter: T) -> Self {
-        Self(Vec::from_iter(iter.into_iter()))
-    }
-}
-
 create_options!(
     /// All the formatting options.
     #[derive(Debug, Clone, Eq, PartialEq)]
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct Options {
-        /// Put trailing commas for multiline arrays/objects
-        pub trailing_comma: bool,
-
-        /// Omit whitespace padding inside single-line arrays/objects/entries.
-        pub compact_mode: bool,
-
         /// Automatically expand arrays/objects to multiple lines
         /// if they're too long.
         pub auto_expand: bool,
@@ -158,6 +135,9 @@ create_options!(
         /// Indentation to use, should be tabs or spaces
         /// but technically could be anything.
         pub indent_string: String,
+
+        /// Put trailing commas for multiline arrays/objects
+        pub trailing_comma: bool,
 
         /// Add trailing newline to the source.
         pub trailing_newline: bool,
@@ -201,12 +181,11 @@ impl std::error::Error for OptionParseError {}
 impl Default for Options {
     fn default() -> Self {
         Options {
-            trailing_comma: true,
-            compact_mode: false,
             auto_collapse: true,
             auto_expand: true,
             column_width: 80,
             indent_string: "  ".into(),
+            trailing_comma: true,
             trailing_newline: true,
             allowed_blank_lines: 2,
             crlf: false,

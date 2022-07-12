@@ -2,7 +2,7 @@ use rowan::TextRange;
 use std::iter::repeat;
 use std::rc::Rc;
 
-use super::{Options, ScopedOptions};
+use super::Options;
 
 pub(crate) fn overlaps(range: TextRange, other: TextRange) -> bool {
     range.contains_range(other)
@@ -18,7 +18,6 @@ pub(crate) struct Context {
     pub(crate) indent_level: usize,
     pub(crate) force_multiline: bool,
     pub(crate) errors: Rc<[TextRange]>,
-    pub(crate) scopes: Rc<ScopedOptions>,
 }
 
 impl Default for Context {
@@ -27,21 +26,11 @@ impl Default for Context {
             indent_level: Default::default(),
             force_multiline: Default::default(),
             errors: Rc::from([]),
-            scopes: Default::default(),
         }
     }
 }
 
 impl Context {
-    /// Update options based on the text range.
-    pub(crate) fn update_options(&self, opts: &mut Options, range: TextRange) {
-        for (r, s) in self.scopes.iter() {
-            if r.contains_range(range) {
-                opts.update(s.clone());
-            }
-        }
-    }
-
     pub(crate) fn error_at(&self, range: TextRange) -> bool {
         for error_range in self.errors.iter().copied() {
             if overlaps(range, error_range) {
