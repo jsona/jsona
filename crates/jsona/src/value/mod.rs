@@ -195,10 +195,7 @@ impl Value {
             Value::Object(Object { annotations, .. }) => annotations,
         }
     }
-}
-
-impl From<&Node> for Value {
-    fn from(node: &Node) -> Self {
+    pub fn from_node(node: &Node) -> Self {
         let mut annotations: IndexMap<String, AnnotationValue> = Default::default();
         if let Some(node_annotations) = node.annotations() {
             for (k, v) in node_annotations.entries().read().iter() {
@@ -245,6 +242,12 @@ impl From<&Node> for Value {
                 Object { value, annotations }.into()
             }
         }
+    }
+}
+
+impl From<&Node> for Value {
+    fn from(node: &Node) -> Self {
+        Self::from_node(node)
     }
 }
 

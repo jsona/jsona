@@ -3,8 +3,8 @@ use super::{
     keys::KeyOrIndex,
     node::{
         Annotations, AnnotationsInner, Array, ArrayInner, BoolInner, Entries, FloatInner,
-        IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node, Null, NullInner,
-        Object, ObjectInner, StrInner, StrRepr,
+        IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node, NullInner, Object,
+        ObjectInner, StrInner, StrRepr,
     },
 };
 
@@ -326,7 +326,7 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
                 return;
             }
         },
-        None => Null::new().into(),
+        None => NullInner::default().wrap().into(),
     };
     add_entry(entries, errors, key, value);
 }

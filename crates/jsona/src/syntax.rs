@@ -103,6 +103,11 @@ pub enum SyntaxKind {
 }
 
 impl SyntaxKind {
+    pub fn is_comment(self) -> bool {
+        use SyntaxKind::*;
+        matches!(self, LINE_COMMENT | BLOCK_COMMENT)
+    }
+
     pub fn is_scalar(self) -> bool {
         use SyntaxKind::*;
         matches!(

@@ -562,7 +562,7 @@ macro_rules! value_from {
 
 value_from!(Null, Float, Integer, Str, Bool, Array, Object, Invalid,);
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) struct NullInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
@@ -576,15 +576,6 @@ wrap_node! {
 }
 
 impl Null {
-    pub fn new() -> Self {
-        NullInner {
-            errors: Default::default(),
-            syntax: None,
-            root_syntax: None,
-            annotations: None,
-        }
-        .wrap()
-    }
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
