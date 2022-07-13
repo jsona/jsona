@@ -14,11 +14,11 @@ pub enum SyntaxKind {
     #[regex(r"(\n|\r\n)+")]
     NEWLINE,
 
-    #[regex(r"/\*(?:[^*]|\*[^/])*\*/")]
-    COMMENT_BLOCK,
+    #[regex(r"/\*", lex_comment_block)]
+    BLOCK_COMMENT,
 
     #[regex(r"//[^\n]*")]
-    COMMENT_LINE,
+    LINE_COMMENT,
 
     #[regex(r"[A-Za-z0-9_-]+", priority = 2)]
     IDENT,
@@ -175,6 +175,31 @@ pub fn write_syntax<T: std::io::Write>(
     Ok(())
 }
 
+fn lex_comment_block(lex: &mut Lexer<SyntaxKind>) -> bool {
+    let remainder: &str = lex.remainder();
+
+    let mut asterisk_found = false;
+
+    let mut total_len = 0;
+
+    for c in remainder.chars() {
+        total_len += c.len_utf8();
+
+        if c == '*' {
+            asterisk_found = true;
+            continue;
+        }
+
+        if c == '/' && asterisk_found {
+            lex.bump(remainder[0..total_len].as_bytes().len());
+            return true;
+        }
+
+        asterisk_found = false;
+    }
+    false
+}
+
 fn lex_backtick_quote(lex: &mut Lexer<SyntaxKind>) -> bool {
     lex_string(lex, '`')
 }
@@ -224,8 +249,8 @@ mod tests {
 
     #[test]
     fn test_lex() {
-        assert_lex!("/* comment */", SyntaxKind::COMMENT_BLOCK);
-        assert_lex!("// comment", SyntaxKind::COMMENT_LINE);
+        assert_lex!("/* comment */", SyntaxKind::BLOCK_COMMENT);
+        assert_lex!("// comment", SyntaxKind::LINE_COMMENT);
         assert_lex!("foo", SyntaxKind::IDENT);
         assert_lex!(r#""I'm a string\u00E9""#, SyntaxKind::DOUBLE_QUOTE);
         assert_lex!(r#"'Say "hello"'"#, SyntaxKind::SINGLE_QUOTE);

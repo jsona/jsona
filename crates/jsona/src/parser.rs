@@ -494,8 +494,8 @@ impl<'p> Parser<'p> {
         self.current_token = None;
         while let Some(token) = self.lexer.next() {
             match token {
-                COMMENT_LINE | COMMENT_BLOCK => {
-                    let multiline = token == COMMENT_BLOCK;
+                LINE_COMMENT | BLOCK_COMMENT => {
+                    let multiline = token == BLOCK_COMMENT;
                     match allowed_chars::comment(self.lexer.slice(), multiline) {
                         Ok(_) => {}
                         Err(err_indices) => {

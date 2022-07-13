@@ -499,7 +499,7 @@ fn preflight_key(node: SyntaxNode, scope: Scope) {
 
 fn preflight_comment(syntax: SyntaxElement, scope: Scope) {
     match syntax.kind() {
-        COMMENT_BLOCK => {
+        BLOCK_COMMENT => {
             let value = syntax.to_string();
             if contain_newline(&value) {
                 scope.multiline();
@@ -507,7 +507,7 @@ fn preflight_comment(syntax: SyntaxElement, scope: Scope) {
                 scope.add_len(SegLen::Comment(value.len()));
             }
         }
-        COMMENT_LINE => {
+        LINE_COMMENT => {
             scope.multiline();
         }
         _ => {}

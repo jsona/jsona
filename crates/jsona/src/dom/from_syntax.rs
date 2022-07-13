@@ -347,7 +347,7 @@ fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) 
 fn first_none_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
     let node = syntax.as_node()?;
     node.children_with_tokens()
-        .find(|v| ![WHITESPACE, NEWLINE, COMMENT_BLOCK, COMMENT_LINE].contains(&v.kind()))
+        .find(|v| ![WHITESPACE, NEWLINE, BLOCK_COMMENT, LINE_COMMENT].contains(&v.kind()))
 }
 
 /// Add an entry and also collect errors on conflicts.
