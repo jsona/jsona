@@ -91,7 +91,7 @@ pub enum SyntaxKind {
     ENTRY,
     OBJECT,
     ARRAY,
-    
+
     ANNOTATION_ENTRY,
     ANNOTATION_VALUE,
 

@@ -129,7 +129,11 @@ impl<'p> Parser<'p> {
 
     fn parse_anno_value(&mut self) -> ParserResult<()> {
         self.must_token_or(PARENTHESES_START, r#"expected "(""#)?;
-        let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations(PARENTHESES_END));
+        let ret = with_node!(
+            self.builder,
+            VALUE,
+            self.parse_value_with_annotations(PARENTHESES_END)
+        );
         self.must_token_or(PARENTHESES_END, r#"expected ")""#)?;
         ret
     }

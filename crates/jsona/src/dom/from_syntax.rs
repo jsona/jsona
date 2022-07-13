@@ -84,6 +84,34 @@ pub(crate) fn comment_from_syntax(syntax: SyntaxElement) -> Comment {
     }
 }
 
+pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
+    assert!(syntax.kind() == KEY);
+    let syntax = syntax.into_node().unwrap();
+    if let Some(syntax) =
+        first_none_empty_child(&syntax).and_then(|v| if v.kind() == IDENT { Some(v) } else { None })
+    {
+        KeyInner {
+            errors: Shared::default(),
+            syntax: Some(syntax),
+            annotations: None,
+            is_valid: true,
+            value: Default::default(),
+        }
+        .wrap()
+    } else {
+        KeyInner {
+            errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
+                syntax: syntax.clone().into(),
+            }])),
+            annotations: None,
+            is_valid: false,
+            value: Default::default(),
+            syntax: Some(syntax.into()),
+        }
+        .wrap()
+    }
+}
+
 fn null_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Null {
     assert!(syntax.kind() == NULL);
     NullInner {
@@ -344,34 +372,6 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
         None => Null::new(true).into(),
     };
     add_entry(entries, errors, key, value);
-}
-
-fn key_from_syntax(syntax: SyntaxElement) -> Key {
-    assert!(syntax.kind() == KEY);
-    let syntax = syntax.into_node().unwrap();
-    if let Some(syntax) =
-        first_none_empty_child(&syntax).and_then(|v| if v.kind() == IDENT { Some(v) } else { None })
-    {
-        KeyInner {
-            errors: Shared::default(),
-            syntax: Some(syntax),
-            annotations: None,
-            is_valid: true,
-            value: Default::default(),
-        }
-        .wrap()
-    } else {
-        KeyInner {
-            errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
-                syntax: syntax.clone().into(),
-            }])),
-            annotations: None,
-            is_valid: false,
-            value: Default::default(),
-            syntax: Some(syntax.into()),
-        }
-        .wrap()
-    }
 }
 
 fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Invalid {

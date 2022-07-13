@@ -13,7 +13,7 @@ use std::sync::Arc;
 pub enum KeyOrIndex {
     Index(usize),
     Key(Key),
-    AnnoKey(Key),
+    AnnotationKey(Key),
 }
 
 impl<N> From<N> for KeyOrIndex
@@ -30,7 +30,7 @@ impl core::fmt::Display for KeyOrIndex {
         match self {
             KeyOrIndex::Index(v) => v.fmt(f),
             KeyOrIndex::Key(v) => v.fmt(f),
-            KeyOrIndex::AnnoKey(v) => v.fmt(f),
+            KeyOrIndex::AnnotationKey(v) => v.fmt(f),
         }
     }
 }
@@ -41,7 +41,7 @@ impl KeyOrIndex {
     }
 
     pub fn new_anno_key(k: Key) -> Self {
-        Self::AnnoKey(k)
+        Self::AnnotationKey(k)
     }
 
     /// Returns `true` if the key or index is [`Index`].
@@ -61,8 +61,8 @@ impl KeyOrIndex {
     /// Returns `true` if the key or index is [`AnnoKey`].
     ///
     /// [`Key`]: KeyOrIndex::Key
-    pub fn is_anno_key(&self) -> bool {
-        matches!(self, Self::AnnoKey(..))
+    pub fn is_annotation_key(&self) -> bool {
+        matches!(self, Self::AnnotationKey(..))
     }
 
     pub fn as_index(&self) -> Option<&usize> {
@@ -81,8 +81,8 @@ impl KeyOrIndex {
         }
     }
 
-    pub fn as_anno_key(&self) -> Option<&Key> {
-        if let Self::AnnoKey(v) = self {
+    pub fn as_annotation_key(&self) -> Option<&Key> {
+        if let Self::AnnotationKey(v) = self {
             Some(v)
         } else {
             None
@@ -93,7 +93,7 @@ impl KeyOrIndex {
         match self {
             KeyOrIndex::Index(_) => format!(".{}", self),
             KeyOrIndex::Key(_) => format!(".{}", self),
-            KeyOrIndex::AnnoKey(_) => format!("@{}", self),
+            KeyOrIndex::AnnotationKey(_) => format!("@{}", self),
         }
     }
 }
@@ -195,7 +195,7 @@ impl Keys {
         join_ranges(self.keys.iter().filter_map(|key| match key {
             KeyOrIndex::Index(_) => None,
             KeyOrIndex::Key(k) => k.text_range(),
-            KeyOrIndex::AnnoKey(k) => k.text_range(),
+            KeyOrIndex::AnnotationKey(k) => k.text_range(),
         }))
     }
 }

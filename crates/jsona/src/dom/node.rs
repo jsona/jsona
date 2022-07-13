@@ -244,7 +244,7 @@ impl Node {
                                     return false;
                                 }
                             }
-                            KeyOrIndex::AnnoKey(_) => {
+                            KeyOrIndex::AnnotationKey(_) => {
                                 return false;
                             }
                             KeyOrIndex::Index(idx) => {
@@ -254,7 +254,7 @@ impl Node {
                             }
                         }
                     }
-                    KeyOrIndex::AnnoKey(search_key) => {
+                    KeyOrIndex::AnnotationKey(search_key) => {
                         let glob = match globset::Glob::new(search_key.value()) {
                             Ok(g) => g.compile_matcher(),
                             Err(glob_err) => {
@@ -267,7 +267,7 @@ impl Node {
                             KeyOrIndex::Key(_) => {
                                 return false;
                             }
-                            KeyOrIndex::AnnoKey(key) => {
+                            KeyOrIndex::AnnotationKey(key) => {
                                 if !glob.is_match(key.value()) {
                                     return false;
                                 }
@@ -281,7 +281,7 @@ impl Node {
                         KeyOrIndex::Key(_) => {
                             return false;
                         }
-                        KeyOrIndex::AnnoKey(_) => {
+                        KeyOrIndex::AnnotationKey(_) => {
                             return false;
                         }
                         KeyOrIndex::Index(idx) => {
@@ -421,7 +421,7 @@ impl Node {
                     None
                 }
             }
-            KeyOrIndex::AnnoKey(k) => {
+            KeyOrIndex::AnnotationKey(k) => {
                 if let Some(annotations) = self.annotations() {
                     annotations.get(k.clone())
                 } else {
