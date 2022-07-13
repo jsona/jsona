@@ -1,5 +1,4 @@
 use super::error::{Error, QueryError};
-use super::from_syntax::comment_from_syntax;
 use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
 use crate::syntax::{SyntaxElement, SyntaxKind};
@@ -30,6 +29,9 @@ macro_rules! wrap_node {
 
         impl $crate::private::Sealed for $name {}
         impl $crate::dom::node::DomNode for $name {
+            fn root_syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
+                self.inner.root_syntax.as_ref()
+            }
             fn syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
                 self.inner.syntax.as_ref()
             }
@@ -65,6 +67,7 @@ macro_rules! wrap_node {
 }
 
 pub trait DomNode: Sized + Sealed {
+    fn root_syntax(&self) -> Option<&SyntaxElement>;
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
     fn annotations(&self) -> &Option<Annotations>;
@@ -88,6 +91,19 @@ pub enum Node {
 
 impl Sealed for Node {}
 impl DomNode for Node {
+    fn root_syntax(&self) -> Option<&SyntaxElement> {
+        match self {
+            Node::Null(n) => n.root_syntax(),
+            Node::Bool(n) => n.root_syntax(),
+            Node::Integer(n) => n.root_syntax(),
+            Node::Float(n) => n.root_syntax(),
+            Node::Str(n) => n.root_syntax(),
+            Node::Array(n) => n.root_syntax(),
+            Node::Object(n) => n.root_syntax(),
+            Node::Invalid(n) => n.root_syntax(),
+        }
+    }
+
     fn syntax(&self) -> Option<&SyntaxElement> {
         match self {
             Node::Null(n) => n.syntax(),
@@ -159,6 +175,7 @@ impl Node {
             Node::from(
                 InvalidInner {
                     errors: Shared::from(Vec::from([Error::Query(QueryError::NotFound)])),
+                    root_syntax: None,
                     syntax: None,
                     annotations: None,
                 }
@@ -356,52 +373,9 @@ impl Node {
                 ranges.extend(k.text_ranges());
                 ranges.extend(entry.text_ranges());
             }
-
-            if let Some(mut r) = v.syntax().map(|s| s.text_range()) {
-                for range in &ranges {
-                    r = r.cover(*range);
-                }
-
-                ranges.insert(0, r);
-            }
         }
 
         ranges.into_iter()
-    }
-
-    /// All the comments in the tree, including header comments returned from [`Self::header_comments`].
-    pub fn comments(&self) -> impl Iterator<Item = Comment> {
-        if let Some(syntax) = self.syntax().cloned().and_then(|s| s.into_node()) {
-            Either::Left(
-                syntax
-                    .descendants_with_tokens()
-                    .filter(|t| {
-                        t.kind() == SyntaxKind::COMMENT_BLOCK
-                            || t.kind() == SyntaxKind::COMMENT_LINE
-                    })
-                    .map(comment_from_syntax),
-            )
-        } else {
-            Either::Right(empty())
-        }
-    }
-
-    /// Comments before the first item in the file.
-    ///
-    /// These are always counted from the root and the same
-    /// values are returned from every node in the same tree.
-    pub fn header_comments(&self) -> impl Iterator<Item = Comment> {
-        let first_item = self
-            .syntax()
-            .and_then(|syntax| syntax.ancestors().last())
-            .and_then(|root| root.descendants().nth(1));
-
-        match first_item {
-            Some(it) => Either::Left(self.comments().take_while(move |c| {
-                c.syntax.as_ref().unwrap().text_range().end() <= it.text_range().start()
-            })),
-            None => Either::Right(self.comments()),
-        }
     }
 
     fn get_impl(&self, idx: &KeyOrIndex) -> Option<Node> {
@@ -535,247 +509,65 @@ impl Node {
     }
 }
 
+macro_rules! define_value_fns {
+    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident, $try_fn:ident) => {
+        pub fn $is_fn(&self) -> bool {
+            matches!(self, Self::$elm(..))
+        }
+
+        pub fn $as_fn(&self) -> Option<&$t> {
+            if let Self::$elm(v) = self {
+                Some(v)
+            } else {
+                None
+            }
+        }
+
+        pub fn $try_fn(self) -> Result<$t, Self> {
+            if let Self::$elm(v) = self {
+                Ok(v)
+            } else {
+                Err(self)
+            }
+        }
+    };
+}
+
 impl Node {
-    /// Returns `true` if the node is [`Object`].
-    ///
-    /// [`Object`]: Node::Object
-    pub fn is_object(&self) -> bool {
-        matches!(self, Self::Object(..))
-    }
-
-    /// Returns `true` if the node is [`Array`].
-    ///
-    /// [`Array`]: Node::Array
-    pub fn is_array(&self) -> bool {
-        matches!(self, Self::Array(..))
-    }
-
-    /// Returns `true` if the node is [`Bool`].
-    ///
-    /// [`Bool`]: Node::Bool
-    pub fn is_bool(&self) -> bool {
-        matches!(self, Self::Bool(..))
-    }
-
-    /// Returns `true` if the node is [`Str`].
-    ///
-    /// [`Str`]: Node::Str
-    pub fn is_str(&self) -> bool {
-        matches!(self, Self::Str(..))
-    }
-
-    /// Returns `true` if the node is [`Integer`].
-    ///
-    /// [`Integer`]: Node::Integer
-    pub fn is_integer(&self) -> bool {
-        matches!(self, Self::Integer(..))
-    }
-
-    /// Returns `true` if the node is [`Float`].
-    ///
-    /// [`Float`]: Node::Float
-    pub fn is_float(&self) -> bool {
-        matches!(self, Self::Float(..))
-    }
-
-    /// Returns `true` if the node is [`Null`].
-    ///
-    /// [`Null`]: Node::Null
-    pub fn is_null(&self) -> bool {
-        matches!(self, Self::Null(..))
-    }
-
-    /// Returns `true` if the node is [`Invalid`].
-    ///
-    /// [`Invalid`]: Node::Invalid
-    pub fn is_invalid(&self) -> bool {
-        matches!(self, Self::Invalid(..))
-    }
-
-    pub fn as_table(&self) -> Option<&Object> {
-        if let Self::Object(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_array(&self) -> Option<&Array> {
-        if let Self::Array(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_bool(&self) -> Option<&Bool> {
-        if let Self::Bool(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_str(&self) -> Option<&Str> {
-        if let Self::Str(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_integer(&self) -> Option<&Integer> {
-        if let Self::Integer(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_float(&self) -> Option<&Float> {
-        if let Self::Float(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_null(&self) -> Option<&Null> {
-        if let Self::Null(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_invalid(&self) -> Option<&Invalid> {
-        if let Self::Invalid(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn try_into_object(self) -> Result<Object, Self> {
-        if let Self::Object(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    pub fn try_into_array(self) -> Result<Array, Self> {
-        if let Self::Array(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    pub fn try_into_bool(self) -> Result<Bool, Self> {
-        if let Self::Bool(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    pub fn try_into_str(self) -> Result<Str, Self> {
-        if let Self::Str(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    pub fn try_into_integer(self) -> Result<Integer, Self> {
-        if let Self::Integer(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    pub fn try_into_float(self) -> Result<Float, Self> {
-        if let Self::Float(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    pub fn try_into_null(self) -> Result<Null, Self> {
-        if let Self::Null(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    pub fn try_into_invalid(self) -> Result<Invalid, Self> {
-        if let Self::Invalid(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
+    define_value_fns!(Null, Null, is_null, as_null, try_info_null);
+    define_value_fns!(Bool, Bool, is_bool, as_bool, try_into_bool);
+    define_value_fns!(Integer, Integer, is_integer, as_integer, try_into_integer);
+    define_value_fns!(Float, Float, is_float, as_float, try_into_float);
+    define_value_fns!(Str, Str, is_str, as_str, try_into_str);
+    define_value_fns!(Object, Object, is_object, as_object, try_into_object);
+    define_value_fns!(Array, Array, is_array, as_array, try_into_array);
+    define_value_fns!(Invalid, Invalid, is_invalid, as_invalid, try_into_invalid);
 }
 
-impl From<Null> for Node {
-    fn from(v: Null) -> Self {
-        Self::Null(v)
+macro_rules! value_from {
+    (
+        $(
+          $elm:ident,
+        )*
+    ) => {
+    $(
+    impl From<$elm> for Node {
+        fn from(v: $elm) -> Self {
+            Self::$elm(v)
+        }
     }
+    )*
+    };
 }
 
-impl From<Float> for Node {
-    fn from(v: Float) -> Self {
-        Self::Float(v)
-    }
-}
-
-impl From<Integer> for Node {
-    fn from(v: Integer) -> Self {
-        Self::Integer(v)
-    }
-}
-
-impl From<Str> for Node {
-    fn from(v: Str) -> Self {
-        Self::Str(v)
-    }
-}
-
-impl From<Bool> for Node {
-    fn from(v: Bool) -> Self {
-        Self::Bool(v)
-    }
-}
-
-impl From<Array> for Node {
-    fn from(v: Array) -> Self {
-        Self::Array(v)
-    }
-}
-
-impl From<Object> for Node {
-    fn from(v: Object) -> Self {
-        Self::Object(v)
-    }
-}
-
-impl From<Invalid> for Node {
-    fn from(v: Invalid) -> Self {
-        Self::Invalid(v)
-    }
-}
+value_from!(Null, Float, Integer, Str, Bool, Array, Object, Invalid,);
 
 #[derive(Debug)]
 pub(crate) struct NullInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
-    /// For tag anno like `@optional`
-    pub(crate) is_omitted: bool,
 }
 
 wrap_node! {
@@ -784,17 +576,14 @@ wrap_node! {
 }
 
 impl Null {
-    pub fn new(is_omitted: bool) -> Self {
+    pub fn new() -> Self {
         NullInner {
             errors: Default::default(),
             syntax: None,
-            is_omitted,
+            root_syntax: None,
             annotations: None,
         }
         .wrap()
-    }
-    pub fn is_omitted(&self) -> bool {
-        self.inner.is_omitted
     }
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
@@ -809,6 +598,7 @@ impl Null {
 pub(crate) struct BoolInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<bool>,
 }
@@ -842,6 +632,7 @@ impl Bool {
 pub(crate) struct IntegerInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: IntegerRepr,
     pub(crate) value: OnceCell<IntegerValue>,
@@ -907,6 +698,7 @@ pub enum IntegerRepr {
 pub(crate) struct FloatInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<f64>,
 }
@@ -942,6 +734,7 @@ impl Float {
 pub(crate) struct StrInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: StrRepr,
     pub(crate) value: OnceCell<String>,
@@ -1032,6 +825,7 @@ pub enum StrRepr {
 pub(crate) struct ArrayInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) items: Shared<Vec<Node>>,
 }
@@ -1059,6 +853,7 @@ impl Array {
 pub(crate) struct ObjectInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) entries: Shared<Entries>,
 }
@@ -1091,6 +886,7 @@ impl Object {
 #[derive(Debug)]
 pub(crate) struct InvalidInner {
     pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) root_syntax: Option<SyntaxElement>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
 }
@@ -1114,14 +910,21 @@ impl Invalid {
 pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annotations: Option<Annotations>,
     pub(crate) is_valid: bool,
     pub(crate) value: OnceCell<String>,
 }
 
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Key { inner: KeyInner }
+#[derive(Debug, Clone)]
+pub struct Key {
+    inner: Arc<KeyInner>,
+}
+
+impl From<KeyInner> for Key {
+    fn from(inner: KeyInner) -> Self {
+        Self {
+            inner: Arc::new(inner),
+        }
+    }
 }
 
 impl<S> From<S> for Key
@@ -1143,11 +946,10 @@ impl Key {
         KeyInner {
             errors: Default::default(),
             syntax: None,
-            annotations: None,
             is_valid: true,
             value: OnceCell::from(key.into()),
         }
-        .wrap()
+        .into()
     }
 
     /// An unescaped value of the key.
@@ -1205,12 +1007,30 @@ impl Key {
             .map(|v| Either::Left(once(v)))
             .unwrap_or_else(|| Either::Right(empty()))
     }
+}
 
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
+impl Sealed for Key {}
+impl DomNode for Key {
+    fn root_syntax(&self) -> Option<&SyntaxElement> {
+        self.inner.syntax.as_ref()
+    }
+
+    fn syntax(&self) -> Option<&SyntaxElement> {
+        self.inner.syntax.as_ref()
+    }
+
+    fn errors(&self) -> &Shared<Vec<Error>> {
+        &self.inner.errors
+    }
+
+    fn annotations(&self) -> &Option<Annotations> {
+        &None
+    }
+
+    fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
         if !self.inner.is_valid {
             return Err(self.errors());
         }
-
         let _ = self.value();
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -1313,15 +1133,12 @@ impl FromIterator<(Key, Node)> for Entries {
 #[derive(Debug)]
 pub(crate) struct AnnotationsInner {
     pub(crate) errors: Shared<Vec<Error>>,
-    pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annotations: Option<Annotations>,
     pub(crate) entries: Shared<Entries>,
-    pub(crate) is_composed: bool,
 }
 
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Annotations { inner: AnnotationsInner }
+#[derive(Debug, Clone)]
+pub struct Annotations {
+    inner: Arc<AnnotationsInner>,
 }
 
 impl Annotations {
@@ -1334,12 +1151,27 @@ impl Annotations {
     pub fn entries(&self) -> &Shared<Entries> {
         &self.inner.entries
     }
+}
 
-    pub fn is_composed(&self) -> bool {
-        self.inner.is_composed
+impl Sealed for Annotations {}
+impl DomNode for Annotations {
+    fn root_syntax(&self) -> Option<&SyntaxElement> {
+        None
     }
 
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
+    fn syntax(&self) -> Option<&SyntaxElement> {
+        None
+    }
+
+    fn errors(&self) -> &Shared<Vec<Error>> {
+        &self.inner.errors
+    }
+
+    fn annotations(&self) -> &Option<Annotations> {
+        &None
+    }
+
+    fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
         if self.errors().read().as_ref().is_empty() {
             Ok(())
         } else {
@@ -1348,114 +1180,10 @@ impl Annotations {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct Comment {
-    pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) value: OnceCell<CommentValue>,
-}
-
-impl Comment {
-    pub fn new(value: impl Into<String>) -> Self {
+impl From<AnnotationsInner> for Annotations {
+    fn from(inner: AnnotationsInner) -> Self {
         Self {
-            syntax: None,
-            value: OnceCell::from(CommentValue::Comment(value.into())),
+            inner: Arc::new(inner),
         }
-    }
-
-    pub fn new_directive(name: impl Into<String>, value: impl Into<String>) -> Self {
-        Self {
-            syntax: None,
-            value: OnceCell::from(CommentValue::Directive {
-                name: name.into(),
-                value: value.into(),
-            }),
-        }
-    }
-
-    pub fn is_directive(&self) -> bool {
-        self.value_internal().is_directive()
-    }
-
-    pub fn directive(&self) -> Option<&str> {
-        if let CommentValue::Directive { name, .. } = self.value_internal() {
-            Some(name)
-        } else {
-            None
-        }
-    }
-
-    pub fn value(&self) -> &str {
-        match self.value_internal() {
-            CommentValue::Comment(s) => s,
-            CommentValue::Directive { value, .. } => value,
-        }
-    }
-
-    fn value_internal(&self) -> &CommentValue {
-        self.value
-            .get_or_init(|| match self.syntax.as_ref().and_then(|s| s.as_token()) {
-                Some(t) => {
-                    let text = t.text();
-
-                    if let Some(directive_content) = text.strip_prefix("#:") {
-                        let mut directive_content = directive_content.split_whitespace();
-                        let directive_name = directive_content.next().unwrap_or("");
-                        let directive_value = directive_content.next().unwrap_or("");
-                        return CommentValue::Directive {
-                            name: directive_name.into(),
-                            value: directive_value.into(),
-                        };
-                    }
-
-                    if let Some(comment_content) = text.strip_prefix('#') {
-                        return CommentValue::Comment(comment_content.into());
-                    }
-
-                    Default::default()
-                }
-                None => Default::default(),
-            })
-    }
-}
-
-impl core::fmt::Display for Comment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(s) = &self.syntax {
-            s.fmt(f)
-        } else {
-            match self.value_internal() {
-                CommentValue::Comment(c) => {
-                    f.write_str("#")?;
-                    c.fmt(f)
-                }
-                CommentValue::Directive { name, value } => {
-                    f.write_str("#:")?;
-                    name.fmt(f)?;
-                    f.write_str(" ")?;
-                    value.fmt(f)
-                }
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum CommentValue {
-    Comment(String),
-    Directive { name: String, value: String },
-}
-
-impl CommentValue {
-    /// Returns `true` if the comment value is [`Directive`].
-    ///
-    /// [`Directive`]: CommentValue::Directive
-    fn is_directive(&self) -> bool {
-        matches!(self, Self::Directive { .. })
-    }
-}
-
-impl Default for CommentValue {
-    fn default() -> Self {
-        Self::Comment(String::new())
     }
 }

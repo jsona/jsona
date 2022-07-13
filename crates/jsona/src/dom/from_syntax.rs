@@ -2,39 +2,126 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annotations, AnnotationsInner, Array, ArrayInner, Bool, BoolInner, Comment, Entries, Float,
-        FloatInner, Integer, IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node,
-        Null, NullInner, Object, ObjectInner, Str, StrInner, StrRepr,
+        Annotations, AnnotationsInner, Array, ArrayInner, BoolInner, Entries, FloatInner,
+        IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node, Null, NullInner,
+        Object, ObjectInner, StrInner, StrRepr,
     },
 };
 
 use crate::{
-    syntax::{SyntaxElement, SyntaxKind::*, SyntaxNode},
+    syntax::{SyntaxElement, SyntaxKind::*},
     util::shared::Shared,
 };
 use either::Either;
 
-pub fn from_syntax(syntax: SyntaxElement) -> Node {
-    if syntax.kind() != VALUE {
-        return invalid_from_syntax(syntax, None).into();
+pub fn from_syntax(root: SyntaxElement) -> Node {
+    if root.kind() != VALUE {
+        return invalid_from_syntax(root, None).into();
     }
-    let annotations = annotations_from_syntax(syntax.clone());
-    let syntax = syntax.into_node().unwrap();
-    match first_none_empty_child(&syntax) {
-        None => invalid_from_syntax(syntax.into(), None).into(),
+    let annotations = annotations_from_syntax(root.clone());
+    let errors: Vec<Error> = Default::default();
+    match first_none_value_child(&root) {
+        None => invalid_from_syntax(root, annotations).into(),
         Some(syntax) => match syntax.kind() {
-            NULL => null_from_syntax(syntax, annotations).into(),
-            BOOL => bool_from_syntax(syntax, annotations).into(),
-            INTEGER | INTEGER_HEX | INTEGER_OCT | INTEGER_BIN => {
-                integer_from_syntax(syntax, annotations).into()
+            NULL => NullInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
             }
-            FLOAT => float_from_syntax(syntax, annotations).into(),
-            SINGLE_QUOTE | DOUBLE_QUOTE | BACKTICK_QUOTE => {
-                str_from_syntax(syntax, annotations).into()
+            .wrap()
+            .into(),
+            BOOL => BoolInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                value: Default::default(),
             }
-            ARRAY => array_from_syntax(syntax, annotations).into(),
-            OBJECT => object_from_syntax(syntax, annotations).into(),
-            _ => invalid_from_syntax(syntax, None).into(),
+            .wrap()
+            .into(),
+            INTEGER => IntegerInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                value: Default::default(),
+                repr: IntegerRepr::Dec,
+            }
+            .wrap()
+            .into(),
+            INTEGER_BIN => IntegerInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                value: Default::default(),
+                repr: IntegerRepr::Bin,
+            }
+            .wrap()
+            .into(),
+            INTEGER_HEX => IntegerInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                value: Default::default(),
+                repr: IntegerRepr::Hex,
+            }
+            .wrap()
+            .into(),
+            INTEGER_OCT => IntegerInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                value: Default::default(),
+                repr: IntegerRepr::Oct,
+            }
+            .wrap()
+            .into(),
+            FLOAT => FloatInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                value: Default::default(),
+            }
+            .wrap()
+            .into(),
+            SINGLE_QUOTE => StrInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                repr: StrRepr::Single,
+                value: Default::default(),
+            }
+            .wrap()
+            .into(),
+            DOUBLE_QUOTE => StrInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                repr: StrRepr::Double,
+                value: Default::default(),
+            }
+            .wrap()
+            .into(),
+            BACKTICK_QUOTE => StrInner {
+                errors: errors.into(),
+                syntax: Some(syntax),
+                root_syntax: Some(root),
+                annotations,
+                repr: StrRepr::Backtick,
+                value: Default::default(),
+            }
+            .wrap()
+            .into(),
+            ARRAY => array_from_syntax(root, syntax, annotations).into(),
+            OBJECT => object_from_syntax(root, syntax, annotations).into(),
+            _ => invalid_from_syntax(root, annotations).into(),
         },
     }
 }
@@ -57,11 +144,10 @@ pub(crate) fn keys_from_syntax(
                         let key = KeyInner {
                             errors: Shared::default(),
                             syntax: Some(child),
-                            annotations: None,
                             is_valid: true,
                             value: Default::default(),
                         }
-                        .wrap();
+                        .into();
 
                         if at_token {
                             keys.push(KeyOrIndex::new_anno_key(key));
@@ -77,177 +163,46 @@ pub(crate) fn keys_from_syntax(
         .unwrap_or_else(|| Either::Right(core::iter::empty()))
 }
 
-pub(crate) fn comment_from_syntax(syntax: SyntaxElement) -> Comment {
-    Comment {
-        syntax: Some(syntax),
-        value: Default::default(),
-    }
-}
-
 pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
     assert!(syntax.kind() == KEY);
-    let syntax = syntax.into_node().unwrap();
     if let Some(syntax) =
-        first_none_empty_child(&syntax).and_then(|v| if v.kind() == IDENT { Some(v) } else { None })
+        first_none_value_child(&syntax).and_then(|v| if v.kind() == IDENT { Some(v) } else { None })
     {
         KeyInner {
             errors: Shared::default(),
             syntax: Some(syntax),
-            annotations: None,
             is_valid: true,
             value: Default::default(),
         }
-        .wrap()
+        .into()
     } else {
         KeyInner {
             errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
-                syntax: syntax.clone().into(),
+                syntax: syntax.clone(),
             }])),
-            annotations: None,
             is_valid: false,
             value: Default::default(),
-            syntax: Some(syntax.into()),
+            syntax: Some(syntax),
         }
-        .wrap()
+        .into()
     }
 }
 
-fn null_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Null {
-    assert!(syntax.kind() == NULL);
-    NullInner {
-        errors: Default::default(),
-        syntax: Some(syntax),
-        annotations,
-        is_omitted: false,
-    }
-    .into()
-}
-
-fn bool_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Bool {
-    assert!(syntax.kind() == BOOL);
-    BoolInner {
-        errors: Default::default(),
-        syntax: Some(syntax),
-        annotations,
-        value: Default::default(),
-    }
-    .into()
-}
-
-fn integer_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Integer {
-    let mut errors = Vec::new();
-    match syntax.kind() {
-        INTEGER => IntegerInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            annotations,
-            value: Default::default(),
-            repr: IntegerRepr::Dec,
-        }
-        .into(),
-        INTEGER_BIN => IntegerInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            annotations,
-            value: Default::default(),
-            repr: IntegerRepr::Bin,
-        }
-        .into(),
-        INTEGER_HEX => IntegerInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            annotations,
-            value: Default::default(),
-            repr: IntegerRepr::Hex,
-        }
-        .into(),
-        INTEGER_OCT => IntegerInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            annotations,
-            value: Default::default(),
-            repr: IntegerRepr::Oct,
-        }
-        .into(),
-        _ => {
-            errors.push(Error::UnexpectedSyntax {
-                syntax: syntax.clone(),
-            });
-            IntegerInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                annotations,
-                value: Default::default(),
-                repr: IntegerRepr::Dec,
-            }
-            .into()
-        }
-    }
-}
-
-fn float_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Float {
-    assert!(syntax.kind() == FLOAT);
-    FloatInner {
-        errors: Default::default(),
-        syntax: Some(syntax),
-        annotations,
-        value: Default::default(),
-    }
-    .into()
-}
-
-fn str_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Str {
-    let mut errors = Vec::new();
-    match syntax.kind() {
-        SINGLE_QUOTE => StrInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            annotations,
-            repr: StrRepr::Single,
-            value: Default::default(),
-        }
-        .into(),
-        DOUBLE_QUOTE => StrInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            annotations,
-            repr: StrRepr::Double,
-            value: Default::default(),
-        }
-        .into(),
-        BACKTICK_QUOTE => StrInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            annotations,
-            repr: StrRepr::Backtick,
-            value: Default::default(),
-        }
-        .into(),
-        _ => {
-            errors.push(Error::UnexpectedSyntax {
-                syntax: syntax.clone(),
-            });
-            StrInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                annotations,
-                repr: StrRepr::Double,
-                value: Default::default(),
-            }
-            .into()
-        }
-    }
-}
-
-fn array_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Array {
+fn array_from_syntax(
+    root: SyntaxElement,
+    syntax: SyntaxElement,
+    annotations: Option<Annotations>,
+) -> Array {
     assert!(syntax.kind() == ARRAY);
-    let syntax = syntax.into_node().unwrap();
     ArrayInner {
         errors: Default::default(),
-        syntax: Some(syntax.clone().into()),
+        root_syntax: Some(root),
+        syntax: Some(syntax.clone()),
         annotations,
         items: Shared::new(
             syntax
+                .as_node()
+                .unwrap()
                 .children()
                 .filter(|v| v.kind() == VALUE)
                 .map(|syntax| from_syntax(syntax.into()))
@@ -257,17 +212,26 @@ fn array_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) ->
     .into()
 }
 
-fn object_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Object {
+fn object_from_syntax(
+    root: SyntaxElement,
+    syntax: SyntaxElement,
+    annotations: Option<Annotations>,
+) -> Object {
     assert!(syntax.kind() == OBJECT);
-    let syntax = syntax.into_node().unwrap();
     let mut errors = Vec::new();
     let mut entries = Entries::default();
-    for child in syntax.children().filter(|v| v.kind() == ENTRY) {
+    for child in syntax
+        .as_node()
+        .unwrap()
+        .children()
+        .filter(|v| v.kind() == ENTRY)
+    {
         object_entry_from_syntax(child.into(), &mut entries, &mut errors)
     }
     ObjectInner {
         errors: errors.into(),
-        syntax: Some(syntax.into()),
+        root_syntax: Some(root),
+        syntax: Some(syntax),
         annotations,
         entries: entries.into(),
     }
@@ -304,8 +268,7 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
 
     let mut errors: Vec<Error> = vec![];
     let mut entries = Entries::default();
-
-    let (annotations_syntax, is_composed) = match (
+    match (
         syntax.children().find(|v| v.kind() == ANNOTATIONS),
         syntax
             .children()
@@ -317,13 +280,11 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
             for child in scope_annotations.children() {
                 anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
             }
-            (scope_annotations, false)
         }
         (Some(entry_annotations), None) => {
             for child in entry_annotations.children() {
                 anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
             }
-            (entry_annotations, false)
         }
         (Some(entry_annotations), Some(scope_annotations)) => {
             for child in entry_annotations.children() {
@@ -332,18 +293,14 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
             for child in scope_annotations.children() {
                 anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
             }
-            (syntax, true)
         }
     };
     Some(
         AnnotationsInner {
             errors: errors.into(),
             entries: entries.into(),
-            annotations: None,
-            is_composed,
-            syntax: Some(annotations_syntax.into()),
         }
-        .wrap(),
+        .into(),
     )
 }
 
@@ -369,7 +326,7 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
                 return;
             }
         },
-        None => Null::new(true).into(),
+        None => Null::new().into(),
     };
     add_entry(entries, errors, key, value);
 }
@@ -380,15 +337,16 @@ fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) 
     }]);
     InvalidInner {
         errors: errors.into(),
+        root_syntax: Some(syntax.clone()),
         syntax: Some(syntax),
         annotations,
     }
     .into()
 }
 
-fn first_none_empty_child(syntax: &SyntaxNode) -> Option<SyntaxElement> {
-    syntax
-        .children_with_tokens()
+fn first_none_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
+    let node = syntax.as_node()?;
+    node.children_with_tokens()
         .find(|v| ![WHITESPACE, NEWLINE, COMMENT_BLOCK, COMMENT_LINE].contains(&v.kind()))
 }
 

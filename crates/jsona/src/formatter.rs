@@ -1,14 +1,17 @@
 use crate::{
     dom::{from_syntax::key_from_syntax, KeyOrIndex, Keys},
     parser,
-    syntax::{SyntaxElement, SyntaxKind::*, SyntaxNode, SyntaxToken},
+    syntax::{SyntaxElement, SyntaxKind::*, SyntaxNode},
 };
 
 use rowan::{NodeOrToken, TextRange};
-use std::rc::Rc;
-use std::{cell::RefCell, collections::{HashMap, HashSet}};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+};
 
 macro_rules! create_options {
     (
@@ -200,7 +203,6 @@ impl Options {
     }
 }
 
-
 /// Parses then formats a JSONA document, skipping ranges that contain syntax errors.
 pub fn format(src: &str, options: Options) -> String {
     let p = parser::parse(src);
@@ -230,7 +232,7 @@ struct ScopeKeysState {
 enum SegLen {
     Key(usize),
     Comment(usize),
-    Value(usize)
+    Value(usize),
 }
 
 impl Scope {
@@ -281,15 +283,12 @@ impl Scope {
     }
 
     fn state(&self) -> (bool, usize) {
-        if let Some(state) = self.states
-            .borrow_mut()
-            .get(&self.keys) {
-                (state.multiline, state.nums)
-            } else {
-                (false, 0)
-            }
+        if let Some(state) = self.states.borrow_mut().get(&self.keys) {
+            (state.multiline, state.nums)
+        } else {
+            (false, 0)
+        }
     }
-
 
     fn inc_num(&self) {
         self.states
@@ -304,7 +303,8 @@ impl Scope {
             .borrow_mut()
             .entry(self.keys.clone())
             .or_default()
-            .lens.push(type_len);
+            .lens
+            .push(type_len);
     }
 
     fn multiline(&self) {
@@ -350,7 +350,7 @@ fn format_root(node: SyntaxNode, scope: Scope) -> String {
 }
 
 fn format_value(node: SyntaxNode, scope: Scope) -> String {
-   todo!() 
+    todo!()
 }
 
 fn preflight_value(node: SyntaxNode, scope: Scope) {
@@ -376,7 +376,7 @@ fn preflight_value(node: SyntaxNode, scope: Scope) {
                 } else {
                     preflight_comment(t.into(), scope.clone());
                 }
-            },
+            }
         }
     }
 }

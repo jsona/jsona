@@ -116,7 +116,7 @@ impl Display for Value {
 
 fn write_annotations(
     f: &mut impl Write,
-    annotations: &IndexMap<String, AnnotaionValue>,
+    annotations: &IndexMap<String, AnnotationValue>,
     inline: bool,
     level: usize,
 ) -> Result {
