@@ -9,7 +9,6 @@ impl Node {
             options: Rc::new(Default::default()),
             level: 0,
             formatted: Default::default(),
-            error_ranges: Rc::new(vec![]),
             kind: ScopeKind::Root,
         };
         write_value(scope.clone(), self);

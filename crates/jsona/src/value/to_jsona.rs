@@ -1,5 +1,5 @@
 use crate::formatter::{Scope, ScopeKind};
-use crate::util::quote::{check_quote, quote};
+use crate::util::quote::quote;
 
 use super::*;
 use std::{
@@ -13,7 +13,6 @@ impl Value {
             options: Rc::new(Default::default()),
             level: 0,
             formatted: Default::default(),
-            error_ranges: Rc::new(vec![]),
             kind: ScopeKind::Root,
         };
         write_value(scope.clone(), self);
@@ -45,8 +44,7 @@ fn write_value(scope: Scope, value: &Value) {
             write_scalar(scope, value, annotations);
         }
         Value::Str(Str { value, annotations }) => {
-            let quote_type = check_quote(value);
-            let value = quote(value, quote_type.quote(false));
+            let value = quote(value, true);
             write_scalar(scope, value, annotations);
         }
         Value::Array(Array { value, annotations }) => {

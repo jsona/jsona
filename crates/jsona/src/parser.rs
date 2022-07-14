@@ -2,7 +2,7 @@
 
 use crate::dom;
 use crate::syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode};
-use crate::util::escape::check_escape;
+use crate::util::quote::check_escape;
 use logos::{Lexer, Logos};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 use std::convert::TryInto;

@@ -10,7 +10,7 @@ use crate::{
     syntax::{SyntaxKind::*, SyntaxNode, SyntaxToken},
 };
 
-use rowan::{NodeOrToken, TextRange, WalkEvent};
+use rowan::{NodeOrToken, WalkEvent};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -126,12 +126,6 @@ create_options!(
     #[derive(Debug, Clone, Eq, PartialEq)]
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct Options {
-        /// Target maximum column width after which
-        /// annotations are expanded into new lines.
-        ///
-        /// This is best-effort and might not be accurate.
-        pub column_width: usize,
-
         /// Indentation to use, should be tabs or spaces
         /// but technically could be anything.
         pub indent_string: String,
@@ -175,7 +169,6 @@ impl std::error::Error for OptionParseError {}
 impl Default for Options {
     fn default() -> Self {
         Options {
-            column_width: 80,
             indent_string: "  ".into(),
             trailing_comma: true,
             trailing_newline: true,
@@ -187,7 +180,6 @@ impl Default for Options {
 pub(crate) struct Scope {
     pub(crate) options: Rc<Options>,
     pub(crate) level: usize,
-    pub(crate) error_ranges: Rc<Vec<TextRange>>,
     pub(crate) formatted: Rc<RefCell<String>>,
     pub(crate) kind: ScopeKind,
 }
@@ -197,7 +189,6 @@ impl Scope {
         Self {
             options: self.options.clone(),
             level: self.level + 1,
-            error_ranges: self.error_ranges.clone(),
             formatted: self.formatted.clone(),
             kind,
         }
@@ -206,7 +197,6 @@ impl Scope {
         Self {
             options: self.options.clone(),
             level: self.level - 1,
-            error_ranges: self.error_ranges.clone(),
             formatted: self.formatted.clone(),
             kind: self.kind,
         }
@@ -292,13 +282,11 @@ impl Context {
 /// Parses then formats a JSONA document, skipping ranges that contain syntax errors.
 pub fn format(src: &str, options: Options) -> String {
     let p = parser::parse(src);
-    let error_ranges = p.errors.iter().map(|err| err.range).collect();
     let trailing_newline = options.trailing_newline;
     let scope = Scope {
         options: Rc::new(options),
         level: 0,
         formatted: Default::default(),
-        error_ranges: Rc::new(error_ranges),
         kind: ScopeKind::Root,
     };
     let mut ctx = Context {
@@ -567,7 +555,7 @@ fn format_annotation_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
         match c {
             NodeOrToken::Node(n) => {
                 if n.kind() == VALUE {
-                    match plain_value_to_tokens(syntax.clone()) {
+                    match compact_value_tokens(syntax.clone()) {
                         Some(tokens) => {
                             let token_texts: Vec<&str> = tokens.iter().map(|v| v.text()).collect();
                             let text = token_texts.join("");
@@ -646,7 +634,7 @@ fn format_error(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {
     ctx.col_offset += scope.write(syntax.text());
 }
 
-fn plain_value_to_tokens(syntax: SyntaxNode) -> Option<Vec<SyntaxToken>> {
+fn compact_value_tokens(syntax: SyntaxNode) -> Option<Vec<SyntaxToken>> {
     let mut tokens = vec![];
     for event in syntax.preorder_with_tokens() {
         if let WalkEvent::Enter(ele) = event {

@@ -2,8 +2,7 @@ use super::error::{Error, QueryError};
 use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
 use crate::syntax::{SyntaxElement, SyntaxKind};
-use crate::util::escape::unescape;
-use crate::util::quote::{check_quote, quote};
+use crate::util::quote::{quote, unquote, QuoteType};
 use crate::util::shared::Shared;
 use crate::value::IntegerValue;
 
@@ -352,11 +351,7 @@ impl Node {
             Node::Str(v) => {
                 let text = match self.syntax() {
                     Some(syntax) => syntax.to_string(),
-                    None => {
-                        let value = v.value();
-                        let quote_type = check_quote(value);
-                        quote(value, quote_type.quote(false))
-                    }
+                    None => quote(v.value(), true),
                 };
                 Some(text)
             }
@@ -785,51 +780,21 @@ impl Str {
             self.inner
                 .syntax
                 .as_ref()
-                .map(|s| match self.inner.repr {
-                    StrRepr::Double => {
-                        let string = s.as_token().unwrap().text();
-                        let string = string.strip_prefix('"').unwrap_or(string);
-                        let string = string.strip_suffix('"').unwrap_or(string);
-                        match unescape(string) {
-                            Ok(s) => s,
-                            Err(_) => {
-                                self.inner.errors.update(|errors| {
-                                    errors.push(Error::InvalidEscapeSequence { string: s.clone() })
-                                });
-                                String::new()
-                            }
-                        }
-                    }
-                    StrRepr::Single => {
-                        let string = s.as_token().unwrap().text();
-                        let string = string.strip_prefix('\'').unwrap_or(string);
-                        let string = string.strip_suffix('\'').unwrap_or(string);
-                        match unescape(string) {
-                            Ok(s) => s,
-                            Err(_) => {
-                                self.inner.errors.update(|errors| {
-                                    errors.push(Error::InvalidEscapeSequence { string: s.clone() })
-                                });
-                                String::new()
-                            }
-                        }
-                    }
-                    StrRepr::Backtick => {
-                        let string = s.as_token().unwrap().text();
-                        let string = string.strip_prefix('`').unwrap_or(string);
-                        let string = match string.strip_prefix("\r\n") {
-                            Some(s) => s,
-                            None => string.strip_prefix('\n').unwrap_or(string),
-                        };
-                        let string = string.strip_suffix('`').unwrap_or(string);
-                        match unescape(string) {
-                            Ok(s) => s,
-                            Err(_) => {
-                                self.inner.errors.update(|errors| {
-                                    errors.push(Error::InvalidEscapeSequence { string: s.clone() })
-                                });
-                                String::new()
-                            }
+                .map(|s| {
+                    let quote_type = match self.inner.repr {
+                        StrRepr::Double => QuoteType::Double,
+                        StrRepr::Single => QuoteType::Single,
+                        StrRepr::Backtick => QuoteType::Backtick,
+                    };
+
+                    let string = s.as_token().unwrap().text();
+                    match unquote(string, quote_type) {
+                        Ok(s) => s,
+                        Err(_) => {
+                            self.inner.errors.update(|errors| {
+                                errors.push(Error::InvalidEscapeSequence { string: s.clone() })
+                            });
+                            String::new()
                         }
                     }
                 })
@@ -993,38 +958,24 @@ impl Key {
                 .as_ref()
                 .and_then(NodeOrToken::as_token)
                 .map(|s| {
-                    if s.text().starts_with('\'') {
-                        let string = s.text();
-                        let string = string.strip_prefix('\'').unwrap_or(string);
-                        let string = string.strip_suffix('\'').unwrap_or(string);
-                        match unescape(string) {
-                            Ok(s) => s,
-                            Err(_) => {
-                                self.inner.errors.update(|errors| {
-                                    errors.push(Error::InvalidEscapeSequence {
-                                        string: s.clone().into(),
-                                    })
-                                });
-                                String::new()
-                            }
+                    let quote_type = match s.text().chars().nth(1) {
+                        Some('\'') => QuoteType::Single,
+                        Some('"') => QuoteType::Double,
+                        Some('`') => QuoteType::Backtick,
+                        _ => QuoteType::None,
+                    };
+
+                    let string = s.text();
+                    match unquote(string, quote_type) {
+                        Ok(s) => s,
+                        Err(_) => {
+                            self.inner.errors.update(|errors| {
+                                errors.push(Error::InvalidEscapeSequence {
+                                    string: s.clone().into(),
+                                })
+                            });
+                            String::new()
                         }
-                    } else if s.text().starts_with('"') {
-                        let string = s.text();
-                        let string = string.strip_prefix('"').unwrap_or(string);
-                        let string = string.strip_suffix('"').unwrap_or(string);
-                        match unescape(string) {
-                            Ok(s) => s,
-                            Err(_) => {
-                                self.inner.errors.update(|errors| {
-                                    errors.push(Error::InvalidEscapeSequence {
-                                        string: s.clone().into(),
-                                    })
-                                });
-                                String::new()
-                            }
-                        }
-                    } else {
-                        s.text().to_string()
                     }
                 })
                 .unwrap_or_default()
