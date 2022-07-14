@@ -226,13 +226,16 @@ impl Scope {
     fn ident(&self) -> String {
         self.options.indent_string.repeat(self.level)
     }
-    fn is_prev_space(&self) -> bool {
+    fn is_last_char(&self, c: char) -> bool {
         self.formatted
             .borrow()
             .chars()
             .last()
-            .map(|v| v.is_whitespace())
+            .map(|v| v == c)
             .unwrap_or_default()
+    }
+    fn remove_last_char(&self) {
+        self.formatted.borrow_mut().pop();
     }
     fn is_object_scope(&self) -> bool {
         self.kind == ScopeKind::Object
@@ -258,7 +261,7 @@ struct Context {
 
 impl Context {
     fn maybe_insert_space(&mut self, scope: &Scope) {
-        if self.col_offset > 0 && !scope.is_prev_space() {
+        if self.col_offset > 0 && !scope.is_last_char(' ') {
             self.col_offset += scope.write(" ");
         }
     }
@@ -389,7 +392,11 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                     scope = scope.exit();
                     ctx.last_nodes.pop();
                     if is_empty {
-                        ctx.col_offset += scope.write("}");
+                        if ctx.col_offset == 0 {
+                            ctx.col_offset += scope.write_with_ident("}");
+                        } else {
+                            ctx.col_offset += scope.write("}");
+                        }
                     } else {
                         ctx.newline(&scope);
                         ctx.col_offset += scope.write_with_ident("}");
@@ -471,7 +478,11 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                     scope = scope.exit();
                     ctx.last_nodes.pop();
                     if is_empty {
-                        ctx.col_offset += scope.write("]");
+                        if ctx.col_offset == 0 {
+                            ctx.col_offset += scope.write_with_ident("]");
+                        } else {
+                            ctx.col_offset += scope.write("]");
+                        }
                     } else {
                         if ctx.col_offset > 0 {
                             scope.write("\n");
@@ -519,19 +530,18 @@ fn format_annotation_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Conte
         scope.write(&syntax.to_string());
         return;
     }
-    let has_value = syntax.children().any(|v| v.kind() == ANNOTATION_VALUE);
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => match n.kind() {
                 KEY => {
+                    if ctx.col_offset > 0 && !scope.is_last_char(' ') {
+                        ctx.col_offset += scope.write(" ");
+                    }
                     let text = format!("@{}", n);
-                    if ctx.col_offset > 0 {
-                        if !scope.is_prev_space() {
-                            ctx.col_offset += scope.write(" ");
-                        }
-                        ctx.col_offset += scope.write(text);
-                    } else {
+                    if ctx.col_offset == 0 {
                         ctx.col_offset += scope.write_with_ident(text);
+                    } else {
+                        ctx.col_offset += scope.write(text);
                     }
                 }
                 ANNOTATION_VALUE => format_annotation_value(scope.clone(), n, ctx),
@@ -552,46 +562,44 @@ fn format_annotation_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Conte
         scope.write(&syntax.to_string());
         return;
     }
-    match plain_value_to_tokens(syntax.clone()) {
-        Some(tokens) => {
-            let token_texts: Vec<&str> = tokens.iter().map(|v| v.text()).collect();
-            let text = token_texts.join("");
-            ctx.col_offset += scope.write(text);
-        }
-        None => {
-            for c in syntax.children_with_tokens() {
-                match c {
-                    NodeOrToken::Node(n) => {
-                        if n.kind() == VALUE {
+    for c in syntax.children_with_tokens() {
+        match c {
+            NodeOrToken::Node(n) => {
+                if n.kind() == VALUE {
+                    match plain_value_to_tokens(syntax.clone()) {
+                        Some(tokens) => {
+                            let token_texts: Vec<&str> = tokens.iter().map(|v| v.text()).collect();
+                            let text = token_texts.join("");
+                            ctx.col_offset += scope.write(text);
+                        }
+                        None => {
                             format_value(scope.clone(), n, ctx);
                         }
                     }
-                    NodeOrToken::Token(t) => match t.kind() {
-                        PARENTHESES_START => {
-                            if ctx.col_offset == 0 {
-                                ctx.col_offset += scope.write_with_ident("(");
-                            } else {
-                                ctx.col_offset += scope.write("(");
-                            }
-                            scope = scope.enter(ScopeKind::Annotaion);
-                            ctx.last_nodes.push(false);
-                        }
-                        PARENTHESES_END => {
-                            scope = scope.exit();
-                            ctx.last_nodes.pop();
-                            if ctx.col_offset > 0 {
-                                scope.write("\n");
-                                ctx.col_offset = 0;
-                            }
-                            ctx.col_offset += scope.write_with_ident("]");
-                        }
-                        ERROR => format_error(scope.clone(), t, ctx),
-                        NEWLINE => format_newline(scope.clone(), t, ctx),
-                        k if k.is_comment() => format_comment(scope.clone(), t, ctx),
-                        _ => {}
-                    },
                 }
             }
+            NodeOrToken::Token(t) => match t.kind() {
+                PARENTHESES_START => {
+                    if ctx.col_offset == 0 {
+                        ctx.col_offset += scope.write_with_ident("(");
+                    } else {
+                        ctx.col_offset += scope.write("(");
+                    }
+                }
+                PARENTHESES_END => {
+                    if scope.is_last_char(',') {
+                        scope.remove_last_char();
+                    }
+                    if ctx.col_offset > 0 {
+                        ctx.col_offset += scope.write(")");
+                    } else {
+                        ctx.col_offset += scope.write_with_ident(")");
+                    }
+                }
+                ERROR => format_error(scope.clone(), t, ctx),
+                k if k.is_comment() => format_comment(scope.clone(), t, ctx),
+                _ => {}
+            },
         }
     }
 }
@@ -645,8 +653,7 @@ fn plain_value_to_tokens(syntax: SyntaxNode) -> Option<Vec<SyntaxToken>> {
                 match t.kind() {
                     IDENT | FLOAT | BOOL | NULL | SINGLE_QUOTE | DOUBLE_QUOTE | BACKTICK_QUOTE
                     | INTEGER | INTEGER_BIN | INTEGER_HEX | INTEGER_OCT | COLON | COMMA
-                    | PARENTHESES_START | PARENTHESES_END | BRACE_START | BRACE_END
-                    | BRACKET_END | BRACKET_END => {
+                    | BRACE_START | BRACE_END | BRACKET_START | BRACKET_END => {
                         tokens.push(t.clone());
                     }
                     NEWLINE | LINE_COMMENT => return None,

@@ -133,7 +133,7 @@ impl<'p> Parser<'p> {
             self.must_token_or(PARENTHESES_END, r#"expected ")""#)?;
             return Ok(());
         }
-        let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
+        let ret = with_node!(self.builder, VALUE, self.parse_value());
         self.must_token_or(PARENTHESES_END, r#"expected ")""#)?;
         ret
     }
