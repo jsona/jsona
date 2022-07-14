@@ -312,43 +312,9 @@ fn format_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => match n.kind() {
-                OBJECT => {
-                    if ctx.col_offset == 0 {
-                        ctx.col_offset += scope.write_with_ident("{");
-                    } else {
-                        ctx.col_offset += scope.write("{");
-                    }
-                    let scope = scope.enter(ScopeKind::Object);
-                    ctx.last_nodes.push(false);
-                    format_object(scope.clone(), n, ctx);
-                    ctx.maybe_insert_comma(&scope);
-                }
-                ARRAY => {
-                    if ctx.col_offset == 0 {
-                        ctx.col_offset += scope.write_with_ident("[");
-                    } else {
-                        ctx.col_offset += scope.write("[");
-                    }
-                    let scope = scope.enter(ScopeKind::Array);
-                    ctx.last_nodes.push(false);
-                    format_array(scope.clone(), n, ctx);
-                    ctx.maybe_insert_comma(&scope);
-                }
-                SCALAR => {
-                    let text = n.to_string();
-                    if ctx.col_offset == 0 && scope.is_array_scope() {
-                        ctx.col_offset += scope.write_with_ident(&text);
-                    } else {
-                        scope.write(&text);
-                        ctx.col_offset += text.len();
-                    }
-                    if is_multiline(&text) {
-                        if let Some(offset) = text.split('\n').last().map(|v| v.len()) {
-                            ctx.col_offset = offset
-                        }
-                    }
-                    ctx.maybe_insert_comma(&scope);
-                }
+                SCALAR => format_scalar(scope.clone(), n, ctx),
+                OBJECT => format_object(scope.clone(), n, ctx),
+                ARRAY => format_array(scope.clone(), n, ctx),
                 _ => {}
             },
             NodeOrToken::Token(t) => match t.kind() {
@@ -365,6 +331,15 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
         scope.write(&syntax.to_string());
         return;
     }
+
+    if ctx.col_offset == 0 {
+        ctx.col_offset += scope.write_with_ident("{");
+    } else {
+        ctx.col_offset += scope.write("{");
+    }
+    scope = scope.enter(ScopeKind::Object);
+    ctx.last_nodes.push(false);
+
     let mut is_empty = true;
     for c in syntax.children_with_tokens() {
         match c {
@@ -401,6 +376,23 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             },
         }
     }
+    ctx.maybe_insert_comma(&scope);
+}
+
+fn format_scalar(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+    let text = syntax.to_string();
+    if ctx.col_offset == 0 && scope.is_array_scope() {
+        ctx.col_offset += scope.write_with_ident(&text);
+    } else {
+        scope.write(&text);
+        ctx.col_offset += text.len();
+    }
+    if is_multiline(&text) {
+        if let Some(offset) = text.split('\n').last().map(|v| v.len()) {
+            ctx.col_offset = offset
+        }
+    }
+    ctx.maybe_insert_comma(&scope);
 }
 
 fn format_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
@@ -439,6 +431,15 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
         scope.write(&syntax.to_string());
         return;
     }
+
+    if ctx.col_offset == 0 {
+        ctx.col_offset += scope.write_with_ident("[");
+    } else {
+        ctx.col_offset += scope.write("[");
+    }
+    scope = scope.enter(ScopeKind::Array);
+    ctx.last_nodes.push(false);
+
     let mut is_empty = true;
     for c in syntax.children_with_tokens() {
         match c {
@@ -475,6 +476,8 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             },
         }
     }
+
+    ctx.maybe_insert_comma(&scope);
 }
 
 fn format_comment(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {

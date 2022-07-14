@@ -258,7 +258,10 @@ fn object_from_syntax(
 
 fn object_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: &mut Vec<Error>) {
     assert!(syntax.kind() == ENTRY);
-    let syntax = syntax.into_node().unwrap();
+    let syntax = match syntax.into_node() {
+        Some(v) => v,
+        None => return,
+    };
     let key = match syntax.children().find(|v| v.kind() == KEY) {
         Some(key) => key_from_syntax(key.into()),
         None => {
@@ -282,7 +285,7 @@ fn object_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors
 
 fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
     assert!(syntax.kind() == VALUE);
-    let syntax = syntax.into_node().unwrap();
+    let syntax = syntax.into_node()?;
 
     let mut errors: Vec<Error> = vec![];
     let mut entries = Entries::default();
@@ -324,7 +327,10 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
 
 fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: &mut Vec<Error>) {
     assert!(syntax.kind() == ANNOTATION_ENTRY);
-    let syntax = syntax.into_node().unwrap();
+    let syntax = match syntax.into_node() {
+        Some(v) => v,
+        None => return,
+    };
     let key = match syntax.children().find(|v| v.kind() == KEY) {
         Some(key) => key_from_syntax(key.into()),
         None => {
