@@ -2,9 +2,8 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annotations, AnnotationsInner, Array, ArrayInner, BoolInner, Entries, FloatInner,
-        IntegerInner, IntegerRepr, Invalid, InvalidInner, Key, KeyInner, Node, NullInner, Object,
-        ObjectInner, StrInner, StrRepr,
+        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, FloatInner, IntegerInner,
+        IntegerRepr, InvalidInner, Key, KeyInner, Node, NullInner, ObjectInner, StrInner, StrRepr,
     },
 };
 
@@ -16,112 +15,16 @@ use either::Either;
 
 pub fn from_syntax(root: SyntaxElement) -> Node {
     if root.kind() != VALUE {
-        return invalid_from_syntax(root, None).into();
+        return invalid_from_syntax(root, None);
     }
     let annotations = annotations_from_syntax(root.clone());
-    let errors: Vec<Error> = Default::default();
-    match first_none_value_child(&root) {
-        None => invalid_from_syntax(root, annotations).into(),
+    match first_value_child(&root) {
+        None => invalid_from_syntax(root, annotations),
         Some(syntax) => match syntax.kind() {
-            NULL => NullInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-            }
-            .wrap()
-            .into(),
-            BOOL => BoolInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                value: Default::default(),
-            }
-            .wrap()
-            .into(),
-            INTEGER => IntegerInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                value: Default::default(),
-                repr: IntegerRepr::Dec,
-            }
-            .wrap()
-            .into(),
-            INTEGER_BIN => IntegerInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                value: Default::default(),
-                repr: IntegerRepr::Bin,
-            }
-            .wrap()
-            .into(),
-            INTEGER_HEX => IntegerInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                value: Default::default(),
-                repr: IntegerRepr::Hex,
-            }
-            .wrap()
-            .into(),
-            INTEGER_OCT => IntegerInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                value: Default::default(),
-                repr: IntegerRepr::Oct,
-            }
-            .wrap()
-            .into(),
-            FLOAT => FloatInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                value: Default::default(),
-            }
-            .wrap()
-            .into(),
-            SINGLE_QUOTE => StrInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                repr: StrRepr::Single,
-                value: Default::default(),
-            }
-            .wrap()
-            .into(),
-            DOUBLE_QUOTE => StrInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                repr: StrRepr::Double,
-                value: Default::default(),
-            }
-            .wrap()
-            .into(),
-            BACKTICK_QUOTE => StrInner {
-                errors: errors.into(),
-                syntax: Some(syntax),
-                root_syntax: Some(root),
-                annotations,
-                repr: StrRepr::Backtick,
-                value: Default::default(),
-            }
-            .wrap()
-            .into(),
-            ARRAY => array_from_syntax(root, syntax, annotations).into(),
-            OBJECT => object_from_syntax(root, syntax, annotations).into(),
-            _ => invalid_from_syntax(root, annotations).into(),
+            SCALAR => scalar_from_syntax(root, syntax, annotations),
+            ARRAY => array_from_syntax(root, syntax, annotations),
+            OBJECT => object_from_syntax(root, syntax, annotations),
+            _ => invalid_from_syntax(root, annotations),
         },
     }
 }
@@ -166,7 +69,7 @@ pub(crate) fn keys_from_syntax(
 pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
     assert!(syntax.kind() == KEY);
     if let Some(syntax) =
-        first_none_value_child(&syntax).and_then(|v| if v.kind() == IDENT { Some(v) } else { None })
+        first_value_child(&syntax).and_then(|v| if v.kind() == IDENT { Some(v) } else { None })
     {
         KeyInner {
             errors: Shared::default(),
@@ -188,27 +91,142 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
     }
 }
 
+fn scalar_from_syntax(
+    root: SyntaxElement,
+    syntax: SyntaxElement,
+    annotations: Option<Annotations>,
+) -> Node {
+    assert!(syntax.kind() == SCALAR);
+    let errors: Vec<Error> = Default::default();
+    let syntax = match syntax.into_node().and_then(|v| v.first_child_or_token()) {
+        Some(v) => v,
+        _ => return invalid_from_syntax(root, annotations),
+    };
+    match syntax.kind() {
+        NULL => NullInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+        }
+        .wrap()
+        .into(),
+        BOOL => BoolInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            value: Default::default(),
+        }
+        .wrap()
+        .into(),
+        INTEGER => IntegerInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            value: Default::default(),
+            repr: IntegerRepr::Dec,
+        }
+        .wrap()
+        .into(),
+        INTEGER_BIN => IntegerInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            value: Default::default(),
+            repr: IntegerRepr::Bin,
+        }
+        .wrap()
+        .into(),
+        INTEGER_HEX => IntegerInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            value: Default::default(),
+            repr: IntegerRepr::Hex,
+        }
+        .wrap()
+        .into(),
+        INTEGER_OCT => IntegerInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            value: Default::default(),
+            repr: IntegerRepr::Oct,
+        }
+        .wrap()
+        .into(),
+        FLOAT => FloatInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            value: Default::default(),
+        }
+        .wrap()
+        .into(),
+        SINGLE_QUOTE => StrInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            repr: StrRepr::Single,
+            value: Default::default(),
+        }
+        .wrap()
+        .into(),
+        DOUBLE_QUOTE => StrInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            repr: StrRepr::Double,
+            value: Default::default(),
+        }
+        .wrap()
+        .into(),
+        BACKTICK_QUOTE => StrInner {
+            errors: errors.into(),
+            syntax: Some(syntax),
+            root_syntax: Some(root),
+            annotations,
+            repr: StrRepr::Backtick,
+            value: Default::default(),
+        }
+        .wrap()
+        .into(),
+        _ => invalid_from_syntax(root, annotations),
+    }
+}
+
 fn array_from_syntax(
     root: SyntaxElement,
     syntax: SyntaxElement,
     annotations: Option<Annotations>,
-) -> Array {
+) -> Node {
     assert!(syntax.kind() == ARRAY);
+    let syntax = match syntax.into_node() {
+        Some(v) => v,
+        _ => return invalid_from_syntax(root, annotations),
+    };
+    let items: Vec<Node> = syntax
+        .children()
+        .filter(|v| v.kind() == VALUE)
+        .map(|syntax| from_syntax(syntax.into()))
+        .collect();
+
     ArrayInner {
         errors: Default::default(),
         root_syntax: Some(root),
-        syntax: Some(syntax.clone()),
+        syntax: Some(syntax.into()),
         annotations,
-        items: Shared::new(
-            syntax
-                .as_node()
-                .unwrap()
-                .children()
-                .filter(|v| v.kind() == VALUE)
-                .map(|syntax| from_syntax(syntax.into()))
-                .collect(),
-        ),
+        items: items.into(),
     }
+    .wrap()
     .into()
 }
 
@@ -216,25 +234,25 @@ fn object_from_syntax(
     root: SyntaxElement,
     syntax: SyntaxElement,
     annotations: Option<Annotations>,
-) -> Object {
+) -> Node {
     assert!(syntax.kind() == OBJECT);
+    let syntax = match syntax.into_node() {
+        Some(v) => v,
+        _ => return invalid_from_syntax(root, annotations),
+    };
     let mut errors = Vec::new();
     let mut entries = Entries::default();
-    for child in syntax
-        .as_node()
-        .unwrap()
-        .children()
-        .filter(|v| v.kind() == ENTRY)
-    {
+    for child in syntax.children().filter(|v| v.kind() == ENTRY) {
         object_entry_from_syntax(child.into(), &mut entries, &mut errors)
     }
     ObjectInner {
         errors: errors.into(),
         root_syntax: Some(root),
-        syntax: Some(syntax),
+        syntax: Some(syntax.into()),
         annotations,
         entries: entries.into(),
     }
+    .wrap()
     .into()
 }
 
@@ -331,7 +349,7 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
     add_entry(entries, errors, key, value);
 }
 
-fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Invalid {
+fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Node {
     let errors = Vec::from([Error::UnexpectedSyntax {
         syntax: syntax.clone(),
     }]);
@@ -341,13 +359,14 @@ fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) 
         syntax: Some(syntax),
         annotations,
     }
+    .wrap()
     .into()
 }
 
-fn first_none_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
+fn first_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
     let node = syntax.as_node()?;
     node.children_with_tokens()
-        .find(|v| ![WHITESPACE, NEWLINE, BLOCK_COMMENT, LINE_COMMENT].contains(&v.kind()))
+        .find(|v| !v.kind().is_not_sematic())
 }
 
 /// Add an entry and also collect errors on conflicts.

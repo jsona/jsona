@@ -158,7 +158,7 @@ impl<'p> Parser<'p> {
             BRACKET_START => {
                 with_node!(self.builder, ARRAY, self.parse_array())
             }
-            NULL | BOOL => self.consume_current_token(),
+            NULL | BOOL => with_node!(self.builder, SCALAR, self.consume_current_token()),
             INTEGER => {
                 // This could've been done more elegantly probably.
                 if (self.lexer.slice().starts_with('0') && self.lexer.slice() != "0")
@@ -169,28 +169,28 @@ impl<'p> Parser<'p> {
                 } else if !validate_underscore_integer(self.lexer.slice(), 10) {
                     self.consume_error_token("invalid underscores")
                 } else {
-                    self.consume_current_token()
+                    with_node!(self.builder, SCALAR, self.consume_current_token())
                 }
             }
             INTEGER_BIN => {
                 if !validate_underscore_integer(self.lexer.slice(), 2) {
                     self.consume_error_token("invalid underscores")
                 } else {
-                    self.consume_current_token()
+                    with_node!(self.builder, SCALAR, self.consume_current_token())
                 }
             }
             INTEGER_HEX => {
                 if !validate_underscore_integer(self.lexer.slice(), 16) {
                     self.consume_error_token("invalid underscores")
                 } else {
-                    self.consume_current_token()
+                    with_node!(self.builder, SCALAR, self.consume_current_token())
                 }
             }
             INTEGER_OCT => {
                 if !validate_underscore_integer(self.lexer.slice(), 8) {
                     self.consume_error_token("invalid underscores")
                 } else {
-                    self.consume_current_token()
+                    with_node!(self.builder, SCALAR, self.consume_current_token())
                 }
             }
             FLOAT => {
@@ -208,7 +208,7 @@ impl<'p> Parser<'p> {
                 } else if !validate_underscore_integer(self.lexer.slice(), 10) {
                     self.consume_error_token("invalid underscores")
                 } else {
-                    self.consume_current_token()
+                    with_node!(self.builder, SCALAR, self.consume_current_token())
                 }
             }
             DOUBLE_QUOTE | SINGLE_QUOTE => {
@@ -238,7 +238,7 @@ impl<'p> Parser<'p> {
                         });
                     }
                 };
-                self.consume_current_token()
+                with_node!(self.builder, SCALAR, self.consume_current_token())
             }
             BACKTICK_QUOTE => {
                 match allowed_chars::backtick_string(self.lexer.slice()) {
@@ -256,7 +256,7 @@ impl<'p> Parser<'p> {
                         }
                     }
                 };
-                self.consume_current_token()
+                with_node!(self.builder, SCALAR, self.consume_current_token())
             }
             _ => self.consume_error_token("expected value"),
         }

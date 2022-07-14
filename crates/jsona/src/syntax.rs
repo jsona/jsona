@@ -88,6 +88,7 @@ pub enum SyntaxKind {
 
     // composite types
     KEY,
+    SCALAR,
     ENTRY,
     OBJECT,
     ARRAY,
@@ -108,21 +109,9 @@ impl SyntaxKind {
         matches!(self, LINE_COMMENT | BLOCK_COMMENT)
     }
 
-    pub fn is_scalar(self) -> bool {
+    pub fn is_not_sematic(self) -> bool {
         use SyntaxKind::*;
-        matches!(
-            self,
-            SINGLE_QUOTE
-                | DOUBLE_QUOTE
-                | BACKTICK_QUOTE
-                | INTEGER
-                | INTEGER_BIN
-                | INTEGER_HEX
-                | INTEGER_OCT
-                | FLOAT
-                | BOOL
-                | NULL
-        )
+        matches!(self, WHITESPACE | NEWLINE | BLOCK_COMMENT | LINE_COMMENT)
     }
 }
 
