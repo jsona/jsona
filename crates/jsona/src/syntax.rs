@@ -113,6 +113,12 @@ impl SyntaxKind {
         use SyntaxKind::*;
         matches!(self, WHITESPACE | NEWLINE)
     }
+
+    pub fn is_compose(self) -> bool {
+        use SyntaxKind::*;
+        matches!(self, OBJECT | ARRAY)
+    }
+
     pub fn is_ws_or_comment(self) -> bool {
         self.is_ws() || self.is_comment()
     }

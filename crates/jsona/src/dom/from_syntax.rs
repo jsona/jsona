@@ -293,25 +293,25 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
         syntax.children().find(|v| v.kind() == ANNOTATIONS),
         syntax
             .children()
-            .find(|v| v.kind() == OBJECT || v.kind() == ARRAY)
+            .find(|v| v.kind().is_compose())
             .and_then(|v| v.children().find(|v| v.kind() == ANNOTATIONS)),
     ) {
         (None, None) => return None,
-        (None, Some(scope_annotations)) => {
-            for child in scope_annotations.children() {
+        (None, Some(inner_annotations)) => {
+            for child in inner_annotations.children() {
                 anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
             }
         }
-        (Some(entry_annotations), None) => {
-            for child in entry_annotations.children() {
+        (Some(outer_annotations), None) => {
+            for child in outer_annotations.children() {
                 anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
             }
         }
-        (Some(entry_annotations), Some(scope_annotations)) => {
-            for child in entry_annotations.children() {
+        (Some(outer_annotations), Some(inner_annotations)) => {
+            for child in inner_annotations.children() {
                 anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
             }
-            for child in scope_annotations.children() {
+            for child in outer_annotations.children() {
                 anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
             }
         }

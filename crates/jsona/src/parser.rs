@@ -129,11 +129,11 @@ impl<'p> Parser<'p> {
 
     fn parse_anno_value(&mut self) -> ParserResult<()> {
         self.must_token_or(PARENTHESES_START, r#"expected "(""#)?;
-        let ret = with_node!(
-            self.builder,
-            VALUE,
-            self.parse_value_with_annotations(PARENTHESES_END)
-        );
+        if PARENTHESES_END == self.peek_token()? {
+            self.must_token_or(PARENTHESES_END, r#"expected ")""#)?;
+            return Ok(());
+        }
+        let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
         self.must_token_or(PARENTHESES_END, r#"expected ")""#)?;
         ret
     }
@@ -141,11 +141,7 @@ impl<'p> Parser<'p> {
     fn parse_entry(&mut self) -> ParserResult<()> {
         with_node!(self.builder, KEY, self.parse_key())?;
         self.must_token_or(COLON, r#"expected ":""#)?;
-        with_node!(
-            self.builder,
-            VALUE,
-            self.parse_value_with_annotations(BRACE_END)
-        )?;
+        with_node!(self.builder, VALUE, self.parse_value_with_annotations())?;
         Ok(())
     }
 
@@ -262,24 +258,18 @@ impl<'p> Parser<'p> {
         }
     }
 
-    fn parse_value_with_annotations(&mut self, kind: SyntaxKind) -> ParserResult<()> {
+    fn parse_value_with_annotations(&mut self) -> ParserResult<()> {
         self.parse_value()?;
-        let span = self.lexer.span();
         let mut is_comma = false;
         if let Ok(COMMA) = self.peek_token() {
             is_comma = true;
             self.consume_current_token()?;
         }
         self.parse_annotations()?;
-        let is_end = self.peek_token()? == kind;
-        if !is_comma && !is_end {
-            self.add_error(&Error {
-                range: TextRange::new(
-                    TextSize::from(span.start as u32),
-                    TextSize::from(span.end as u32),
-                ),
-                message: r#"expected ",""#.into(),
-            })
+        if !is_comma {
+            if let Ok(COMMA) = self.peek_token() {
+                self.consume_current_token()?;
+            }
         }
         Ok(())
     }
@@ -321,11 +311,7 @@ impl<'p> Parser<'p> {
                     self.parse_annotations()?;
                 }
                 _ => {
-                    let _ = with_node!(
-                        self.builder,
-                        VALUE,
-                        self.parse_value_with_annotations(BRACKET_END)
-                    );
+                    let _ = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
                 }
             }
         }
