@@ -5,7 +5,7 @@ mod to_jsona;
 use crate::dom::{DomNode, Node};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Formatter, Write};
+use std::fmt::Formatter;
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

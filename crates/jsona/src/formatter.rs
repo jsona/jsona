@@ -184,16 +184,16 @@ impl Default for Options {
 }
 
 #[derive(Debug, Clone)]
-struct Scope {
-    options: Rc<Options>,
-    level: usize,
-    error_ranges: Rc<[TextRange]>,
-    formatted: Rc<RefCell<String>>,
-    kind: ScopeKind,
+pub(crate) struct Scope {
+    pub(crate) options: Rc<Options>,
+    pub(crate) level: usize,
+    pub(crate) error_ranges: Rc<Vec<TextRange>>,
+    pub(crate) formatted: Rc<RefCell<String>>,
+    pub(crate) kind: ScopeKind,
 }
 
 impl Scope {
-    fn enter(&self, kind: ScopeKind) -> Self {
+    pub(crate) fn enter(&self, kind: ScopeKind) -> Self {
         Self {
             options: self.options.clone(),
             level: self.level + 1,
@@ -202,7 +202,7 @@ impl Scope {
             kind,
         }
     }
-    fn exit(&self) -> Self {
+    pub(crate) fn exit(&self) -> Self {
         Self {
             options: self.options.clone(),
             level: self.level - 1,
@@ -211,25 +211,25 @@ impl Scope {
             kind: self.kind,
         }
     }
-    fn write<T: AsRef<str>>(&self, text: T) -> usize {
+    pub(crate) fn write<T: AsRef<str>>(&self, text: T) -> usize {
         let text = text.as_ref();
         let len = text.len();
         self.formatted.borrow_mut().push_str(text);
         len
     }
-    fn write_with_ident<T: AsRef<str>>(&self, text: T) -> usize {
+    pub(crate) fn write_with_ident<T: AsRef<str>>(&self, text: T) -> usize {
         let ident = self.ident();
         let idented_text = format!("{}{}", ident, text.as_ref());
         self.formatted.borrow_mut().push_str(&idented_text);
         idented_text.len()
     }
-    fn read(&self) -> String {
-        self.formatted.borrow_mut().to_string()
+    pub(crate) fn read(&self) -> String {
+        self.formatted.borrow().to_string()
     }
-    fn ident(&self) -> String {
+    pub(crate) fn ident(&self) -> String {
         self.options.indent_string.repeat(self.level)
     }
-    fn is_last_char(&self, c: char) -> bool {
+    pub(crate) fn is_last_char(&self, c: char) -> bool {
         self.formatted
             .borrow()
             .chars()
@@ -237,16 +237,18 @@ impl Scope {
             .map(|v| v == c)
             .unwrap_or_default()
     }
-    fn remove_last_char(&self) {
+    pub(crate) fn remove_last_char(&self) {
         self.formatted.borrow_mut().pop();
     }
-    fn is_array_scope(&self) -> bool {
-        self.kind == ScopeKind::Array
+    pub(crate) fn maybe_newline(&self) {
+        if !self.is_last_char('\n') {
+            self.write("\n");
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ScopeKind {
+pub(crate) enum ScopeKind {
     Root,
     Array,
     Object,
@@ -296,7 +298,7 @@ pub fn format(src: &str, options: Options) -> String {
         options: Rc::new(options),
         level: 0,
         formatted: Default::default(),
-        error_ranges,
+        error_ranges: Rc::new(error_ranges),
         kind: ScopeKind::Root,
     };
     let mut ctx = Context {
@@ -340,7 +342,7 @@ fn format_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 
 fn format_scalar(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     let text = syntax.to_string();
-    if ctx.col_offset == 0 && scope.is_array_scope() {
+    if ctx.col_offset == 0 && scope.kind == ScopeKind::Array {
         ctx.col_offset += scope.write_with_ident(&text);
     } else {
         scope.write(&text);

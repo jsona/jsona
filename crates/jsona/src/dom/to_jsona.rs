@@ -1,204 +1,120 @@
 use super::*;
-use crate::util::quote::{check_quote, quote};
-use std::fmt::{Display, Formatter, Result, Write};
+use crate::formatter::{Scope, ScopeKind};
+use std::fmt::{Display, Formatter, Result};
+use std::rc::Rc;
 
 impl Node {
-    pub fn to_jsona(&self, inline: bool) -> String {
-        let mut s = String::new();
-        self.to_jsona_fmt(&mut s, inline).unwrap();
-        s
-    }
-
-    pub fn to_jsona_fmt(&self, f: &mut impl Write, inline: bool) -> Result {
-        self.to_jsona_impl(f, inline, 0, false)
-    }
-
-    pub fn to_jsona_impl(
-        &self,
-        f: &mut impl Write,
-        inline: bool,
-        level: usize,
-        comma: bool,
-    ) -> Result {
-        match self {
-            Node::Null(_) => {
-                f.write_str("null")?;
-                if comma {
-                    f.write_char(',')?;
-                }
-                write_annotations(f, self.annotations(), inline, level)?;
-            }
-            Node::Bool(v) => {
-                match self.syntax() {
-                    Some(syntax) => {
-                        write!(f, "{}", syntax)?;
-                    }
-                    None => {
-                        write!(f, "{}", v.value())?;
-                    }
-                }
-                if comma {
-                    f.write_char(',')?;
-                }
-                write_annotations(f, self.annotations(), inline, level)?;
-            }
-            Node::Integer(v) => {
-                match self.syntax() {
-                    Some(syntax) => {
-                        write!(f, "{}", syntax)?;
-                    }
-                    None => {
-                        write!(f, "{}", v.value())?;
-                    }
-                }
-                if comma {
-                    f.write_char(',')?;
-                }
-                write_annotations(f, v.annotations(), inline, level)?;
-            }
-            Node::Float(v) => {
-                match self.syntax() {
-                    Some(syntax) => {
-                        write!(f, "{}", syntax)?;
-                    }
-                    None => {
-                        write!(f, "{}", v.value())?;
-                    }
-                }
-                if comma {
-                    f.write_char(',')?;
-                }
-                write_annotations(f, v.annotations(), inline, level)?;
-            }
-            Node::Str(v) => {
-                match self.syntax() {
-                    Some(syntax) => {
-                        write!(f, "{}", syntax)?;
-                    }
-                    None => {
-                        let value = v.value();
-                        let quote_type = check_quote(value);
-                        write!(f, "{}", quote(value, quote_type.quote(inline)))?;
-                    }
-                }
-                if comma {
-                    f.write_char(',')?;
-                }
-                write_annotations(f, v.annotations(), inline, level)?;
-            }
-            Node::Array(v) => {
-                f.write_char('[')?;
-                write_annotations(f, v.annotations(), inline, level + 1)?;
-                let value = v.items().read();
-                let len = value.len();
-                for (i, item) in value.iter().enumerate() {
-                    if !inline {
-                        f.write_char('\n')?;
-                        write_ident(f, level + 1)?;
-                    }
-                    item.to_jsona_impl(f, inline, level + 1, i < len - 1)?;
-                }
-                if !inline {
-                    f.write_char('\n')?;
-                    write_ident(f, level)?;
-                }
-                f.write_char(']')?;
-                if comma {
-                    f.write_char(',')?;
-                }
-            }
-            Node::Object(v) => {
-                f.write_char('{')?;
-                write_annotations(f, v.annotations(), inline, level + 1)?;
-                let value = v.entries().read();
-                let len = value.len();
-                for (i, (k, v)) in value.iter().enumerate() {
-                    if !inline {
-                        f.write_char('\n')?;
-                        write_ident(f, level + 1)?;
-                    }
-                    match k.syntax() {
-                        Some(syntax) => {
-                            write!(f, "{}:", syntax)?;
-                        }
-                        None => {
-                            let value = k.value();
-                            let quote_type = check_quote(value);
-                            write!(f, "{}:", quote(value, quote_type.ident()))?;
-                        }
-                    }
-                    if !inline {
-                        f.write_char(' ')?;
-                    }
-                    v.to_jsona_impl(f, inline, level + 1, i < len - 1)?;
-                }
-                if !inline {
-                    f.write_char('\n')?;
-                    write_ident(f, level)?;
-                }
-                f.write_char('}')?;
-                if comma {
-                    f.write_char(',')?;
-                }
-            }
-            Node::Invalid(_) => {}
+    pub fn to_jsona(&self) -> String {
+        let scope = Scope {
+            options: Rc::new(Default::default()),
+            level: 0,
+            formatted: Default::default(),
+            error_ranges: Rc::new(vec![]),
+            kind: ScopeKind::Root,
+        };
+        write_value(scope.clone(), self);
+        if scope.is_last_char(',') {
+            scope.remove_last_char();
         }
-        Ok(())
+        scope.read()
     }
 }
 
 impl Display for Node {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.to_jsona_impl(f, true, 0, false)
+        f.write_str(&self.to_jsona())
     }
 }
 
-fn write_annotations(
-    f: &mut impl Write,
-    annotations: &Option<Annotations>,
-    inline: bool,
-    level: usize,
-) -> Result {
+fn write_value(scope: Scope, value: &Node) {
+    match value {
+        Node::Null(_) | Node::Bool(_) | Node::Integer(_) | Node::Float(_) | Node::Str(_) => {
+            if let Some(text) = value.jsona_text() {
+                write_scalar(scope, text, value.annotations());
+            }
+        }
+        Node::Array(v) => {
+            if scope.kind == ScopeKind::Array {
+                scope.write_with_ident("[");
+            } else {
+                scope.write("[");
+            }
+            let scope = scope.enter(ScopeKind::Array);
+            write_annotations(scope.clone(), v.annotations());
+            scope.maybe_newline();
+            let value = v.items().read();
+            for item in value.iter() {
+                write_value(scope.clone(), item);
+                scope.maybe_newline();
+            }
+            let scope = scope.exit();
+            scope.write_with_ident("],");
+        }
+        Node::Object(v) => {
+            if scope.kind == ScopeKind::Array {
+                scope.write_with_ident("{");
+            } else {
+                scope.write("{");
+            }
+            let scope = scope.enter(ScopeKind::Object);
+            write_annotations(scope.clone(), v.annotations());
+            scope.maybe_newline();
+            let value = v.entries().read();
+            for (k, v) in value.iter() {
+                scope.write_with_ident(format!("{}: ", k));
+                write_value(scope.clone(), v);
+                scope.maybe_newline();
+            }
+            let scope = scope.exit();
+            scope.write_with_ident("},");
+        }
+        Node::Invalid(_) => {}
+    }
+}
+
+fn write_scalar<T: Display>(scope: Scope, value: T, annotations: &Option<Annotations>) {
+    if scope.kind == ScopeKind::Array {
+        scope.write_with_ident(format!("{},", value));
+    } else if scope.kind == ScopeKind::Object {
+        scope.write(format!("{},", value));
+    } else {
+        scope.write(value.to_string());
+    }
+    write_annotations(scope, annotations);
+}
+
+fn write_annotations(scope: Scope, annotations: &Option<Annotations>) {
     match annotations {
         Some(annotations) => {
             let annotations = annotations.entries().read();
-            let len = annotations.len();
-            if inline {
-                for (i, (k, v)) in annotations.iter().enumerate() {
-                    if v.is_null() {
-                        write!(f, "@{}", k)?;
-                        if !(level == 0 && i == len - 1) {
-                            f.write_char(' ')?;
+            for (key, value) in annotations.iter() {
+                match value {
+                    Node::Null(_) | Node::Invalid(_) => {
+                        scope.write(format!(" @{}", key));
+                    }
+                    Node::Bool(_) | Node::Integer(_) | Node::Float(_) | Node::Str(_) => {
+                        if let Some(text) = value.jsona_text() {
+                            write_scalar_annotaion(scope.clone(), key, text);
                         }
-                    } else {
-                        write!(f, "@{}({})", k, v)?;
                     }
-                }
-            } else {
-                f.write_char('\n')?;
-                for (i, (k, v)) in annotations.iter().enumerate() {
-                    write_ident(f, level)?;
-                    if v.is_null() {
-                        write!(f, "@{}", k)?;
-                    } else {
-                        write!(f, "@{}(", k)?;
-                        v.to_jsona_impl(f, inline, level, false)?;
-                        f.write_str(")")?;
-                    }
-                    if i < len - 1 {
-                        f.write_char('\n')?;
+                    Node::Array(_) | Node::Object(_) => {
+                        scope.write("\n");
+                        scope.write_with_ident(format!("@{}(", key));
+                        write_value(scope.clone(), value);
+                        scope.exit();
+                        if scope.is_last_char(',') {
+                            scope.remove_last_char();
+                        }
+                        scope.write(")");
                     }
                 }
             }
         }
         None => {}
     }
-    Ok(())
+    scope.maybe_newline();
 }
 
-fn write_ident(f: &mut impl Write, level: usize) -> Result {
-    if level > 0 {
-        write!(f, "{}", "  ".repeat(level))?;
-    }
-    Ok(())
+fn write_scalar_annotaion<T: Display>(scope: Scope, key: &Key, value: T) {
+    scope.write(format!(" @{}({})", key, value));
 }

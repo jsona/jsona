@@ -1,7 +1,8 @@
 fn main() {
-    let jsona_file = std::env::args()
-        .nth(1)
-        .expect("Usage: print_syntax <jsona-file>");
+    let args: Vec<String> = std::env::args().collect();
+    let jsona_file = args
+        .get(1)
+        .expect("Usage: print_syntax <jsona-file> [compact]");
     let jsona_file_path = std::path::Path::new(&jsona_file);
     let jsona_content = std::fs::read_to_string(jsona_file_path).unwrap();
 
@@ -17,5 +18,5 @@ fn main() {
         }
     }
     let value = jsona::value::Value::from(&node);
-    println!("{}", value.to_jsona(false));
+    println!("{}", value.to_jsona());
 }

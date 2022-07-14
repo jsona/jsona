@@ -3,6 +3,7 @@ use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
 use crate::syntax::{SyntaxElement, SyntaxKind};
 use crate::util::escape::unescape;
+use crate::util::quote::{check_quote, quote};
 use crate::util::shared::Shared;
 use crate::value::IntegerValue;
 
@@ -322,6 +323,47 @@ impl Node {
         }
 
         Ok(all.into_iter())
+    }
+
+    pub fn jsona_text(&self) -> Option<String> {
+        match self {
+            Node::Null(_) => Some("null".to_string()),
+            Node::Bool(v) => {
+                let text = match self.syntax() {
+                    Some(syntax) => syntax.to_string(),
+                    None => v.value().to_string(),
+                };
+                Some(text)
+            }
+            Node::Integer(v) => {
+                let text = match self.syntax() {
+                    Some(syntax) => syntax.to_string(),
+                    None => v.value().to_string(),
+                };
+                Some(text)
+            }
+            Node::Float(v) => {
+                let text = match self.syntax() {
+                    Some(syntax) => syntax.to_string(),
+                    None => v.value().to_string(),
+                };
+                Some(text)
+            }
+            Node::Str(v) => {
+                let text = match self.syntax() {
+                    Some(syntax) => syntax.to_string(),
+                    None => {
+                        let value = v.value();
+                        let quote_type = check_quote(value);
+                        quote(value, quote_type.quote(false))
+                    }
+                };
+                Some(text)
+            }
+            Node::Array(_) => None,
+            Node::Object(_) => None,
+            Node::Invalid(_) => None,
+        }
     }
 
     pub fn text_ranges(&self) -> impl ExactSizeIterator<Item = TextRange> {
