@@ -1,3 +1,5 @@
+//! The Value enum, a loosely typed way of representing any valid JSONA value.
+
 mod to_jsona;
 
 use crate::dom::{DomNode, Node};

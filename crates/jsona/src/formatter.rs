@@ -1,10 +1,13 @@
-#![allow(unused)]
+//! This module is used to format TOML.
+//!
+//! The formatting can be done on documents that might
+//! contain invalid syntax. In that case the invalid part is skipped.
 
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     parser,
-    syntax::{SyntaxElement, SyntaxKind::*, SyntaxNode, SyntaxToken},
+    syntax::{SyntaxKind::*, SyntaxNode, SyntaxToken},
 };
 
 use rowan::{NodeOrToken, TextRange, WalkEvent};
@@ -237,9 +240,6 @@ impl Scope {
     fn remove_last_char(&self) {
         self.formatted.borrow_mut().pop();
     }
-    fn is_object_scope(&self) -> bool {
-        self.kind == ScopeKind::Object
-    }
     fn is_array_scope(&self) -> bool {
         self.kind == ScopeKind::Array
     }
@@ -250,7 +250,6 @@ enum ScopeKind {
     Root,
     Array,
     Object,
-    Annotaion,
 }
 
 #[derive(Debug, Clone)]
@@ -315,7 +314,7 @@ pub fn format(src: &str, options: Options) -> String {
     formatted
 }
 
-fn format_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != VALUE {
         scope.write(&syntax.to_string());
         return;
@@ -339,7 +338,7 @@ fn format_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     }
 }
 
-fn format_scalar(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_scalar(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     let text = syntax.to_string();
     if ctx.col_offset == 0 && scope.is_array_scope() {
         ctx.col_offset += scope.write_with_ident(&text);
@@ -412,7 +411,7 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     ctx.maybe_insert_comma(&scope);
 }
 
-fn format_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != ENTRY {
         scope.write(&syntax.to_string());
         return;
@@ -502,7 +501,7 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     ctx.maybe_insert_comma(&scope);
 }
 
-fn format_annotations(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != ANNOTATIONS {
         scope.write(&syntax.to_string());
         return;
@@ -525,7 +524,7 @@ fn format_annotations(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     }
 }
 
-fn format_annotation_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != ANNOTATION_ENTRY {
         scope.write(&syntax.to_string());
         return;
@@ -557,7 +556,7 @@ fn format_annotation_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Conte
     }
 }
 
-fn format_annotation_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_annotation_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != ANNOTATION_VALUE {
         scope.write(&syntax.to_string());
         return;
