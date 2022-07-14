@@ -1,0 +1,28 @@
+[package]
+name = "jsona"
+version = "0.3.0"
+authors = ["sigoden <sigoden@gmail.com>"]
+edition = "2018"
+description = "JSONA is JSON superset. JSONA = JSON (less grammatical restrictions) + Annotation."
+documentation = "https://github.com/sigoden/jsona"
+repository = "https://github.com/sigoden/jsona"
+keywords = ["jsona", "parser"]
+categories = ["encoding", "parser-implementations"]
+license = "MIT"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+arc-swap = "1.5"
+either = "1.7"
+globset = "0.4"
+indexmap = { version = "1.9"}
+logos = "0.12"
+once_cell = "1.13"
+rowan = "0.15"
+serde = { version = "1", features = ["derive"], optional = true }
+thiserror = "1"
+
+[features]
+default = ["serde", "indexmap/serde"]
