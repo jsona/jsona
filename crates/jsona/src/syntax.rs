@@ -109,9 +109,12 @@ impl SyntaxKind {
         matches!(self, LINE_COMMENT | BLOCK_COMMENT)
     }
 
-    pub fn is_not_sematic(self) -> bool {
+    pub fn is_ws(self) -> bool {
         use SyntaxKind::*;
-        matches!(self, WHITESPACE | NEWLINE | BLOCK_COMMENT | LINE_COMMENT)
+        matches!(self, WHITESPACE | NEWLINE)
+    }
+    pub fn is_ws_or_comment(self) -> bool {
+        self.is_ws() || self.is_comment()
     }
 }
 

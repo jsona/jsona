@@ -366,7 +366,7 @@ fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) 
 fn first_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
     let node = syntax.as_node()?;
     node.children_with_tokens()
-        .find(|v| !v.kind().is_not_sematic())
+        .find(|v| !v.kind().is_ws_or_comment())
 }
 
 /// Add an entry and also collect errors on conflicts.

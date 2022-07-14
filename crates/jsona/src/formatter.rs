@@ -1,10 +1,13 @@
 #![allow(unused)]
 
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     parser,
-    syntax::{SyntaxKind::*, SyntaxNode},
+    syntax::{SyntaxElement, SyntaxKind::*, SyntaxNode, SyntaxToken},
 };
 
+use rowan::{NodeOrToken, TextRange};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -120,12 +123,6 @@ create_options!(
     #[derive(Debug, Clone, Eq, PartialEq)]
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct Options {
-        /// Automatically collapse annotations if they
-        /// fit in one line.
-        ///
-        /// The annotations won't be collapsed if it
-        /// contains a comment.
-        pub annotations_auto_collapse: bool,
         /// Target maximum column width after which
         /// annotations are expanded into new lines.
         ///
@@ -141,9 +138,6 @@ create_options!(
 
         /// Add trailing newline to the source.
         pub trailing_newline: bool,
-
-        /// Use CRLF line endings
-        pub crlf: bool,
     }
 );
 
@@ -178,28 +172,359 @@ impl std::error::Error for OptionParseError {}
 impl Default for Options {
     fn default() -> Self {
         Options {
-            annotations_auto_collapse: true,
             column_width: 80,
             indent_string: "  ".into(),
             trailing_comma: true,
             trailing_newline: true,
-            crlf: false,
         }
     }
 }
 
-impl Options {
-    pub(crate) fn newline(&self) -> &'static str {
-        if self.crlf {
-            "\r\n"
-        } else {
-            "\n"
+#[derive(Debug, Clone)]
+struct Scope {
+    options: Rc<Options>,
+    level: usize,
+    error_ranges: Rc<[TextRange]>,
+    formatted: Rc<RefCell<String>>,
+    kind: ScopeKind,
+}
+
+impl Scope {
+    fn enter(&self, kind: ScopeKind) -> Self {
+        Self {
+            options: self.options.clone(),
+            level: self.level + 1,
+            error_ranges: self.error_ranges.clone(),
+            formatted: self.formatted.clone(),
+            kind,
         }
+    }
+    fn exit(&self) -> Self {
+        Self {
+            options: self.options.clone(),
+            level: self.level - 1,
+            error_ranges: self.error_ranges.clone(),
+            formatted: self.formatted.clone(),
+            kind: self.kind,
+        }
+    }
+    fn write<T: AsRef<str>>(&self, text: T) -> usize {
+        let text = text.as_ref();
+        let len = text.len();
+        self.formatted.borrow_mut().push_str(text);
+        len
+    }
+    fn write_with_ident<T: AsRef<str>>(&self, text: T) -> usize {
+        let ident = self.ident();
+        let idented_text = format!("{}{}", ident, text.as_ref());
+        self.formatted.borrow_mut().push_str(&idented_text);
+        idented_text.len()
+    }
+    fn read(&self) -> String {
+        self.formatted.borrow_mut().to_string()
+    }
+    fn ident(&self) -> String {
+        self.options.indent_string.repeat(self.level)
+    }
+    fn is_prev_space(&self) -> bool {
+        self.formatted
+            .borrow()
+            .chars()
+            .last()
+            .map(|v| v.is_whitespace())
+            .unwrap_or_default()
+    }
+    fn is_object_scope(&self) -> bool {
+        self.kind == ScopeKind::Object
+    }
+    fn is_array_scope(&self) -> bool {
+        self.kind == ScopeKind::Array
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ScopeKind {
+    Root,
+    Array,
+    Object,
+}
+
+#[derive(Debug, Clone)]
+struct Context {
+    col_offset: usize,
+    last_nodes: Vec<bool>,
+}
+
+impl Context {
+    fn maybe_insert_space(&mut self, scope: &Scope) {
+        if self.col_offset > 0 && !scope.is_prev_space() {
+            self.col_offset += scope.write(" ");
+        }
+    }
+
+    fn maybe_insert_comma(&mut self, scope: &Scope) {
+        match self.last_nodes.last() {
+            Some(&true) => {
+                if scope.options.trailing_comma {
+                    self.col_offset += scope.write(",");
+                }
+            }
+            Some(&false) => {
+                self.col_offset += scope.write(",");
+            }
+            None => {}
+        };
     }
 }
 
 /// Parses then formats a JSONA document, skipping ranges that contain syntax errors.
 pub fn format(src: &str, options: Options) -> String {
     let p = parser::parse(src);
-    todo!()
+    let error_ranges = p.errors.iter().map(|err| err.range).collect();
+    let trailing_newline = options.trailing_newline;
+    let scope = Scope {
+        options: Rc::new(options),
+        level: 0,
+        formatted: Default::default(),
+        error_ranges,
+        kind: ScopeKind::Root,
+    };
+    let mut ctx = Context {
+        col_offset: 0,
+        last_nodes: vec![],
+    };
+    format_value(scope.clone(), p.into_syntax(), &mut ctx);
+    let mut formatted = scope.read();
+    if formatted.ends_with('\n') {
+        formatted.truncate(formatted.len() - 1);
+    }
+    if trailing_newline {
+        formatted += "\n";
+    }
+    formatted
+}
+
+fn format_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+    if syntax.kind() != VALUE {
+        scope.write(&syntax.to_string());
+        return;
+    }
+    for c in syntax.children_with_tokens() {
+        match c {
+            NodeOrToken::Node(n) => match n.kind() {
+                OBJECT => {
+                    if ctx.col_offset == 0 {
+                        ctx.col_offset += scope.write_with_ident("{");
+                    } else {
+                        ctx.col_offset += scope.write("{");
+                    }
+                    let scope = scope.enter(ScopeKind::Object);
+                    ctx.last_nodes.push(false);
+                    format_object(scope.clone(), n, ctx);
+                    ctx.maybe_insert_comma(&scope);
+                }
+                ARRAY => {
+                    if ctx.col_offset == 0 {
+                        ctx.col_offset += scope.write_with_ident("[");
+                    } else {
+                        ctx.col_offset += scope.write("[");
+                    }
+                    let scope = scope.enter(ScopeKind::Array);
+                    ctx.last_nodes.push(false);
+                    format_array(scope.clone(), n, ctx);
+                    ctx.maybe_insert_comma(&scope);
+                }
+                SCALAR => {
+                    let text = n.to_string();
+                    if ctx.col_offset == 0 && scope.is_array_scope() {
+                        ctx.col_offset += scope.write_with_ident(&text);
+                    } else {
+                        scope.write(&text);
+                        ctx.col_offset += text.len();
+                    }
+                    if is_multiline(&text) {
+                        if let Some(offset) = text.split('\n').last().map(|v| v.len()) {
+                            ctx.col_offset = offset
+                        }
+                    }
+                    ctx.maybe_insert_comma(&scope);
+                }
+                _ => {}
+            },
+            NodeOrToken::Token(t) => match t.kind() {
+                NEWLINE => format_newline(scope.clone(), t, ctx),
+                k if k.is_comment() => format_comment(scope.clone(), t, ctx),
+                _ => {}
+            },
+        }
+    }
+}
+
+fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+    if syntax.kind() != OBJECT {
+        scope.write(&syntax.to_string());
+        return;
+    }
+    let mut is_empty = true;
+    for c in syntax.children_with_tokens() {
+        match c {
+            NodeOrToken::Node(n) => {
+                is_empty = false;
+                match n.kind() {
+                    ENTRY => {
+                        if let Some(c) = ctx.last_nodes.last_mut() {
+                            *c = n.next_sibling().is_none();
+                        }
+                        format_entry(scope.clone(), n, ctx);
+                    }
+                    ANNOTATIONS => {}
+                    _ => {}
+                }
+            }
+            NodeOrToken::Token(t) => match t.kind() {
+                BRACE_END => {
+                    scope = scope.exit();
+                    ctx.last_nodes.pop();
+                    if is_empty {
+                        ctx.col_offset += scope.write("}");
+                    } else {
+                        if ctx.col_offset > 0 {
+                            scope.write("\n");
+                            ctx.col_offset = 0;
+                        }
+                        ctx.col_offset += scope.write_with_ident("}");
+                    }
+                }
+                NEWLINE => format_newline(scope.clone(), t, ctx),
+                k if k.is_comment() => format_comment(scope.clone(), t, ctx),
+                _ => {}
+            },
+        }
+    }
+}
+
+fn format_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+    if syntax.kind() != ENTRY {
+        scope.write(&syntax.to_string());
+        return;
+    }
+    for c in syntax.children_with_tokens() {
+        match c {
+            NodeOrToken::Node(n) => match n.kind() {
+                KEY => {
+                    let text = n.to_string();
+                    if ctx.col_offset != 0 {
+                        scope.write("\n");
+                        ctx.col_offset = 0;
+                    }
+                    ctx.col_offset += scope.write_with_ident(&text);
+                }
+                VALUE => format_value(scope.clone(), n, ctx),
+                _ => {}
+            },
+            NodeOrToken::Token(t) => match t.kind() {
+                COLON => {
+                    ctx.col_offset += scope.write(": ");
+                }
+                NEWLINE => format_newline(scope.clone(), t, ctx),
+                k if k.is_comment() => format_comment(scope.clone(), t, ctx),
+                _ => {}
+            },
+        }
+    }
+}
+
+fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+    if syntax.kind() != ARRAY {
+        scope.write(&syntax.to_string());
+        return;
+    }
+    let mut is_empty = true;
+    for c in syntax.children_with_tokens() {
+        match c {
+            NodeOrToken::Node(n) => {
+                is_empty = false;
+                match n.kind() {
+                    VALUE => {
+                        if let Some(c) = ctx.last_nodes.last_mut() {
+                            *c = n.next_sibling().is_none();
+                        }
+                        format_value(scope.clone(), n, ctx);
+                    }
+                    ANNOTATIONS => {}
+                    _ => {}
+                }
+            }
+            NodeOrToken::Token(t) => match t.kind() {
+                BRACKET_END => {
+                    scope = scope.exit();
+                    ctx.last_nodes.pop();
+                    if is_empty {
+                        ctx.col_offset += scope.write("]");
+                    } else {
+                        if ctx.col_offset > 0 {
+                            scope.write("\n");
+                            ctx.col_offset = 0;
+                        }
+                        ctx.col_offset += scope.write_with_ident("]");
+                    }
+                }
+                NEWLINE => format_newline(scope.clone(), t, ctx),
+                k if k.is_comment() => format_comment(scope.clone(), t, ctx),
+                _ => {}
+            },
+        }
+    }
+}
+
+fn format_comment(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {
+    let kind = syntax.kind();
+    assert!(kind.is_comment());
+    if kind == BLOCK_COMMENT {
+        let text = syntax.text();
+        if is_multiline(text) {
+            if ctx.col_offset > 0 {
+                scope.write("\n");
+            }
+            scope.write(ident_block_comment(text, &scope.ident()));
+            scope.write("\n");
+            ctx.col_offset = 0;
+        } else {
+            ctx.maybe_insert_space(&scope);
+            ctx.col_offset += scope.write(text);
+        }
+    } else if kind == LINE_COMMENT {
+        ctx.maybe_insert_space(&scope);
+        let text = syntax.text();
+        scope.write(text.trim());
+        scope.write("\n");
+        ctx.col_offset = 0;
+    }
+}
+
+fn format_newline(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {
+    assert!(syntax.kind() == NEWLINE);
+    let text = syntax.text();
+    let mut count = count_newlines(text);
+    if ctx.col_offset == 0 {
+        count -= 1;
+    }
+    scope.write("\n".repeat(count));
+    ctx.col_offset = 0;
+}
+
+fn is_multiline(text: &str) -> bool {
+    text.contains('\n')
+}
+
+fn ident_block_comment(text: &str, ident: &str) -> String {
+    let lines: Vec<String> = text
+        .split('\n')
+        .map(|v| format!("{}{}", ident, v.trim()))
+        .collect();
+    lines.join("\n")
+}
+
+fn count_newlines(text: &str) -> usize {
+    text.chars().filter(|v| v.is_whitespace()).count()
 }
