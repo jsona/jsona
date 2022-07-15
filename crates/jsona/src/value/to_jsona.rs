@@ -80,11 +80,7 @@ fn write_value(scope: Scope, value: &Value) {
     }
 }
 
-fn write_scalar<T: Display>(
-    scope: Scope,
-    value: T,
-    annotations: &IndexMap<String, AnnotationValue>,
-) {
+fn write_scalar<T: Display>(scope: Scope, value: T, annotations: &IndexMap<String, PlainValue>) {
     if scope.kind == ScopeKind::Array {
         scope.write_ident();
         scope.write(format!("{},", value));
@@ -96,17 +92,17 @@ fn write_scalar<T: Display>(
     write_annotations(scope, annotations);
 }
 
-fn write_annotations(scope: Scope, annotations: &IndexMap<String, AnnotationValue>) {
+fn write_annotations(scope: Scope, annotations: &IndexMap<String, PlainValue>) {
     for (key, value) in annotations {
         match value {
-            AnnotationValue::Null(_) => {
+            PlainValue::Null => {
                 scope.write(format!(" @{}", key));
             }
-            AnnotationValue::Bool(inner) => write_scalar_annotaion(scope.clone(), key, inner),
-            AnnotationValue::Integer(inner) => write_scalar_annotaion(scope.clone(), key, inner),
-            AnnotationValue::Float(inner) => write_scalar_annotaion(scope.clone(), key, inner),
-            AnnotationValue::Str(inner) => write_scalar_annotaion(scope.clone(), key, inner),
-            AnnotationValue::Array(_) | AnnotationValue::Object(_) => {
+            PlainValue::Bool(inner) => write_scalar_annotaion(scope.clone(), key, inner),
+            PlainValue::Integer(inner) => write_scalar_annotaion(scope.clone(), key, inner),
+            PlainValue::Float(inner) => write_scalar_annotaion(scope.clone(), key, inner),
+            PlainValue::Str(inner) => write_scalar_annotaion(scope.clone(), key, inner),
+            PlainValue::Array(_) | PlainValue::Object(_) => {
                 scope.write("\n");
                 scope.write_ident();
                 scope.write(format!("@{}(", key));

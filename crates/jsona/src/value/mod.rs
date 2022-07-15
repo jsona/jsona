@@ -23,63 +23,62 @@ pub enum Value {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(untagged))]
-pub enum AnnotationValue {
-    Null(()),
+pub enum PlainValue {
+    Null,
     Bool(bool),
     Integer(IntegerValue),
     Float(f64),
     Str(String),
-    Array(Vec<AnnotationValue>),
-    Object(IndexMap<String, AnnotationValue>),
+    Array(Vec<PlainValue>),
+    Object(IndexMap<String, PlainValue>),
 }
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Null {
-    pub value: (),
-    pub annotations: IndexMap<String, AnnotationValue>,
+    pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Bool {
     pub value: bool,
-    pub annotations: IndexMap<String, AnnotationValue>,
+    pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Integer {
     pub value: IntegerValue,
-    pub annotations: IndexMap<String, AnnotationValue>,
+    pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Float {
     pub value: f64,
-    pub annotations: IndexMap<String, AnnotationValue>,
+    pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Str {
     pub value: String,
-    pub annotations: IndexMap<String, AnnotationValue>,
+    pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Array {
     pub value: Vec<Value>,
-    pub annotations: IndexMap<String, AnnotationValue>,
+    pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Object {
     pub value: IndexMap<String, Value>,
-    pub annotations: IndexMap<String, AnnotationValue>,
+    pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -175,7 +174,7 @@ impl Value {
     define_value_fns!(Object, Object, is_object, as_object);
     define_value_fns!(Array, Array, is_array, as_array);
 
-    pub fn get_annotations(&self) -> &IndexMap<String, AnnotationValue> {
+    pub fn get_annotations(&self) -> &IndexMap<String, PlainValue> {
         match self {
             Value::Null(Null { annotations, .. }) => annotations,
             Value::Bool(Bool { annotations, .. }) => annotations,
@@ -186,7 +185,7 @@ impl Value {
             Value::Object(Object { annotations, .. }) => annotations,
         }
     }
-    pub fn get_annotations_mut(&mut self) -> &mut IndexMap<String, AnnotationValue> {
+    pub fn get_annotations_mut(&mut self) -> &mut IndexMap<String, PlainValue> {
         match self {
             Value::Null(Null { annotations, .. }) => annotations,
             Value::Bool(Bool { annotations, .. }) => annotations,
@@ -198,18 +197,14 @@ impl Value {
         }
     }
     pub fn from_node(node: &Node) -> Self {
-        let mut annotations: IndexMap<String, AnnotationValue> = Default::default();
+        let mut annotations: IndexMap<String, PlainValue> = Default::default();
         if let Some(node_annotations) = node.annotations() {
             for (k, v) in node_annotations.entries().read().iter() {
-                annotations.insert(k.value().to_string(), v.into());
+                annotations.insert(k.value().to_string(), Value::from_node(v).into());
             }
         }
         match node {
-            Node::Invalid(_) | Node::Null(_) => Null {
-                value: (),
-                annotations,
-            }
-            .into(),
+            Node::Invalid(_) | Node::Null(_) => Null { annotations }.into(),
             Node::Bool(v) => Bool {
                 value: v.value(),
                 annotations,
@@ -253,25 +248,21 @@ impl From<&Node> for Value {
     }
 }
 
-impl From<AnnotationValue> for Value {
-    fn from(annotation: AnnotationValue) -> Self {
+impl From<PlainValue> for Value {
+    fn from(annotation: PlainValue) -> Self {
         let annotations = Default::default();
         match annotation {
-            AnnotationValue::Null(_) => Null {
-                value: (),
-                annotations,
-            }
-            .into(),
-            AnnotationValue::Bool(value) => Bool { value, annotations }.into(),
-            AnnotationValue::Integer(value) => Integer { value, annotations }.into(),
-            AnnotationValue::Float(value) => Float { value, annotations }.into(),
-            AnnotationValue::Str(value) => Str { value, annotations }.into(),
-            AnnotationValue::Array(value) => Array {
+            PlainValue::Null => Null { annotations }.into(),
+            PlainValue::Bool(value) => Bool { value, annotations }.into(),
+            PlainValue::Integer(value) => Integer { value, annotations }.into(),
+            PlainValue::Float(value) => Float { value, annotations }.into(),
+            PlainValue::Str(value) => Str { value, annotations }.into(),
+            PlainValue::Array(value) => Array {
                 value: value.into_iter().map(|v| v.into()).collect(),
                 annotations,
             }
             .into(),
-            AnnotationValue::Object(value) => Object {
+            PlainValue::Object(value) => Object {
                 value: value.into_iter().map(|(k, v)| (k, v.into())).collect(),
                 annotations,
             }
@@ -284,67 +275,48 @@ macro_rules! define_annotation_value_fns {
     ($yt:ident, $t:ty, $is_fn:ident,$as_fn:ident) => {
         pub fn $is_fn(&self) -> bool {
             match self {
-                AnnotationValue::$yt(_) => true,
+                PlainValue::$yt(_) => true,
                 _ => false,
             }
         }
         pub fn $as_fn(&self) -> Option<&$t> {
             match self {
-                AnnotationValue::$yt(ref v) => Some(v),
+                PlainValue::$yt(ref v) => Some(v),
                 _ => None,
             }
         }
     };
 }
 
-impl AnnotationValue {
-    define_annotation_value_fns!(Null, (), is_null, as_null);
+impl PlainValue {
+    pub fn is_null(&self) -> bool {
+        matches!(self, PlainValue::Null)
+    }
+    pub fn as_null(&self) -> Option<()> {
+        match self {
+            PlainValue::Null => Some(()),
+            _ => None,
+        }
+    }
     define_annotation_value_fns!(Bool, bool, is_bool, as_bool);
     define_annotation_value_fns!(Integer, IntegerValue, is_integer, as_integer);
     define_annotation_value_fns!(Float, f64, is_float, as_float);
     define_annotation_value_fns!(Str, String, is_str, as_str);
-    define_annotation_value_fns!(Object, IndexMap<String, AnnotationValue>, is_object, as_object);
-    define_annotation_value_fns!(Array, Vec<AnnotationValue>, is_array, as_array);
+    define_annotation_value_fns!(Object, IndexMap<String, PlainValue>, is_object, as_object);
+    define_annotation_value_fns!(Array, Vec<PlainValue>, is_array, as_array);
 }
 
-impl From<&Node> for AnnotationValue {
-    fn from(node: &Node) -> Self {
-        match node {
-            Node::Invalid(_) | Node::Null(_) => AnnotationValue::Null(()),
-            Node::Bool(v) => AnnotationValue::Bool(v.value()),
-            Node::Integer(v) => AnnotationValue::Integer(v.value()),
-            Node::Float(v) => AnnotationValue::Float(v.value()),
-            Node::Str(v) => AnnotationValue::Str(v.value().to_string()),
-            Node::Array(v) => {
-                let value = v.items().read().iter().map(|v| v.into()).collect();
-                AnnotationValue::Array(value)
-            }
-            Node::Object(v) => {
-                let value = v
-                    .entries()
-                    .read()
-                    .iter()
-                    .map(|(k, v)| (k.value().to_string(), v.into()))
-                    .collect();
-                AnnotationValue::Object(value)
-            }
-        }
-    }
-}
-
-impl From<Value> for AnnotationValue {
+impl From<Value> for PlainValue {
     fn from(annotation: Value) -> Self {
         match annotation {
-            Value::Null(_) => AnnotationValue::Null(()),
-            Value::Bool(v) => AnnotationValue::Bool(v.value),
-            Value::Integer(v) => AnnotationValue::Integer(v.value),
-            Value::Float(v) => AnnotationValue::Float(v.value),
-            Value::Str(v) => AnnotationValue::Str(v.value),
-            Value::Array(v) => {
-                AnnotationValue::Array(v.value.into_iter().map(|v| v.into()).collect())
-            }
+            Value::Null(_) => PlainValue::Null,
+            Value::Bool(v) => PlainValue::Bool(v.value),
+            Value::Integer(v) => PlainValue::Integer(v.value),
+            Value::Float(v) => PlainValue::Float(v.value),
+            Value::Str(v) => PlainValue::Str(v.value),
+            Value::Array(v) => PlainValue::Array(v.value.into_iter().map(|v| v.into()).collect()),
             Value::Object(v) => {
-                AnnotationValue::Object(v.value.into_iter().map(|(k, v)| (k, v.into())).collect())
+                PlainValue::Object(v.value.into_iter().map(|(k, v)| (k, v.into())).collect())
             }
         }
     }
