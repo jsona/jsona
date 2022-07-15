@@ -43,11 +43,13 @@ pub(crate) fn keys_from_syntax(
                 match child.kind() {
                     AT => at_token = true,
                     PERIOD => at_token = false,
-                    IDENT => {
+
+                    k if k.is_key() => {
                         let key = KeyInner {
                             errors: Shared::default(),
                             syntax: Some(child),
                             is_valid: true,
+                            is_glob: k == IDENT_WITH_GLOB,
                             value: Default::default(),
                         }
                         .into();
@@ -69,12 +71,13 @@ pub(crate) fn keys_from_syntax(
 pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
     assert!(syntax.kind() == KEY);
     if let Some(syntax) =
-        first_value_child(&syntax).and_then(|v| if v.kind() == IDENT { Some(v) } else { None })
+        first_value_child(&syntax).and_then(|v| if v.kind().is_key() { Some(v) } else { None })
     {
         KeyInner {
             errors: Shared::default(),
             syntax: Some(syntax),
             is_valid: true,
+            is_glob: false,
             value: Default::default(),
         }
         .into()
@@ -84,6 +87,7 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
                 syntax: syntax.clone(),
             }])),
             is_valid: false,
+            is_glob: false,
             value: Default::default(),
             syntax: Some(syntax),
         }

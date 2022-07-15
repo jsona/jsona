@@ -59,6 +59,7 @@ pub(crate) struct Parser<'p> {
     builder: GreenNodeBuilder<'p>,
     errors: Vec<Error>,
     annotation_scope: bool,
+    glob_key: bool,
 }
 
 /// This is just a convenience type during parsing.
@@ -73,10 +74,12 @@ impl<'p> Parser<'p> {
             builder: Default::default(),
             errors: Default::default(),
             annotation_scope: false,
+            glob_key: false,
         }
     }
 
     pub(crate) fn parse_keys_only(mut self) -> Parse {
+        self.glob_key = true;
         let _ = with_node!(self.builder, KEY, self.parse_keys());
 
         Parse {
@@ -371,13 +374,14 @@ impl<'p> Parser<'p> {
 
         match t {
             IDENT => self.consume_current_token(),
-            NULL | BOOL => self.consume_current_token_as(IDENT),
-            INTEGER_HEX | INTEGER_BIN | INTEGER_OCT => self.consume_current_token_as(IDENT),
+            IDENT_WITH_GLOB if self.glob_key => self.consume_current_token(),
+            NULL | BOOL => self.consume_current_token(),
+            INTEGER_HEX | INTEGER_BIN | INTEGER_OCT => self.consume_current_token(),
             INTEGER => {
                 if self.lexer.slice().starts_with('+') {
                     Err(())
                 } else {
-                    self.consume_current_token_as(IDENT)
+                    self.consume_current_token()
                 }
             }
             SINGLE_QUOTE | DOUBLE_QUOTE => {
@@ -396,7 +400,7 @@ impl<'p> Parser<'p> {
                         }
                     }
                 };
-                self.consume_current_token_as(IDENT)
+                self.consume_current_token()
             }
             FLOAT => {
                 if self.lexer.slice().starts_with('0') {
@@ -404,7 +408,7 @@ impl<'p> Parser<'p> {
                 } else if self.lexer.slice().starts_with('+') {
                     Err(())
                 } else {
-                    self.consume_current_token_as(IDENT)
+                    self.consume_current_token()
                 }
             }
             _ => self.consume_error_token("expected identifier"),
@@ -443,16 +447,6 @@ impl<'p> Parser<'p> {
             Err(_) => Err(()),
             Ok(token) => {
                 self.consume_token(token, self.lexer.slice());
-                Ok(())
-            }
-        }
-    }
-
-    fn consume_current_token_as(&mut self, kind: SyntaxKind) -> ParserResult<()> {
-        match self.peek_token() {
-            Err(_) => Err(()),
-            Ok(_) => {
-                self.consume_token(kind, self.lexer.slice());
                 Ok(())
             }
         }

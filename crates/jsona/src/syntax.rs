@@ -23,6 +23,11 @@ pub enum SyntaxKind {
     #[regex(r"[A-Za-z0-9_-]+", priority = 2)]
     IDENT,
 
+    /// Not part of the regular JSONA syntax, only used to allow
+    /// glob patterns in keys.
+    #[regex(r"[*?A-Za-z0-9_-]+")]
+    IDENT_WITH_GLOB,
+
     #[token(".")]
     PERIOD,
 
@@ -117,6 +122,24 @@ impl SyntaxKind {
     pub fn is_compose(self) -> bool {
         use SyntaxKind::*;
         matches!(self, OBJECT | ARRAY)
+    }
+
+    pub fn is_key(self) -> bool {
+        use SyntaxKind::*;
+        matches!(
+            self,
+            IDENT
+                | IDENT_WITH_GLOB
+                | NULL
+                | BOOL
+                | INTEGER_HEX
+                | INTEGER_BIN
+                | INTEGER_OCT
+                | INTEGER
+                | SINGLE_QUOTE
+                | DOUBLE_QUOTE
+                | FLOAT
+        )
     }
 
     pub fn is_ws_or_comment(self) -> bool {

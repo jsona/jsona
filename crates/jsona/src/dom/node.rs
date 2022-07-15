@@ -1,17 +1,15 @@
 use super::error::{Error, QueryError};
 use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
-use crate::syntax::{SyntaxElement, SyntaxKind};
+use crate::syntax::SyntaxElement;
 use crate::util::quote::{quote, unquote, QuoteType};
 use crate::util::shared::Shared;
 use crate::value::IntegerValue;
 
 use either::Either;
-use logos::Lexer;
 use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};
 use std::collections::HashMap;
-use std::fmt::Write;
 use std::iter::{empty, once, FromIterator};
 use std::sync::Arc;
 
@@ -909,6 +907,7 @@ pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) is_valid: bool,
+    pub(crate) is_glob: bool,
     pub(crate) value: OnceCell<String>,
 }
 
@@ -945,6 +944,7 @@ impl Key {
             errors: Default::default(),
             syntax: None,
             is_valid: true,
+            is_glob: false,
             value: OnceCell::from(key.into()),
         }
         .into()
@@ -980,6 +980,10 @@ impl Key {
                 })
                 .unwrap_or_default()
         })
+    }
+
+    pub fn is_glob(&self) -> bool {
+        self.inner.is_glob
     }
 
     pub fn text_range(&self) -> Option<TextRange> {
@@ -1036,17 +1040,7 @@ impl core::fmt::Display for Key {
             return s.fmt(f);
         }
 
-        if !matches!(
-            Lexer::<SyntaxKind>::new(self.value()).next(),
-            Some(SyntaxKind::IDENT) | None
-        ) {
-            f.write_char('\"')?;
-            self.value().fmt(f)?;
-            f.write_char('\"')?;
-            return Ok(());
-        }
-
-        self.value().fmt(f)
+        quote(self.value(), false).fmt(f)
     }
 }
 
