@@ -11,7 +11,6 @@ use crate::{
     syntax::{SyntaxElement, SyntaxKind::*},
     util::shared::Shared,
 };
-use either::Either;
 
 pub fn from_syntax(root: SyntaxElement) -> Node {
     if root.kind() != VALUE {
@@ -63,9 +62,9 @@ pub(crate) fn keys_from_syntax(
                     _ => {}
                 }
             }
-            Either::Left(keys.into_iter())
+            keys.into_iter()
         })
-        .unwrap_or_else(|| Either::Right(core::iter::empty()))
+        .unwrap_or_else(|| vec![].into_iter())
 }
 
 pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
