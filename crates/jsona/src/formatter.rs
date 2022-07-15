@@ -176,12 +176,13 @@ impl Default for Options {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct Scope {
     pub(crate) options: Rc<Options>,
     pub(crate) level: usize,
     pub(crate) formatted: Rc<RefCell<String>>,
     pub(crate) kind: ScopeKind,
+    pub(crate) compact: bool,
 }
 
 impl Scope {
@@ -191,6 +192,7 @@ impl Scope {
             level: self.level + 1,
             formatted: self.formatted.clone(),
             kind,
+            compact: self.compact,
         }
     }
     pub(crate) fn exit(&self) -> Self {
@@ -199,6 +201,7 @@ impl Scope {
             level: self.level - 1,
             formatted: self.formatted.clone(),
             kind: self.kind,
+            compact: self.compact,
         }
     }
     pub(crate) fn write<T: AsRef<str>>(&self, text: T) -> usize {
@@ -207,16 +210,15 @@ impl Scope {
         self.formatted.borrow_mut().push_str(text);
         len
     }
-    pub(crate) fn write_with_ident<T: AsRef<str>>(&self, text: T) -> usize {
-        let ident = self.ident();
-        let idented_text = format!("{}{}", ident, text.as_ref());
-        self.formatted.borrow_mut().push_str(&idented_text);
-        idented_text.len()
+    pub(crate) fn write_ident(&self) -> usize {
+        let ident = self.ident_string();
+        self.formatted.borrow_mut().push_str(&ident);
+        ident.len()
     }
     pub(crate) fn read(&self) -> String {
         self.formatted.borrow().to_string()
     }
-    pub(crate) fn ident(&self) -> String {
+    pub(crate) fn ident_string(&self) -> String {
         self.options.indent_string.repeat(self.level)
     }
     pub(crate) fn is_last_char(&self, c: char) -> bool {
@@ -230,7 +232,7 @@ impl Scope {
     pub(crate) fn remove_last_char(&self) {
         self.formatted.borrow_mut().pop();
     }
-    pub(crate) fn maybe_newline(&self) {
+    pub(crate) fn newline(&self) {
         if !self.is_last_char('\n') {
             self.write("\n");
         }
@@ -244,38 +246,63 @@ pub(crate) enum ScopeKind {
     Object,
 }
 
+impl Default for ScopeKind {
+    fn default() -> Self {
+        ScopeKind::Root
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Context {
     col_offset: usize,
-    last_nodes: Vec<bool>,
+    value_commas: Vec<ValueComma>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ValueComma {
+    ForceYes,
+    ForceNo,
+    Auto,
 }
 
 impl Context {
-    fn maybe_insert_space(&mut self, scope: &Scope) {
+    fn space(&mut self, scope: &Scope) {
         if self.col_offset > 0 && !scope.is_last_char(' ') {
-            self.col_offset += scope.write(" ");
+            self.write(scope, " ")
         }
     }
 
-    fn maybe_insert_comma(&mut self, scope: &Scope) {
-        match self.last_nodes.last() {
-            Some(&true) => {
-                if scope.options.trailing_comma {
-                    self.col_offset += scope.write(",");
+    fn comma(&mut self, scope: &Scope) {
+        match self.value_commas.last() {
+            Some(ValueComma::Auto) => {
+                if !scope.compact && scope.options.trailing_comma {
+                    self.write(scope, ",")
                 }
             }
-            Some(&false) => {
-                self.col_offset += scope.write(",");
+            Some(ValueComma::ForceYes) => {
+                if scope.compact {
+                    self.write(scope, ", ")
+                } else {
+                    self.write(scope, ",")
+                }
             }
-            None => {}
+            _ => {}
         };
     }
 
     fn newline(&mut self, scope: &Scope) {
-        if self.col_offset > 0 {
+        if !scope.compact && self.col_offset > 0 {
             scope.write("\n");
             self.col_offset = 0;
         }
+    }
+    fn ident(&mut self, scope: &Scope) {
+        if self.col_offset == 0 {
+            self.col_offset += scope.write_ident();
+        }
+    }
+    fn write<T: AsRef<str>>(&mut self, scope: &Scope, text: T) {
+        self.col_offset += scope.write(text)
     }
 }
 
@@ -288,10 +315,11 @@ pub fn format(src: &str, options: Options) -> String {
         level: 0,
         formatted: Default::default(),
         kind: ScopeKind::Root,
+        compact: false,
     };
     let mut ctx = Context {
         col_offset: 0,
-        last_nodes: vec![],
+        value_commas: vec![],
     };
     format_value(scope.clone(), p.into_syntax(), &mut ctx);
     let mut formatted = scope.read();
@@ -304,11 +332,14 @@ pub fn format(src: &str, options: Options) -> String {
     formatted
 }
 
-fn format_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != VALUE {
         scope.write(&syntax.to_string());
         return;
     }
+
+    scope.compact = can_compact(syntax.clone());
+
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => match n.kind() {
@@ -330,18 +361,19 @@ fn format_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 
 fn format_scalar(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     let text = syntax.to_string();
-    if ctx.col_offset == 0 && scope.kind == ScopeKind::Array {
-        ctx.col_offset += scope.write_with_ident(&text);
+    if scope.kind == ScopeKind::Array {
+        ctx.newline(&scope);
+        ctx.ident(&scope);
+        ctx.write(&scope, &text)
     } else {
-        scope.write(&text);
-        ctx.col_offset += text.len();
+        ctx.write(&scope, &text)
     }
     if is_multiline(&text) {
         if let Some(offset) = text.split('\n').last().map(|v| v.len()) {
             ctx.col_offset = offset
         }
     }
-    ctx.maybe_insert_comma(&scope);
+    ctx.comma(&scope);
 }
 
 fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
@@ -358,8 +390,10 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                 is_empty = false;
                 match n.kind() {
                     ENTRY => {
-                        if let Some(c) = ctx.last_nodes.last_mut() {
-                            *c = n.next_sibling().is_none();
+                        if let Some(c) = ctx.value_commas.last_mut() {
+                            if n.next_sibling().is_none() {
+                                *c = ValueComma::Auto;
+                            }
                         }
                         format_entry(scope.clone(), n, ctx);
                     }
@@ -369,27 +403,19 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             }
             NodeOrToken::Token(t) => match t.kind() {
                 BRACE_START => {
-                    if ctx.col_offset == 0 {
-                        ctx.col_offset += scope.write_with_ident("{");
-                    } else {
-                        ctx.col_offset += scope.write("{");
-                    }
+                    ctx.ident(&scope);
+                    ctx.write(&scope, "{");
                     scope = scope.enter(ScopeKind::Object);
-                    ctx.last_nodes.push(false);
+                    ctx.value_commas.push(ValueComma::ForceYes);
                 }
                 BRACE_END => {
                     scope = scope.exit();
-                    ctx.last_nodes.pop();
-                    if is_empty {
-                        if ctx.col_offset == 0 {
-                            ctx.col_offset += scope.write_with_ident("}");
-                        } else {
-                            ctx.col_offset += scope.write("}");
-                        }
-                    } else {
+                    ctx.value_commas.pop();
+                    if !is_empty {
                         ctx.newline(&scope);
-                        ctx.col_offset += scope.write_with_ident("}");
                     }
+                    ctx.ident(&scope);
+                    ctx.write(&scope, "}");
                 }
                 ERROR => format_error(scope.clone(), t, ctx),
                 NEWLINE => format_newline(scope.clone(), t, ctx),
@@ -398,7 +424,7 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             },
         }
     }
-    ctx.maybe_insert_comma(&scope);
+    ctx.comma(&scope);
 }
 
 fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
@@ -412,15 +438,14 @@ fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                 KEY => {
                     let text = n.to_string();
                     ctx.newline(&scope);
-                    ctx.col_offset += scope.write_with_ident(&text);
+                    ctx.ident(&scope);
+                    ctx.write(&scope, &text);
                 }
                 VALUE => format_value(scope.clone(), n, ctx),
                 _ => {}
             },
             NodeOrToken::Token(t) => match t.kind() {
-                COLON => {
-                    ctx.col_offset += scope.write(": ");
-                }
+                COLON => ctx.write(&scope, ": "),
                 ERROR => format_error(scope.clone(), t, ctx),
                 NEWLINE => format_newline(scope.clone(), t, ctx),
                 k if k.is_comment() => format_comment(scope.clone(), t, ctx),
@@ -444,8 +469,10 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                 is_empty = false;
                 match n.kind() {
                     VALUE => {
-                        if let Some(c) = ctx.last_nodes.last_mut() {
-                            *c = n.next_sibling().is_none();
+                        if let Some(c) = ctx.value_commas.last_mut() {
+                            if n.next_sibling().is_none() {
+                                *c = ValueComma::Auto;
+                            }
                         }
                         format_value(scope.clone(), n, ctx);
                     }
@@ -455,30 +482,19 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             }
             NodeOrToken::Token(t) => match t.kind() {
                 BRACKET_START => {
-                    if ctx.col_offset == 0 {
-                        ctx.col_offset += scope.write_with_ident("[");
-                    } else {
-                        ctx.col_offset += scope.write("[");
-                    }
+                    ctx.ident(&scope);
+                    ctx.write(&scope, "[");
                     scope = scope.enter(ScopeKind::Array);
-                    ctx.last_nodes.push(false);
+                    ctx.value_commas.push(ValueComma::ForceYes);
                 }
                 BRACKET_END => {
                     scope = scope.exit();
-                    ctx.last_nodes.pop();
-                    if is_empty {
-                        if ctx.col_offset == 0 {
-                            ctx.col_offset += scope.write_with_ident("]");
-                        } else {
-                            ctx.col_offset += scope.write("]");
-                        }
-                    } else {
-                        if ctx.col_offset > 0 {
-                            scope.write("\n");
-                            ctx.col_offset = 0;
-                        }
-                        ctx.col_offset += scope.write_with_ident("]");
+                    ctx.value_commas.pop();
+                    if !is_empty {
+                        ctx.newline(&scope);
                     }
+                    ctx.ident(&scope);
+                    ctx.write(&scope, "]");
                 }
                 ERROR => format_error(scope.clone(), t, ctx),
                 NEWLINE => format_newline(scope.clone(), t, ctx),
@@ -488,7 +504,7 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
         }
     }
 
-    ctx.maybe_insert_comma(&scope);
+    ctx.comma(&scope);
 }
 
 fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
@@ -519,6 +535,7 @@ fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
         scope.write(&syntax.to_string());
         return;
     }
+
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => match n.kind() {
@@ -527,11 +544,8 @@ fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
                         ctx.col_offset += scope.write(" ");
                     }
                     let text = format!("@{}", n);
-                    if ctx.col_offset == 0 {
-                        ctx.col_offset += scope.write_with_ident(text);
-                    } else {
-                        ctx.col_offset += scope.write(text);
-                    }
+                    ctx.ident(&scope);
+                    ctx.write(&scope, text);
                 }
                 ANNOTATION_VALUE => format_annotation_value(scope.clone(), n, ctx),
                 _ => {}
@@ -555,35 +569,19 @@ fn format_annotation_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
         match c {
             NodeOrToken::Node(n) => {
                 if n.kind() == VALUE {
-                    match compact_value_tokens(syntax.clone()) {
-                        Some(tokens) => {
-                            let token_texts: Vec<&str> = tokens.iter().map(|v| v.text()).collect();
-                            let text = token_texts.join("");
-                            ctx.col_offset += scope.write(text);
-                        }
-                        None => {
-                            format_value(scope.clone(), n, ctx);
-                        }
-                    }
+                    format_value(scope.clone(), n, ctx);
                 }
             }
             NodeOrToken::Token(t) => match t.kind() {
                 PARENTHESES_START => {
-                    if ctx.col_offset == 0 {
-                        ctx.col_offset += scope.write_with_ident("(");
-                    } else {
-                        ctx.col_offset += scope.write("(");
-                    }
+                    ctx.ident(&scope);
+                    ctx.write(&scope, "(");
+                    ctx.value_commas.push(ValueComma::ForceNo);
                 }
                 PARENTHESES_END => {
-                    if scope.is_last_char(',') {
-                        scope.remove_last_char();
-                    }
-                    if ctx.col_offset > 0 {
-                        ctx.col_offset += scope.write(")");
-                    } else {
-                        ctx.col_offset += scope.write_with_ident(")");
-                    }
+                    ctx.value_commas.pop();
+                    ctx.ident(&scope);
+                    ctx.write(&scope, ")");
                 }
                 ERROR => format_error(scope.clone(), t, ctx),
                 k if k.is_comment() => format_comment(scope.clone(), t, ctx),
@@ -602,15 +600,15 @@ fn format_comment(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {
             if ctx.col_offset > 0 {
                 scope.write("\n");
             }
-            scope.write(ident_block_comment(text, &scope.ident()));
+            scope.write(ident_block_comment(text, &scope.ident_string()));
             scope.write("\n");
             ctx.col_offset = 0;
         } else {
-            ctx.maybe_insert_space(&scope);
-            ctx.col_offset += scope.write(text);
+            ctx.space(&scope);
+            ctx.write(&scope, text)
         }
     } else if kind == LINE_COMMENT {
-        ctx.maybe_insert_space(&scope);
+        ctx.space(&scope);
         let text = syntax.text();
         scope.write(text.trim());
         scope.write("\n");
@@ -631,34 +629,35 @@ fn format_newline(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {
 
 fn format_error(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {
     assert!(syntax.kind() == ERROR);
-    ctx.col_offset += scope.write(syntax.text());
+    ctx.write(&scope, syntax.text())
 }
 
-fn compact_value_tokens(syntax: SyntaxNode) -> Option<Vec<SyntaxToken>> {
-    let mut tokens = vec![];
+fn can_compact(syntax: SyntaxNode) -> bool {
+    let mut exist_newline = false;
     for event in syntax.preorder_with_tokens() {
         if let WalkEvent::Enter(ele) = event {
             if let Some(t) = ele.as_token() {
+                if t.kind() == WHITESPACE {
+                    continue;
+                }
+                if exist_newline {
+                    return false;
+                }
                 match t.kind() {
-                    IDENT | FLOAT | BOOL | NULL | SINGLE_QUOTE | DOUBLE_QUOTE | BACKTICK_QUOTE
-                    | INTEGER | INTEGER_BIN | INTEGER_HEX | INTEGER_OCT | COLON | COMMA
-                    | BRACE_START | BRACE_END | BRACKET_START | BRACKET_END => {
-                        tokens.push(t.clone());
-                    }
-                    NEWLINE | LINE_COMMENT => return None,
                     BLOCK_COMMENT => {
                         if is_multiline(t.text()) {
-                            return None;
-                        } else {
-                            tokens.push(t.clone());
+                            return false;
                         }
+                    }
+                    NEWLINE => {
+                        exist_newline = true;
                     }
                     _ => {}
                 }
             }
         }
     }
-    Some(tokens)
+    true
 }
 
 fn is_multiline(text: &str) -> bool {

@@ -1,16 +1,10 @@
 use super::*;
 use crate::formatter::{Scope, ScopeKind};
 use std::fmt::{Display, Formatter, Result};
-use std::rc::Rc;
 
 impl Node {
     pub fn to_jsona(&self) -> String {
-        let scope = Scope {
-            options: Rc::new(Default::default()),
-            level: 0,
-            formatted: Default::default(),
-            kind: ScopeKind::Root,
-        };
+        let scope = Scope::default();
         write_value(scope.clone(), self);
         if scope.is_last_char(',') {
             scope.remove_last_char();
@@ -34,38 +28,43 @@ fn write_value(scope: Scope, value: &Node) {
         }
         Node::Array(v) => {
             if scope.kind == ScopeKind::Array {
-                scope.write_with_ident("[");
+                scope.write_ident();
+                scope.write("[");
             } else {
                 scope.write("[");
             }
             let scope = scope.enter(ScopeKind::Array);
             write_annotations(scope.clone(), v.annotations());
-            scope.maybe_newline();
+            scope.newline();
             let value = v.items().read();
             for item in value.iter() {
                 write_value(scope.clone(), item);
-                scope.maybe_newline();
+                scope.newline();
             }
             let scope = scope.exit();
-            scope.write_with_ident("],");
+            scope.write_ident();
+            scope.write("],");
         }
         Node::Object(v) => {
             if scope.kind == ScopeKind::Array {
-                scope.write_with_ident("{");
+                scope.write_ident();
+                scope.write("{");
             } else {
                 scope.write("{");
             }
             let scope = scope.enter(ScopeKind::Object);
             write_annotations(scope.clone(), v.annotations());
-            scope.maybe_newline();
+            scope.newline();
             let value = v.entries().read();
             for (k, v) in value.iter() {
-                scope.write_with_ident(format!("{}: ", k));
+                scope.write_ident();
+                scope.write(format!("{}: ", k));
                 write_value(scope.clone(), v);
-                scope.maybe_newline();
+                scope.newline();
             }
             let scope = scope.exit();
-            scope.write_with_ident("},");
+            scope.write_ident();
+            scope.write("},");
         }
         Node::Invalid(_) => {}
     }
@@ -73,7 +72,8 @@ fn write_value(scope: Scope, value: &Node) {
 
 fn write_scalar<T: Display>(scope: Scope, value: T, annotations: &Option<Annotations>) {
     if scope.kind == ScopeKind::Array {
-        scope.write_with_ident(format!("{},", value));
+        scope.write_ident();
+        scope.write(format!("{},", value));
     } else if scope.kind == ScopeKind::Object {
         scope.write(format!("{},", value));
     } else {
@@ -98,7 +98,8 @@ fn write_annotations(scope: Scope, annotations: &Option<Annotations>) {
                     }
                     Node::Array(_) | Node::Object(_) => {
                         scope.write("\n");
-                        scope.write_with_ident(format!("@{}(", key));
+                        scope.write_ident();
+                        scope.write(format!("@{}(", key));
                         write_value(scope.clone(), value);
                         scope.exit();
                         if scope.is_last_char(',') {
@@ -111,7 +112,7 @@ fn write_annotations(scope: Scope, annotations: &Option<Annotations>) {
         }
         None => {}
     }
-    scope.maybe_newline();
+    scope.newline();
 }
 
 fn write_scalar_annotaion<T: Display>(scope: Scope, key: &Key, value: T) {
