@@ -1,8 +1,8 @@
 //! The Value enum, a loosely typed way of representing any valid JSONA value.
 
+mod from_node;
 mod to_jsona;
 
-use crate::dom::{DomNode, Node};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
@@ -195,56 +195,6 @@ impl Value {
             Value::Array(Array { annotations, .. }) => annotations,
             Value::Object(Object { annotations, .. }) => annotations,
         }
-    }
-    pub fn from_node(node: &Node) -> Self {
-        let mut annotations: IndexMap<String, PlainValue> = Default::default();
-        if let Some(node_annotations) = node.annotations() {
-            for (k, v) in node_annotations.entries().read().iter() {
-                annotations.insert(k.value().to_string(), Value::from_node(v).into());
-            }
-        }
-        match node {
-            Node::Invalid(_) | Node::Null(_) => Null { annotations }.into(),
-            Node::Bool(v) => Bool {
-                value: v.value(),
-                annotations,
-            }
-            .into(),
-            Node::Integer(v) => Integer {
-                value: v.value(),
-                annotations,
-            }
-            .into(),
-            Node::Float(v) => Float {
-                value: v.value(),
-                annotations,
-            }
-            .into(),
-            Node::Str(v) => Str {
-                value: v.value().to_string(),
-                annotations,
-            }
-            .into(),
-            Node::Array(v) => {
-                let value = v.items().read().iter().map(|v| v.into()).collect();
-                Array { value, annotations }.into()
-            }
-            Node::Object(v) => {
-                let value = v
-                    .entries()
-                    .read()
-                    .iter()
-                    .map(|(k, v)| (k.value().to_string(), v.into()))
-                    .collect();
-                Object { value, annotations }.into()
-            }
-        }
-    }
-}
-
-impl From<&Node> for Value {
-    fn from(node: &Node) -> Self {
-        Self::from_node(node)
     }
 }
 
