@@ -1,4 +1,3 @@
-use globset::{Glob, GlobSet, GlobSetBuilder};
 use jsona::dom::{DomNode, Node};
 use parking_lot::{RwLock, RwLockReadGuard};
 use regex::Regex;
@@ -7,7 +6,7 @@ use std::sync::Arc;
 use tap::Tap;
 use url::Url;
 
-use crate::config::Config;
+use crate::{config::Config, util::GlobRule};
 
 pub mod priority {
     pub const CONFIG: usize = 50;
@@ -88,13 +87,14 @@ impl SchemaAssociations {
     }
 
     pub fn add_from_config(&self, config: &Config) {
-        for (name, schema_opts) in &config.schemas {
-            if let (Some(url), Some(file_url)) = (
-                schema_opts.url.as_ref(),
-                config.file_matchers.as_ref().and_then(|v| v.get(name)),
-            ) {
+        for schema_opts in &config.schemas {
+            let file_rule = match schema_opts.file_rule.clone() {
+                Some(rule) => rule,
+                None => continue,
+            };
+            if let Some(url) = &schema_opts.url {
                 self.associations.write().push((
-                    file_url.clone().into(),
+                    file_rule.into(),
                     SchemaAssociation {
                         url: url.clone(),
                         meta: json!({
@@ -134,16 +134,14 @@ impl SchemaAssociations {
 
 #[derive(Clone)]
 pub enum AssociationRule {
-    Glob(GlobSet),
+    Glob(GlobRule),
     Regex(Regex),
     Url(Url),
 }
 
 impl AssociationRule {
     pub fn glob(pattern: &str) -> Result<Self, anyhow::Error> {
-        let mut glob = GlobSetBuilder::new();
-        glob.add(Glob::new(pattern)?);
-        Ok(Self::Glob(glob.build()?))
+        Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
     }
 
     pub fn regex(regex: &str) -> Result<Self, anyhow::Error> {
@@ -157,8 +155,8 @@ impl From<Regex> for AssociationRule {
     }
 }
 
-impl From<GlobSet> for AssociationRule {
-    fn from(v: GlobSet) -> Self {
+impl From<GlobRule> for AssociationRule {
+    fn from(v: GlobRule) -> Self {
         Self::Glob(v)
     }
 }
