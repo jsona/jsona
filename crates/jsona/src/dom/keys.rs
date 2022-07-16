@@ -12,7 +12,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyOrIndex {
     Index(usize),
-    Key(Key),
+    ValueKey(Key),
     AnnotationKey(Key),
 }
 
@@ -29,18 +29,18 @@ impl core::fmt::Display for KeyOrIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             KeyOrIndex::Index(v) => v.fmt(f),
-            KeyOrIndex::Key(v) => v.fmt(f),
+            KeyOrIndex::ValueKey(v) => v.fmt(f),
             KeyOrIndex::AnnotationKey(v) => v.fmt(f),
         }
     }
 }
 
 impl KeyOrIndex {
-    pub fn new_key(k: Key) -> Self {
-        Self::Key(k)
+    pub fn new_value_key(k: Key) -> Self {
+        Self::ValueKey(k)
     }
 
-    pub fn new_anno_key(k: Key) -> Self {
+    pub fn new_annotation_key(k: Key) -> Self {
         Self::AnnotationKey(k)
     }
 
@@ -51,16 +51,16 @@ impl KeyOrIndex {
         matches!(self, Self::Index(..))
     }
 
-    /// Returns `true` if the key or index is [`Key`].
+    /// Returns `true` if the key or index is [`ValueKey`].
     ///
-    /// [`Key`]: KeyOrIndex::Key
-    pub fn is_key(&self) -> bool {
-        matches!(self, Self::Key(..))
+    /// [`ValueKey`]: KeyOrIndex::ValueKey
+    pub fn is_value_key(&self) -> bool {
+        matches!(self, Self::ValueKey(..))
     }
 
-    /// Returns `true` if the key or index is [`AnnoKey`].
+    /// Returns `true` if the key or index is [`AnnotationKey`].
     ///
-    /// [`Key`]: KeyOrIndex::Key
+    /// [`AnnotationKey`]: KeyOrIndex::AnnotationKey
     pub fn is_annotation_key(&self) -> bool {
         matches!(self, Self::AnnotationKey(..))
     }
@@ -73,8 +73,8 @@ impl KeyOrIndex {
         }
     }
 
-    pub fn as_key(&self) -> Option<&Key> {
-        if let Self::Key(v) = self {
+    pub fn as_value_key(&self) -> Option<&Key> {
+        if let Self::ValueKey(v) = self {
             Some(v)
         } else {
             None
@@ -92,7 +92,7 @@ impl KeyOrIndex {
     pub fn to_join_string(&self) -> String {
         match self {
             KeyOrIndex::Index(_) => format!(".{}", self),
-            KeyOrIndex::Key(_) => format!(".{}", self),
+            KeyOrIndex::ValueKey(_) => format!(".{}", self),
             KeyOrIndex::AnnotationKey(_) => format!("@{}", self),
         }
     }
@@ -194,7 +194,7 @@ impl Keys {
     pub fn all_text_range(&self) -> TextRange {
         join_ranges(self.keys.iter().filter_map(|key| match key {
             KeyOrIndex::Index(_) => None,
-            KeyOrIndex::Key(k) => k.text_range(),
+            KeyOrIndex::ValueKey(k) => k.text_range(),
             KeyOrIndex::AnnotationKey(k) => k.text_range(),
         }))
     }

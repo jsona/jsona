@@ -26,7 +26,7 @@
 //! parts of it might be missing.
 //!
 //! ```
-//! use taplo::parser::parse;
+//! use jsona::parser::parse;
 //! const SOURCE: &str = r#"
 //! {
 //!   createPost: { @describe("Create a blog post") @mixin(["createPost", "auth1"])

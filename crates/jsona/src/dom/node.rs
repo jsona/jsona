@@ -200,7 +200,10 @@ impl Node {
             Node::Object(t) => {
                 let entries = t.inner.entries.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_flat(Keys::new(once(KeyOrIndex::new_key(key.clone()))), &mut all);
+                    entry.collect_flat(
+                        Keys::new(once(KeyOrIndex::new_value_key(key.clone()))),
+                        &mut all,
+                    );
                 }
             }
             Node::Array(arr) => {
@@ -215,7 +218,10 @@ impl Node {
         if let Some(annotations) = self.annotations() {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                entry.collect_flat(Keys::new(once(KeyOrIndex::new_key(key.clone()))), &mut all);
+                entry.collect_flat(
+                    Keys::new(once(KeyOrIndex::new_value_key(key.clone()))),
+                    &mut all,
+                );
             }
         }
 
@@ -323,7 +329,7 @@ impl Node {
                     None
                 }
             }
-            KeyOrIndex::Key(k) => {
+            KeyOrIndex::ValueKey(k) => {
                 if let Node::Object(obj) = self {
                     obj.get(k)
                 } else {
@@ -346,7 +352,7 @@ impl Node {
                 all.push((parent.clone(), self.clone()));
                 let entries = t.inner.entries.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_flat(parent.join(KeyOrIndex::new_key(key.clone())), all);
+                    entry.collect_flat(parent.join(KeyOrIndex::new_value_key(key.clone())), all);
                 }
             }
             Node::Array(arr) => {
@@ -365,7 +371,7 @@ impl Node {
             all.push((parent.clone(), self.clone()));
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                entry.collect_flat(parent.join(KeyOrIndex::new_key(key.clone())), all);
+                entry.collect_flat(parent.join(KeyOrIndex::new_value_key(key.clone())), all);
             }
         }
     }

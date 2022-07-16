@@ -54,9 +54,9 @@ pub(crate) fn keys_from_syntax(
                         .into();
 
                         if at_token {
-                            keys.push(KeyOrIndex::new_anno_key(key));
+                            keys.push(KeyOrIndex::new_annotation_key(key));
                         } else {
-                            keys.push(KeyOrIndex::new_key(key));
+                            keys.push(KeyOrIndex::new_value_key(key));
                         }
                     }
                     _ => {}
