@@ -21,7 +21,7 @@
 //! will build a syntax tree that can be traversed.
 //!
 //! If there were no syntax errors during parsing, then a [`dom::Node`]
-//! can be constructed. It will build a DOM tree and validate the TOML document according
+//! can be constructed. It will build a DOM tree and validate the JSONA document according
 //! to the specification. A DOM tree can be constructed even with syntax errors present, however
 //! parts of it might be missing.
 //!

@@ -26,8 +26,8 @@ macro_rules! wrap_node {
 
         impl $crate::private::Sealed for $name {}
         impl $crate::dom::node::DomNode for $name {
-            fn root_syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
-                self.inner.root_syntax.as_ref()
+            fn value_syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
+                self.inner.value_syntax.as_ref()
             }
             fn syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
                 self.inner.syntax.as_ref()
@@ -67,7 +67,7 @@ macro_rules! wrap_node {
 }
 
 pub trait DomNode: Sized + Sealed {
-    fn root_syntax(&self) -> Option<&SyntaxElement>;
+    fn value_syntax(&self) -> Option<&SyntaxElement>;
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
     fn annotations(&self) -> Option<&Annotations>;
@@ -97,10 +97,10 @@ macro_rules! impl_dom_node_for_node {
         )*
     ) => {
 impl DomNode for Node {
-    fn root_syntax(&self) -> Option<&SyntaxElement> {
+    fn value_syntax(&self) -> Option<&SyntaxElement> {
         match self {
             $(
-            Node::$elm(v) => v.root_syntax(),
+            Node::$elm(v) => v.value_syntax(),
             )*
         }
     }
@@ -170,7 +170,7 @@ impl Node {
             Node::from(
                 InvalidInner {
                     errors: Shared::from(Vec::from([Error::Query(QueryError::NotFound)])),
-                    root_syntax: None,
+                    value_syntax: None,
                     syntax: None,
                     annotations: None,
                 }
@@ -501,7 +501,7 @@ value_from!(Null, Float, Integer, Str, Bool, Array, Object, Invalid,);
 pub(crate) struct NullInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
 }
 
@@ -524,7 +524,7 @@ impl Null {
 pub(crate) struct BoolInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<bool>,
 }
@@ -558,7 +558,7 @@ impl Bool {
 pub(crate) struct IntegerInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: IntegerRepr,
     pub(crate) value: OnceCell<IntegerValue>,
@@ -624,7 +624,7 @@ pub enum IntegerRepr {
 pub(crate) struct FloatInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<f64>,
 }
@@ -660,7 +660,7 @@ impl Float {
 pub(crate) struct StrInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: StrRepr,
     pub(crate) value: OnceCell<String>,
@@ -721,7 +721,7 @@ pub enum StrRepr {
 pub(crate) struct ArrayInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) items: Shared<Vec<Node>>,
 }
@@ -749,7 +749,7 @@ impl Array {
 pub(crate) struct ObjectInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) entries: Shared<Entries>,
 }
@@ -781,7 +781,7 @@ impl Object {
 #[derive(Debug)]
 pub(crate) struct InvalidInner {
     pub(crate) errors: Shared<Vec<Error>>,
-    pub(crate) root_syntax: Option<SyntaxElement>,
+    pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
 }
@@ -898,7 +898,7 @@ impl Key {
 
 impl Sealed for Key {}
 impl DomNode for Key {
-    fn root_syntax(&self) -> Option<&SyntaxElement> {
+    fn value_syntax(&self) -> Option<&SyntaxElement> {
         self.inner.syntax.as_ref()
     }
 
@@ -1035,7 +1035,7 @@ impl Annotations {
 
 impl Sealed for Annotations {}
 impl DomNode for Annotations {
-    fn root_syntax(&self) -> Option<&SyntaxElement> {
+    fn value_syntax(&self) -> Option<&SyntaxElement> {
         None
     }
 

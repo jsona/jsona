@@ -18,7 +18,7 @@ impl Node {
             Value::Bool(value::Bool { value, .. }) => BoolInner {
                 errors: Default::default(),
                 syntax: None,
-                root_syntax: None,
+                value_syntax: None,
                 annotations,
                 value: (*value).into(),
             }
@@ -27,7 +27,7 @@ impl Node {
             Value::Integer(value::Integer { value, .. }) => IntegerInner {
                 errors: Default::default(),
                 syntax: None,
-                root_syntax: None,
+                value_syntax: None,
                 annotations,
                 repr: IntegerRepr::Dec,
                 value: (*value).into(),
@@ -37,7 +37,7 @@ impl Node {
             Value::Float(value::Float { value, .. }) => FloatInner {
                 errors: Default::default(),
                 syntax: None,
-                root_syntax: None,
+                value_syntax: None,
                 annotations,
                 value: (*value).into(),
             }
@@ -46,7 +46,7 @@ impl Node {
             Value::Str(value::Str { value, .. }) => StrInner {
                 errors: Default::default(),
                 syntax: None,
-                root_syntax: None,
+                value_syntax: None,
                 annotations,
                 repr: StrRepr::Double,
                 value: value.to_string().into(),
@@ -58,7 +58,7 @@ impl Node {
                 ArrayInner {
                     errors: Default::default(),
                     syntax: None,
-                    root_syntax: None,
+                    value_syntax: None,
                     annotations,
                     items: items.into(),
                 }
@@ -73,7 +73,7 @@ impl Node {
                 ObjectInner {
                     errors: Default::default(),
                     syntax: None,
-                    root_syntax: None,
+                    value_syntax: None,
                     annotations,
                     entries: entries.into(),
                 }

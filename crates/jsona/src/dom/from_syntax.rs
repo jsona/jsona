@@ -109,7 +109,7 @@ fn scalar_from_syntax(
         NULL => NullInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
         }
         .wrap()
@@ -117,7 +117,7 @@ fn scalar_from_syntax(
         BOOL => BoolInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             value: Default::default(),
         }
@@ -126,7 +126,7 @@ fn scalar_from_syntax(
         INTEGER => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             value: Default::default(),
             repr: IntegerRepr::Dec,
@@ -136,7 +136,7 @@ fn scalar_from_syntax(
         INTEGER_BIN => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             value: Default::default(),
             repr: IntegerRepr::Bin,
@@ -146,7 +146,7 @@ fn scalar_from_syntax(
         INTEGER_HEX => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             value: Default::default(),
             repr: IntegerRepr::Hex,
@@ -156,7 +156,7 @@ fn scalar_from_syntax(
         INTEGER_OCT => IntegerInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             value: Default::default(),
             repr: IntegerRepr::Oct,
@@ -166,7 +166,7 @@ fn scalar_from_syntax(
         FLOAT => FloatInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             value: Default::default(),
         }
@@ -175,7 +175,7 @@ fn scalar_from_syntax(
         SINGLE_QUOTE => StrInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             repr: StrRepr::Single,
             value: Default::default(),
@@ -185,7 +185,7 @@ fn scalar_from_syntax(
         DOUBLE_QUOTE => StrInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             repr: StrRepr::Double,
             value: Default::default(),
@@ -195,7 +195,7 @@ fn scalar_from_syntax(
         BACKTICK_QUOTE => StrInner {
             errors: errors.into(),
             syntax: Some(syntax),
-            root_syntax: Some(root),
+            value_syntax: Some(root),
             annotations,
             repr: StrRepr::Backtick,
             value: Default::default(),
@@ -224,7 +224,7 @@ fn array_from_syntax(
 
     ArrayInner {
         errors: Default::default(),
-        root_syntax: Some(root),
+        value_syntax: Some(root),
         syntax: Some(syntax.into()),
         annotations,
         items: items.into(),
@@ -250,7 +250,7 @@ fn object_from_syntax(
     }
     ObjectInner {
         errors: errors.into(),
-        root_syntax: Some(root),
+        value_syntax: Some(root),
         syntax: Some(syntax.into()),
         annotations,
         entries: entries.into(),
@@ -364,7 +364,7 @@ fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) 
     }]);
     InvalidInner {
         errors: errors.into(),
-        root_syntax: Some(syntax.clone()),
+        value_syntax: Some(syntax.clone()),
         syntax: Some(syntax),
         annotations,
     }

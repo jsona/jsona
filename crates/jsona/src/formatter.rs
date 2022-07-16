@@ -1,4 +1,4 @@
-//! This module is used to format TOML.
+//! This module is used to format JSONA.
 //!
 //! The formatting can be done on documents that might
 //! contain invalid syntax. In that case the invalid part is skipped.
@@ -215,8 +215,16 @@ impl Scope {
         self.formatted.borrow_mut().push_str(&ident);
         ident.len()
     }
-    pub(crate) fn read(&self) -> String {
-        self.formatted.borrow().to_string()
+    pub(crate) fn output(&self) -> String {
+        let trailing_newline = self.options.trailing_newline;
+        let mut formatted = self.formatted.borrow().to_string();
+        if formatted.ends_with('\n') {
+            formatted.truncate(formatted.len() - 1);
+        }
+        if trailing_newline {
+            formatted += "\n";
+        }
+        formatted
     }
     pub(crate) fn ident_string(&self) -> String {
         self.options.indent_string.repeat(self.level)
@@ -309,27 +317,30 @@ impl Context {
 /// Parses then formats a JSONA document, skipping ranges that contain syntax errors.
 pub fn format(src: &str, options: Options) -> String {
     let p = parser::parse(src);
-    let trailing_newline = options.trailing_newline;
     let scope = Scope {
         options: Rc::new(options),
-        level: 0,
-        formatted: Default::default(),
-        kind: ScopeKind::Root,
-        compact: false,
+        ..Default::default()
     };
     let mut ctx = Context {
         col_offset: 0,
         value_commas: vec![],
     };
     format_value(scope.clone(), p.into_syntax(), &mut ctx);
-    let mut formatted = scope.read();
-    if formatted.ends_with('\n') {
-        formatted.truncate(formatted.len() - 1);
-    }
-    if trailing_newline {
-        formatted += "\n";
-    }
-    formatted
+    scope.output()
+}
+
+/// Formats a parsed JSONA syntax tree.
+pub fn format_syntax(node: SyntaxNode, options: Options) -> String {
+    let scope = Scope {
+        options: Rc::new(options),
+        ..Default::default()
+    };
+    let mut ctx = Context {
+        col_offset: 0,
+        value_commas: vec![],
+    };
+    format_value(scope.clone(), node, &mut ctx);
+    scope.output()
 }
 
 fn format_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {

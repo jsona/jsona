@@ -9,7 +9,7 @@ impl Node {
         if scope.is_last_char(',') {
             scope.remove_last_char();
         }
-        scope.read()
+        scope.output()
     }
 }
 
