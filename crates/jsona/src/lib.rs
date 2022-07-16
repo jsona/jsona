@@ -53,10 +53,6 @@
 //! assert!(parse_result.errors.is_empty());
 //!
 //! let root_node = parse_result.into_dom();
-//!
-//! // Check for semantic errors.
-//! // In this example "value" is a duplicate key.
-//! assert!(root_node.validate().is_err());
 //! ```
 
 pub mod dom;

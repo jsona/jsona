@@ -1,5 +1,6 @@
 use super::node::Key;
 use crate::syntax::SyntaxElement;
+use crate::util::pattern::PatternError;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
@@ -18,6 +19,8 @@ pub enum Error {
 pub enum QueryError {
     #[error("the key or index was not found")]
     NotFound,
+    #[error("invalid glob pattern: {0}")]
+    InvalidGlob(#[from] PatternError),
     #[error("the given key is invalid: {0}")]
     InvalidKey(crate::parser::Error),
 }

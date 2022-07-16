@@ -1,7 +1,9 @@
 use super::error::{Error, QueryError};
 use super::from_syntax::keys_from_syntax;
 use super::node::Key;
+use super::KeyMatchKind;
 use crate::parser::Parser;
+use crate::util::pattern::Pattern;
 use crate::util::text_range::join_ranges;
 
 use rowan::TextRange;
@@ -30,7 +32,7 @@ impl core::fmt::Display for KeyOrIndex {
         match self {
             KeyOrIndex::Index(v) => v.fmt(f),
             KeyOrIndex::ValueKey(v) => v.fmt(f),
-            KeyOrIndex::AnnotationKey(v) => v.fmt(f),
+            KeyOrIndex::AnnotationKey(v) => write!(f, "@{}", v),
         }
     }
 }
@@ -93,7 +95,15 @@ impl KeyOrIndex {
         match self {
             KeyOrIndex::Index(_) => format!(".{}", self),
             KeyOrIndex::ValueKey(_) => format!(".{}", self),
-            KeyOrIndex::AnnotationKey(_) => format!("@{}", self),
+            KeyOrIndex::AnnotationKey(_) => format!("{}", self),
+        }
+    }
+
+    pub fn match_kind(&self) -> KeyMatchKind {
+        match self {
+            KeyOrIndex::Index(_) => KeyMatchKind::Normal,
+            KeyOrIndex::ValueKey(v) => v.match_kind(),
+            KeyOrIndex::AnnotationKey(v) => v.match_kind(),
         }
     }
 }
@@ -220,6 +230,9 @@ impl FromStr for Keys {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            return Ok(Keys::new(vec![].into_iter()));
+        }
         let mut p = Parser::new(s).parse_keys_only();
         if let Some(err) = p.errors.pop() {
             return Err(QueryError::InvalidKey(err).into());
@@ -251,25 +264,161 @@ where
     }
 }
 
+#[derive(Debug)]
+pub struct KeysMatcher {
+    keys1: Pattern,
+    keys2: Pattern,
+    match_kind: KeyMatchKind,
+    match_children: bool,
+    keys: Keys,
+    value: String,
+}
+
+impl KeysMatcher {
+    pub fn new(keys: &Keys, match_children: bool) -> Result<Self, Error> {
+        let mut keys1 = String::new();
+        let mut keys2 = String::new();
+        let mut match_kind = KeyMatchKind::Normal;
+        let mut at = false;
+        for k in keys.iter() {
+            if !at && k.is_annotation_key() {
+                at = true;
+            }
+            let keys = match at {
+                true => &mut keys2,
+                false => &mut keys1,
+            };
+            if keys.is_empty() {
+                keys.push_str(&k.to_string());
+            } else {
+                keys.push_str(&k.to_join_string());
+            }
+            match_kind = match_kind.max(k.match_kind())
+        }
+        Ok(Self {
+            value: format!("{}{}", keys1, keys2),
+            keys1: Pattern::new(&keys1).map_err(QueryError::InvalidGlob)?,
+            keys2: Pattern::new(&keys2).map_err(QueryError::InvalidGlob)?,
+            match_kind,
+            match_children,
+            keys: keys.clone(),
+        })
+    }
+    pub fn is_match(&self, keys: &Keys) -> bool {
+        match (self.match_kind, self.match_children) {
+            (KeyMatchKind::Normal, true) => {
+                if self.keys.len() > keys.len() {
+                    return false;
+                }
+                keys.to_string().starts_with(&self.value)
+            }
+            (KeyMatchKind::Normal, false) => {
+                if self.keys.len() != keys.len() {
+                    return false;
+                }
+                keys.to_string() == self.value
+            }
+            (KeyMatchKind::MatchOne, true) => {
+                if self.keys.len() > keys.len() {
+                    return false;
+                }
+                let (k1, k2) = Self::split(keys);
+                self.keys1.matches(&k1) && self.keys2.matches(&k2)
+            }
+            (KeyMatchKind::MatchOne, false) => {
+                let (k1, k2) = Self::split(keys);
+                if self.keys.len() != keys.len() {
+                    return false;
+                }
+                self.keys1.matches(&k1) && self.keys2.matches(&k2)
+            }
+            (KeyMatchKind::MatchMulti, _) => {
+                if self.keys.len() > keys.len() {
+                    return false;
+                }
+                let (k1, k2) = Self::split(keys);
+                self.keys1.matches(&k1) && self.keys2.matches(&k2)
+            }
+        }
+    }
+
+    fn split(keys: &Keys) -> (String, String) {
+        let mut keys1 = String::new();
+        let mut keys2 = String::new();
+        let mut at = false;
+        for k in keys.iter() {
+            if !at && k.is_annotation_key() {
+                at = true;
+            }
+            let keys = match at {
+                true => &mut keys2,
+                false => &mut keys1,
+            };
+            if keys.is_empty() {
+                keys.push_str(&k.to_string());
+            } else {
+                keys.push_str(&k.to_join_string());
+            }
+        }
+        (keys1, keys2)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_parse_keys() {
-        let keys = [
-            "object.array.1.foo",
-            "object.array[1].foo",
-            "object.array[*].foo",
-            "object.array.*.foo",
-            "dependencies.tokio-*.version",
-            "object.array.1.foo@bar",
-            "*@foo",
-            "**@foo",
-        ];
-        for v in keys {
-            let keys: Result<Keys, _> = v.parse();
-            assert!(keys.is_ok());
-        }
+        assert!("object.array.1.foo".parse::<Keys>().is_ok());
+        assert!("object.array.1.foo".parse::<Keys>().is_ok());
+        assert!("object.array[1].foo".parse::<Keys>().is_ok());
+        assert!("object.array[*].foo".parse::<Keys>().is_ok());
+        assert!("object.array.*.foo".parse::<Keys>().is_ok());
+        assert!("dependencies.tokio*.version".parse::<Keys>().is_ok());
+        assert!("object.array.1.foo@bar".parse::<Keys>().is_ok());
+        assert!(r#"object."a-b""#.parse::<Keys>().is_ok());
+        assert!("*@foo".parse::<Keys>().is_ok());
+        assert!("**@foo".parse::<Keys>().is_ok());
+        assert!("".parse::<Keys>().is_ok());
+    }
+
+    #[test]
+    fn test_parse_keys_fails() {
+        assert!("object..1".parse::<Keys>().is_err());
+        assert!("object.a-b".parse::<Keys>().is_err());
+        assert!("object.a-*".parse::<Keys>().is_err());
+        assert!("object.a**".parse::<Keys>().is_err());
+        assert!("*@foo@bar".parse::<Keys>().is_err());
+    }
+
+    #[test]
+    fn test_keys_to_string() {
+        assert_eq!(
+            "object.array[1].foo".parse::<Keys>().unwrap().to_string(),
+            "object.array.1.foo"
+        );
+        assert_eq!(
+            "object.array.'1'.foo".parse::<Keys>().unwrap().to_string(),
+            "object.array.'1'.foo"
+        );
+        assert_eq!(
+            "object.array.'a-b'.foo"
+                .parse::<Keys>()
+                .unwrap()
+                .to_string(),
+            "object.array.'a-b'.foo"
+        );
+        assert_eq!(
+            "dependencies.tokio*.version"
+                .parse::<Keys>()
+                .unwrap()
+                .to_string(),
+            "dependencies.tokio*.version"
+        );
+        assert_eq!(
+            r#"object."a-b""#.parse::<Keys>().unwrap().to_string(),
+            r#"object."a-b""#
+        );
     }
 }

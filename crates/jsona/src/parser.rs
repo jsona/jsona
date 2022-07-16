@@ -210,21 +210,7 @@ impl<'p> Parser<'p> {
                 }
             }
             DOUBLE_QUOTE | SINGLE_QUOTE => {
-                match allowed_chars::string(self.lexer.slice()) {
-                    Ok(_) => {}
-                    Err(err_indices) => {
-                        for e in err_indices {
-                            let span = self.lexer.span();
-                            self.add_error(&Error {
-                                range: TextRange::new(
-                                    TextSize::from((span.start + e) as u32),
-                                    TextSize::from((span.start + e) as u32),
-                                ),
-                                message: "invalid character in string".into(),
-                            });
-                        }
-                    }
-                };
+                self.validate_string();
                 if let Err(err_indices) = check_escape(self.lexer.slice()) {
                     for e in err_indices {
                         self.add_error(&Error {
@@ -239,21 +225,7 @@ impl<'p> Parser<'p> {
                 with_node!(self.builder, SCALAR, self.consume_current_token())
             }
             BACKTICK_QUOTE => {
-                match allowed_chars::backtick_string(self.lexer.slice()) {
-                    Ok(_) => {}
-                    Err(err_indices) => {
-                        for e in err_indices {
-                            let span = self.lexer.span();
-                            self.add_error(&Error {
-                                range: TextRange::new(
-                                    TextSize::from((span.start + e) as u32),
-                                    TextSize::from((span.start + e) as u32),
-                                ),
-                                message: "invalid character in string".into(),
-                            });
-                        }
-                    }
-                };
+                self.validate_backtick();
                 with_node!(self.builder, SCALAR, self.consume_current_token())
             }
             _ => self.consume_error_token("expected value"),
@@ -320,8 +292,9 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_keys(&mut self) -> ParserResult<()> {
-        let mut start = true;
+        let mut virgin = true;
         let mut after_period = false;
+        let mut caught_at = false;
         loop {
             let t = match self.peek_token() {
                 Ok(token) => token,
@@ -335,38 +308,47 @@ impl<'p> Parser<'p> {
 
             match t {
                 AT => {
-                    if after_period {
+                    if after_period || caught_at {
                         return self.consume_error_token(r#"unexpected "@""#);
                     } else {
                         self.consume_current_token()?;
+                        caught_at = true;
                         after_period = true;
                     }
                 }
                 PERIOD => {
-                    if after_period || start {
+                    if after_period || virgin {
                         return self.consume_error_token(r#"unexpected ".""#);
                     } else {
                         self.consume_current_token()?;
                         after_period = true;
                     }
                 }
-                FLOAT if !self.lexer.slice().starts_with(['+', '-']) => {
-                    let mut dot = false;
-                    for s in self.lexer.slice().split('.') {
-                        if s.is_empty() {
-                            self.consume_token(PERIOD, ".");
-                            dot = true;
-                        } else {
-                            self.consume_token(IDENT, s);
-                            dot = false;
+                FLOAT => {
+                    let value = self.lexer.slice();
+                    if value.starts_with(['+', '-']) {
+                        return self.consume_error_token(r#"unexpect identifier"#);
+                    } else {
+                        let mut dot = false;
+                        for (i, s) in value.split('.').enumerate() {
+                            if s.is_empty() {
+                                if i == 0 && (after_period || virgin) {
+                                    return self.consume_error_token(r#"unexpect ".""#);
+                                }
+                                self.consume_token(PERIOD, ".");
+                                dot = true;
+                            } else {
+                                self.consume_token(IDENT, s);
+                                dot = false;
+                            }
                         }
+                        if dot {
+                            after_period = true;
+                        }
+                        self.next_token();
                     }
-                    if dot {
-                        after_period = true;
-                    }
-                    self.next_token();
                 }
-                BRACKET_START if self.glob_key => {
+                BRACKET_START => {
                     self.next_token();
 
                     self.parse_key()?;
@@ -380,7 +362,7 @@ impl<'p> Parser<'p> {
                     after_period = false;
                 }
                 _ => {
-                    if after_period || start {
+                    if after_period || virgin {
                         match self.parse_key() {
                             Ok(_) => {}
                             Err(_) => {
@@ -389,7 +371,7 @@ impl<'p> Parser<'p> {
                             }
                         }
                         after_period = false;
-                        start = false;
+                        virgin = false
                     } else {
                         return self.consume_error_token("unexpected identifier");
                     }
@@ -403,7 +385,21 @@ impl<'p> Parser<'p> {
 
         match t {
             IDENT => self.consume_current_token(),
-            IDENT_WITH_GLOB if self.glob_key => self.consume_current_token(),
+            IDENT_WITH_GLOB if self.glob_key => {
+                if let Err(err_indices) = validates::glob(self.lexer.slice()) {
+                    for e in err_indices {
+                        let span = self.lexer.span();
+                        self.add_error(&Error {
+                            range: TextRange::new(
+                                TextSize::from((span.start + e) as u32),
+                                TextSize::from((span.start + e) as u32),
+                            ),
+                            message: "invalid glob".into(),
+                        });
+                    }
+                };
+                self.consume_current_token()
+            }
             NULL | BOOL => self.consume_current_token(),
             INTEGER_HEX | INTEGER_BIN | INTEGER_OCT => self.consume_current_token(),
             INTEGER => {
@@ -414,21 +410,7 @@ impl<'p> Parser<'p> {
                 }
             }
             SINGLE_QUOTE | DOUBLE_QUOTE => {
-                match allowed_chars::string(self.lexer.slice()) {
-                    Ok(_) => {}
-                    Err(err_indices) => {
-                        for e in err_indices {
-                            let span = self.lexer.span();
-                            self.add_error(&Error {
-                                range: TextRange::new(
-                                    TextSize::from((span.start + e) as u32),
-                                    TextSize::from((span.start + e) as u32),
-                                ),
-                                message: "invalid control character in string".into(),
-                            });
-                        }
-                    }
-                };
+                self.validate_string();
                 self.consume_current_token()
             }
             FLOAT => {
@@ -506,19 +488,16 @@ impl<'p> Parser<'p> {
             match token {
                 LINE_COMMENT | BLOCK_COMMENT => {
                     let multiline = token == BLOCK_COMMENT;
-                    match allowed_chars::comment(self.lexer.slice(), multiline) {
-                        Ok(_) => {}
-                        Err(err_indices) => {
-                            for e in err_indices {
-                                let span = self.lexer.span();
-                                self.add_error(&Error {
-                                    range: TextRange::new(
-                                        TextSize::from((span.start + e) as u32),
-                                        TextSize::from((span.start + e) as u32),
-                                    ),
-                                    message: "invalid character in comment".into(),
-                                });
-                            }
+                    if let Err(err_indices) = validates::comment(self.lexer.slice(), multiline) {
+                        for e in err_indices {
+                            let span = self.lexer.span();
+                            self.add_error(&Error {
+                                range: TextRange::new(
+                                    TextSize::from((span.start + e) as u32),
+                                    TextSize::from((span.start + e) as u32),
+                                ),
+                                message: "invalid character in comment".into(),
+                            });
                         }
                     };
 
@@ -563,6 +542,35 @@ impl<'p> Parser<'p> {
             }
         }
         self.errors.push(e.clone());
+    }
+
+    fn validate_string(&mut self) {
+        if let Err(err_indices) = validates::string(self.lexer.slice()) {
+            for e in err_indices {
+                let span = self.lexer.span();
+                self.add_error(&Error {
+                    range: TextRange::new(
+                        TextSize::from((span.start + e) as u32),
+                        TextSize::from((span.start + e) as u32),
+                    ),
+                    message: "invalid character in string".into(),
+                });
+            }
+        };
+    }
+    fn validate_backtick(&mut self) {
+        if let Err(err_indices) = validates::backtick_string(self.lexer.slice()) {
+            for e in err_indices {
+                let span = self.lexer.span();
+                self.add_error(&Error {
+                    range: TextRange::new(
+                        TextSize::from((span.start + e) as u32),
+                        TextSize::from((span.start + e) as u32),
+                    ),
+                    message: "invalid character in string".into(),
+                });
+            }
+        };
     }
 }
 
@@ -609,7 +617,7 @@ impl Parse {
     }
 }
 
-pub(crate) mod allowed_chars {
+pub(crate) mod validates {
     pub(crate) fn comment(s: &str, multiline: bool) -> Result<(), Vec<usize>> {
         let mut err_indices = Vec::new();
 
@@ -655,6 +663,22 @@ pub(crate) mod allowed_chars {
             }
         }
 
+        if err_indices.is_empty() {
+            Ok(())
+        } else {
+            Err(err_indices)
+        }
+    }
+
+    pub(crate) fn glob(s: &str) -> Result<(), Vec<usize>> {
+        let mut err_indices = Vec::new();
+
+        if s == "*" || s == "**" {
+            return Ok(());
+        }
+        if let Some(i) = s.find("**") {
+            err_indices.push(i);
+        }
         if err_indices.is_empty() {
             Ok(())
         } else {

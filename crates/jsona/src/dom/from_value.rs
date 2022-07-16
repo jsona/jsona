@@ -6,7 +6,7 @@ use super::*;
 
 impl Node {
     pub fn from_value(value: &Value) -> Self {
-        let annotations = from_value_annotaions(value.get_annotations());
+        let annotations = from_value_annotaions(value.annotations());
 
         match value {
             Value::Null(value::Null { .. }) => NullInner {

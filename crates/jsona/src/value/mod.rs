@@ -174,7 +174,22 @@ impl Value {
     define_value_fns!(Object, Object, is_object, as_object);
     define_value_fns!(Array, Array, is_array, as_array);
 
-    pub fn get_annotations(&self) -> &IndexMap<String, PlainValue> {
+    pub fn new_array(arr: impl IntoIterator<Item = Self>) -> Self {
+        Array {
+            annotations: Default::default(),
+            value: arr.into_iter().collect(),
+        }
+        .into()
+    }
+    pub fn new_object(obj: impl IntoIterator<Item = (String, Self)>) -> Self {
+        Object {
+            annotations: Default::default(),
+            value: obj.into_iter().collect(),
+        }
+        .into()
+    }
+
+    pub fn annotations(&self) -> &IndexMap<String, PlainValue> {
         match self {
             Value::Null(Null { annotations, .. }) => annotations,
             Value::Bool(Bool { annotations, .. }) => annotations,
@@ -185,7 +200,7 @@ impl Value {
             Value::Object(Object { annotations, .. }) => annotations,
         }
     }
-    pub fn get_annotations_mut(&mut self) -> &mut IndexMap<String, PlainValue> {
+    pub fn annotations_mut(&mut self) -> &mut IndexMap<String, PlainValue> {
         match self {
             Value::Null(Null { annotations, .. }) => annotations,
             Value::Bool(Bool { annotations, .. }) => annotations,
@@ -254,6 +269,12 @@ impl PlainValue {
     define_annotation_value_fns!(Str, String, is_str, as_str);
     define_annotation_value_fns!(Object, IndexMap<String, PlainValue>, is_object, as_object);
     define_annotation_value_fns!(Array, Vec<PlainValue>, is_array, as_array);
+    pub fn new_array(arr: impl IntoIterator<Item = Self>) -> Self {
+        PlainValue::Array(arr.into_iter().collect())
+    }
+    pub fn new_object(obj: impl IntoIterator<Item = (String, Self)>) -> Self {
+        PlainValue::Object(obj.into_iter().collect())
+    }
 }
 
 impl From<Value> for PlainValue {

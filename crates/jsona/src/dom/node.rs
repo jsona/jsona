@@ -1,5 +1,6 @@
 use super::error::{Error, QueryError};
 use super::keys::{KeyOrIndex, Keys};
+use super::KeysMatcher;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
 use crate::util::quote::{quote, unquote, QuoteType};
@@ -219,13 +220,29 @@ impl Node {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
                 entry.collect_flat(
-                    Keys::new(once(KeyOrIndex::new_value_key(key.clone()))),
+                    Keys::new(once(KeyOrIndex::new_annotation_key(key.clone()))),
                     &mut all,
                 );
             }
         }
 
         all.into_iter()
+    }
+
+    pub fn matches_all(
+        &self,
+        keys: Keys,
+        match_children: bool,
+    ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, Error> {
+        let all: Vec<(Keys, Node)> = self.flat_iter().collect();
+        let matcher = KeysMatcher::new(&keys, match_children)?;
+        let mut output = vec![];
+        for (k, v) in all {
+            if matcher.is_match(&k) {
+                output.push((k, v));
+            }
+        }
+        Ok(output.into_iter())
     }
 
     pub fn jsona_text(&self) -> Option<String> {
@@ -368,10 +385,12 @@ impl Node {
         }
 
         if let Some(annotations) = self.annotations() {
-            all.push((parent.clone(), self.clone()));
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                entry.collect_flat(parent.join(KeyOrIndex::new_value_key(key.clone())), all);
+                entry.collect_flat(
+                    parent.join(KeyOrIndex::new_annotation_key(key.clone())),
+                    all,
+                );
             }
         }
     }
@@ -812,7 +831,7 @@ pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) is_valid: bool,
-    pub(crate) is_glob: bool,
+    pub(crate) match_kind: KeyMatchKind,
     pub(crate) value: OnceCell<String>,
 }
 
@@ -849,7 +868,7 @@ impl Key {
             errors: Default::default(),
             syntax: None,
             is_valid: true,
-            is_glob: false,
+            match_kind: KeyMatchKind::Normal,
             value: OnceCell::from(key.into()),
         }
         .into()
@@ -887,8 +906,8 @@ impl Key {
         })
     }
 
-    pub fn is_glob(&self) -> bool {
-        self.inner.is_glob
+    pub fn match_kind(&self) -> KeyMatchKind {
+        self.inner.match_kind
     }
 
     pub fn text_range(&self) -> Option<TextRange> {
@@ -900,6 +919,13 @@ impl Key {
             .map(|v| vec![v].into_iter())
             .unwrap_or_else(|| vec![].into_iter())
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum KeyMatchKind {
+    Normal,
+    MatchOne,
+    MatchMulti,
 }
 
 impl Sealed for Key {}

@@ -20,12 +20,12 @@ pub enum SyntaxKind {
     #[regex(r"//[^\n]*")]
     LINE_COMMENT,
 
-    #[regex(r"[A-Za-z0-9_-]+", priority = 2)]
+    #[regex(r"[A-Za-z0-9_]+", priority = 2)]
     IDENT,
 
     /// Not part of the regular JSONA syntax, only used to allow
     /// glob patterns in keys.
-    #[regex(r"[*?A-Za-z0-9_-]+")]
+    #[regex(r"[*?A-Za-z0-9_]+")]
     IDENT_WITH_GLOB,
 
     #[token(".")]
@@ -294,5 +294,9 @@ mod tests {
         assert_lex!("true", SyntaxKind::BOOL);
         assert_lex!("false", SyntaxKind::BOOL);
         assert_lex!("null", SyntaxKind::NULL);
+        assert_lex!("api*", SyntaxKind::IDENT_WITH_GLOB);
+        assert_lex!("a?i*", SyntaxKind::IDENT_WITH_GLOB);
+        assert_lex!("*", SyntaxKind::IDENT_WITH_GLOB);
+        assert_lex!("**", SyntaxKind::IDENT_WITH_GLOB);
     }
 }

@@ -8,6 +8,7 @@ use super::{
 };
 
 use crate::{
+    dom::KeyMatchKind,
     syntax::{SyntaxElement, SyntaxKind::*},
     util::shared::Shared,
 };
@@ -37,23 +38,24 @@ pub(crate) fn keys_from_syntax(
         .as_node()
         .map(|syntax| {
             let mut keys = vec![];
-            let mut at_token = false;
+            let mut after_at = false;
             for child in syntax.children_with_tokens() {
                 match child.kind() {
-                    AT => at_token = true,
-                    PERIOD => at_token = false,
+                    AT => after_at = true,
+                    PERIOD => after_at = false,
 
                     k if k.is_key() => {
+                        let match_kind = match_kind_from_syntax(&child);
                         let key = KeyInner {
                             errors: Shared::default(),
                             syntax: Some(child),
                             is_valid: true,
-                            is_glob: k == IDENT_WITH_GLOB,
+                            match_kind,
                             value: Default::default(),
                         }
                         .into();
 
-                        if at_token {
+                        if after_at {
                             keys.push(KeyOrIndex::new_annotation_key(key));
                         } else {
                             keys.push(KeyOrIndex::new_value_key(key));
@@ -69,14 +71,14 @@ pub(crate) fn keys_from_syntax(
 
 pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
     assert!(syntax.kind() == KEY);
-    if let Some(syntax) =
+    if let Some(child) =
         first_value_child(&syntax).and_then(|v| if v.kind().is_key() { Some(v) } else { None })
     {
         KeyInner {
             errors: Shared::default(),
-            syntax: Some(syntax),
+            syntax: Some(child.clone()),
             is_valid: true,
-            is_glob: false,
+            match_kind: match_kind_from_syntax(&child),
             value: Default::default(),
         }
         .into()
@@ -86,7 +88,7 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
                 syntax: syntax.clone(),
             }])),
             is_valid: false,
-            is_glob: false,
+            match_kind: KeyMatchKind::Normal,
             value: Default::default(),
             syntax: Some(syntax),
         }
@@ -388,4 +390,17 @@ fn add_entry(entries: &mut Entries, errors: &mut Vec<Error>, key: Key, node: Nod
     }
 
     entries.add(key, node);
+}
+
+fn match_kind_from_syntax(syntax: &SyntaxElement) -> KeyMatchKind {
+    match syntax.kind() {
+        IDENT_WITH_GLOB => {
+            if syntax.to_string() == "**" {
+                KeyMatchKind::MatchMulti
+            } else {
+                KeyMatchKind::MatchOne
+            }
+        }
+        _ => KeyMatchKind::Normal,
+    }
 }
