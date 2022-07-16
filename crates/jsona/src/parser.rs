@@ -117,8 +117,7 @@ impl<'p> Parser<'p> {
     fn parse_anno_entry(&mut self) -> ParserResult<()> {
         self.must_token_or(AT, r#"expected "@""#)?;
         if self.annotation_scope {
-            let err = self.build_error("nexted annotation");
-            self.add_error(&err);
+            self.report_error("nested annotation");
         }
         let _ = with_node!(self.builder, KEY, self.parse_key());
         if let Ok(PARENTHESES_START) = self.peek_token() {
@@ -287,8 +286,7 @@ impl<'p> Parser<'p> {
                     return self.consume_current_token();
                 }
                 AT => {
-                    let err = self.build_error(r#"unexpected "@""#);
-                    self.add_error(&err);
+                    self.report_error(r#"unexpected "@""#);
                     self.parse_annotations()?;
                 }
                 _ => {
@@ -309,8 +307,7 @@ impl<'p> Parser<'p> {
                     return self.consume_current_token();
                 }
                 AT => {
-                    let err = self.build_error(r#"unexpected "@""#);
-                    self.add_error(&err);
+                    self.report_error(r#"unexpected "@""#);
                     self.parse_annotations()?;
                 }
                 _ => {
@@ -324,12 +321,12 @@ impl<'p> Parser<'p> {
 
     fn parse_keys(&mut self) -> ParserResult<()> {
         let mut start = true;
-        let mut after_delimiter = false;
+        let mut after_period = false;
         loop {
             let t = match self.peek_token() {
                 Ok(token) => token,
                 Err(_) => {
-                    if !after_delimiter {
+                    if !after_period {
                         return Ok(());
                     }
                     return self.consume_error_token("unexpected EOF");
@@ -338,28 +335,60 @@ impl<'p> Parser<'p> {
 
             match t {
                 AT => {
-                    if after_delimiter {
+                    if after_period {
                         return self.consume_error_token(r#"unexpected "@""#);
                     } else {
                         self.consume_current_token()?;
-                        after_delimiter = true;
+                        after_period = true;
                     }
                 }
                 PERIOD => {
-                    if after_delimiter || start {
+                    if after_period || start {
                         return self.consume_error_token(r#"unexpected ".""#);
                     } else {
                         self.consume_current_token()?;
-                        after_delimiter = true;
+                        after_period = true;
                     }
                 }
+                FLOAT if !self.lexer.slice().starts_with(['+', '-']) => {
+                    let mut dot = false;
+                    for s in self.lexer.slice().split('.') {
+                        if s.is_empty() {
+                            self.consume_token(PERIOD, ".");
+                            dot = true;
+                        } else {
+                            self.consume_token(IDENT, s);
+                            dot = false;
+                        }
+                    }
+                    if dot {
+                        after_period = true;
+                    }
+                    self.next_token();
+                }
+                BRACKET_START if self.glob_key => {
+                    self.next_token();
+
+                    self.parse_key()?;
+
+                    let token = self.peek_token()?;
+
+                    if !matches!(token, BRACKET_END) {
+                        self.consume_error_token(r#"expected "]""#)?;
+                    }
+                    self.next_token();
+                    after_period = false;
+                }
                 _ => {
-                    if after_delimiter || start {
+                    if after_period || start {
                         match self.parse_key() {
                             Ok(_) => {}
-                            Err(_) => return self.report_error("expected identifier"),
+                            Err(_) => {
+                                self.report_error("expected identifier");
+                                return Err(());
+                            }
                         }
-                        after_delimiter = false;
+                        after_period = false;
                         start = false;
                     } else {
                         return self.consume_error_token("unexpected identifier");
@@ -419,8 +448,7 @@ impl<'p> Parser<'p> {
         match self.peek_token() {
             Ok(t) => Ok(t),
             Err(_) => {
-                let err = self.build_error("unexpected EOF");
-                self.add_error(&err);
+                self.report_error("unexpected EOF");
                 Err(())
             }
         }
@@ -428,7 +456,10 @@ impl<'p> Parser<'p> {
 
     fn must_peek_eof(&mut self) -> ParserResult<()> {
         match self.peek_token() {
-            Ok(_) => self.report_error("expected EOF"),
+            Ok(_) => {
+                self.report_error("expected EOF");
+                Err(())
+            }
             Err(_) => Ok(()),
         }
     }
@@ -438,7 +469,8 @@ impl<'p> Parser<'p> {
         if kind == t {
             self.consume_current_token()
         } else {
-            self.report_error(message)
+            self.report_error(message);
+            Err(())
         }
     }
 
@@ -453,9 +485,7 @@ impl<'p> Parser<'p> {
     }
 
     fn consume_error_token(&mut self, message: &str) -> ParserResult<()> {
-        let err = self.build_error(message);
-
-        self.add_error(&err);
+        self.report_error(message);
 
         self.consume_token(ERROR, self.lexer.slice());
 
@@ -513,22 +543,17 @@ impl<'p> Parser<'p> {
         self.current_token = None;
     }
 
-    fn report_error(&mut self, message: &str) -> ParserResult<()> {
-        let err = self.build_error(message);
-        self.add_error(&err);
-        Err(())
-    }
-
-    fn build_error(&mut self, message: &str) -> Error {
+    fn report_error(&mut self, message: &str) {
         let span = self.lexer.span();
 
-        Error {
+        let err = Error {
             range: TextRange::new(
                 TextSize::from(span.start as u32),
                 TextSize::from(span.end as u32),
             ),
             message: message.into(),
-        }
+        };
+        self.add_error(&err);
     }
 
     fn add_error(&mut self, e: &Error) {

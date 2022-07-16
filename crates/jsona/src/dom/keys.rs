@@ -250,3 +250,26 @@ where
         Keys::new(once(v.into().into()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_keys() {
+        let keys = [
+            "object.array.1.foo",
+            "object.array[1].foo",
+            "object.array[*].foo",
+            "object.array.*.foo",
+            "dependencies.tokio-*.version",
+            "object.array.1.foo@bar",
+            "*@foo",
+            "**@foo",
+        ];
+        for v in keys {
+            let keys: Result<Keys, _> = v.parse();
+            assert!(keys.is_ok());
+        }
+    }
+}
