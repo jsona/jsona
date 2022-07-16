@@ -70,7 +70,7 @@ fn write_value(scope: Scope, value: &Node) {
     }
 }
 
-fn write_scalar<T: Display>(scope: Scope, value: T, annotations: &Option<Annotations>) {
+fn write_scalar<T: Display>(scope: Scope, value: T, annotations: Option<&Annotations>) {
     if scope.kind == ScopeKind::Array {
         scope.write_ident();
         scope.write(format!("{},", value));
@@ -82,7 +82,7 @@ fn write_scalar<T: Display>(scope: Scope, value: T, annotations: &Option<Annotat
     write_annotations(scope, annotations);
 }
 
-fn write_annotations(scope: Scope, annotations: &Option<Annotations>) {
+fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
     match annotations {
         Some(annotations) => {
             let annotations = annotations.entries().read();

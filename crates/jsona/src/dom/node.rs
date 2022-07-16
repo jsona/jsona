@@ -37,8 +37,11 @@ macro_rules! wrap_node {
                 &self.inner.errors
             }
 
-            fn annotations(&self) -> &Option<$crate::dom::node::Annotations> {
-                &self.inner.annotations
+            fn annotations(&self) -> Option<&$crate::dom::node::Annotations> {
+                self.inner.annotations.as_ref()
+            }
+            fn get_annotation(&self,  key: &Key) -> Option<$crate::dom::node::Node> {
+                self.annotations().and_then(|v| v.get(key))
             }
 
             fn validate_node(&self) -> Result<(), &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>>> {
@@ -67,7 +70,8 @@ pub trait DomNode: Sized + Sealed {
     fn root_syntax(&self) -> Option<&SyntaxElement>;
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
-    fn annotations(&self) -> &Option<Annotations>;
+    fn annotations(&self) -> Option<&Annotations>;
+    fn get_annotation(&self, key: &Key) -> Option<Node>;
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>>;
     fn is_valid_node(&self) -> bool {
         self.validate_node().is_ok()
@@ -86,73 +90,67 @@ pub enum Node {
     Invalid(Invalid),
 }
 
-impl Sealed for Node {}
+macro_rules! impl_dom_node_for_node {
+    (
+        $(
+          $elm:ident,
+        )*
+    ) => {
 impl DomNode for Node {
     fn root_syntax(&self) -> Option<&SyntaxElement> {
         match self {
-            Node::Null(n) => n.root_syntax(),
-            Node::Bool(n) => n.root_syntax(),
-            Node::Integer(n) => n.root_syntax(),
-            Node::Float(n) => n.root_syntax(),
-            Node::Str(n) => n.root_syntax(),
-            Node::Array(n) => n.root_syntax(),
-            Node::Object(n) => n.root_syntax(),
-            Node::Invalid(n) => n.root_syntax(),
+            $(
+            Node::$elm(v) => v.root_syntax(),
+            )*
         }
     }
 
     fn syntax(&self) -> Option<&SyntaxElement> {
         match self {
-            Node::Null(n) => n.syntax(),
-            Node::Bool(n) => n.syntax(),
-            Node::Integer(n) => n.syntax(),
-            Node::Float(n) => n.syntax(),
-            Node::Str(n) => n.syntax(),
-            Node::Array(n) => n.syntax(),
-            Node::Object(n) => n.syntax(),
-            Node::Invalid(n) => n.syntax(),
+            $(
+            Node::$elm(v) => v.syntax(),
+            )*
         }
     }
 
     fn errors(&self) -> &Shared<Vec<Error>> {
         match self {
-            Node::Null(n) => n.errors(),
-            Node::Bool(n) => n.errors(),
-            Node::Integer(n) => n.errors(),
-            Node::Float(n) => n.errors(),
-            Node::Str(n) => n.errors(),
-            Node::Array(n) => n.errors(),
-            Node::Object(n) => n.errors(),
-            Node::Invalid(n) => n.errors(),
+            $(
+            Node::$elm(v) => v.errors(),
+            )*
         }
     }
 
-    fn annotations(&self) -> &Option<Annotations> {
+    fn annotations(&self) -> Option<&Annotations> {
         match self {
-            Node::Null(n) => n.annotations(),
-            Node::Bool(n) => n.annotations(),
-            Node::Integer(n) => n.annotations(),
-            Node::Float(n) => n.annotations(),
-            Node::Str(n) => n.annotations(),
-            Node::Array(n) => n.annotations(),
-            Node::Object(n) => n.annotations(),
-            Node::Invalid(n) => n.annotations(),
+            $(
+            Node::$elm(v) => v.annotations(),
+            )*
+        }
+    }
+
+    fn get_annotation(&self, key: &Key) -> Option<Node> {
+        match self {
+            $(
+            Node::$elm(v) => v.get_annotation(key),
+            )*
         }
     }
 
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
         match self {
-            Node::Null(n) => n.validate_node(),
-            Node::Bool(n) => n.validate_node(),
-            Node::Integer(n) => n.validate_node(),
-            Node::Float(n) => n.validate_node(),
-            Node::Str(n) => n.validate_node(),
-            Node::Array(n) => n.validate_node(),
-            Node::Object(n) => n.validate_node(),
-            Node::Invalid(n) => n.validate_node(),
+            $(
+            Node::$elm(v) => v.validate_node(),
+            )*
         }
     }
 }
+    };
+}
+
+impl Sealed for Node {}
+
+impl_dom_node_for_node!(Null, Float, Integer, Str, Bool, Array, Object, Invalid,);
 
 impl Node {
     pub fn path(&self, keys: &Keys) -> Option<Node> {
@@ -327,14 +325,14 @@ impl Node {
             }
             KeyOrIndex::Key(k) => {
                 if let Node::Object(obj) = self {
-                    obj.get(k.clone())
+                    obj.get(k)
                 } else {
                     None
                 }
             }
             KeyOrIndex::AnnotationKey(k) => {
                 if let Some(annotations) = self.annotations() {
-                    annotations.get(k.clone())
+                    annotations.get(k)
                 } else {
                     None
                 }
@@ -762,10 +760,9 @@ wrap_node! {
 }
 
 impl Object {
-    pub fn get(&self, key: impl Into<Key>) -> Option<Node> {
-        let key = key.into();
+    pub fn get(&self, key: &Key) -> Option<Node> {
         let entries = self.inner.entries.read();
-        entries.lookup.get(&key).cloned()
+        entries.lookup.get(key).cloned()
     }
 
     pub fn entries(&self) -> &Shared<Entries> {
@@ -913,8 +910,12 @@ impl DomNode for Key {
         &self.inner.errors
     }
 
-    fn annotations(&self) -> &Option<Annotations> {
-        &None
+    fn annotations(&self) -> Option<&Annotations> {
+        None
+    }
+
+    fn get_annotation(&self, _key: &Key) -> Option<Node> {
+        None
     }
 
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -1022,10 +1023,9 @@ pub struct Annotations {
 }
 
 impl Annotations {
-    pub fn get(&self, key: impl Into<Key>) -> Option<Node> {
-        let key = key.into();
+    pub fn get(&self, key: &Key) -> Option<Node> {
         let entries = self.inner.entries.read();
-        entries.lookup.get(&key).cloned()
+        entries.lookup.get(key).cloned()
     }
 
     pub fn entries(&self) -> &Shared<Entries> {
@@ -1047,8 +1047,12 @@ impl DomNode for Annotations {
         &self.inner.errors
     }
 
-    fn annotations(&self) -> &Option<Annotations> {
-        &None
+    fn annotations(&self) -> Option<&Annotations> {
+        None
+    }
+
+    fn get_annotation(&self, _key: &Key) -> Option<Node> {
+        None
     }
 
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
