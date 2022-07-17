@@ -1,6 +1,5 @@
 use super::error::{Error, QueryError};
 use super::keys::{KeyOrIndex, Keys};
-use super::KeysMatcher;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
 use crate::util::quote::{quote, unquote, QuoteType};
@@ -201,10 +200,8 @@ impl Node {
             Node::Object(t) => {
                 let entries = t.inner.entries.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_flat(
-                        Keys::new(once(KeyOrIndex::new_value_key(key.clone()))),
-                        &mut all,
-                    );
+                    entry
+                        .collect_flat(Keys::new(once(KeyOrIndex::ValueKey(key.clone()))), &mut all);
                 }
             }
             Node::Array(arr) => {
@@ -220,7 +217,7 @@ impl Node {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
                 entry.collect_flat(
-                    Keys::new(once(KeyOrIndex::new_annotation_key(key.clone()))),
+                    Keys::new(once(KeyOrIndex::AnnotationKey(key.clone()))),
                     &mut all,
                 );
             }
@@ -235,10 +232,9 @@ impl Node {
         match_children: bool,
     ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, Error> {
         let all: Vec<(Keys, Node)> = self.flat_iter().collect();
-        let matcher = KeysMatcher::new(&keys, match_children)?;
         let mut output = vec![];
         for (k, v) in all {
-            if matcher.is_match(&k) {
+            if keys.is_match(&k, match_children) {
                 output.push((k, v));
             }
         }
@@ -336,8 +332,8 @@ impl Node {
         ranges.into_iter()
     }
 
-    fn get_impl(&self, idx: &KeyOrIndex) -> Option<Node> {
-        match idx {
+    fn get_impl(&self, key: &KeyOrIndex) -> Option<Node> {
+        match key {
             KeyOrIndex::Index(v) => {
                 if let Node::Array(arr) = self {
                     let items = arr.items().read();
@@ -360,6 +356,7 @@ impl Node {
                     None
                 }
             }
+            _ => None,
         }
     }
 
@@ -369,7 +366,7 @@ impl Node {
                 all.push((parent.clone(), self.clone()));
                 let entries = t.inner.entries.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_flat(parent.join(KeyOrIndex::new_value_key(key.clone())), all);
+                    entry.collect_flat(parent.join(KeyOrIndex::ValueKey(key.clone())), all);
                 }
             }
             Node::Array(arr) => {
@@ -387,10 +384,7 @@ impl Node {
         if let Some(annotations) = self.annotations() {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                entry.collect_flat(
-                    parent.join(KeyOrIndex::new_annotation_key(key.clone())),
-                    all,
-                );
+                entry.collect_flat(parent.join(KeyOrIndex::AnnotationKey(key.clone())), all);
             }
         }
     }
@@ -831,7 +825,6 @@ pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) is_valid: bool,
-    pub(crate) match_kind: KeyMatchKind,
     pub(crate) value: OnceCell<String>,
 }
 
@@ -868,7 +861,6 @@ impl Key {
             errors: Default::default(),
             syntax: None,
             is_valid: true,
-            match_kind: KeyMatchKind::Normal,
             value: OnceCell::from(key.into()),
         }
         .into()
@@ -882,7 +874,7 @@ impl Key {
                 .as_ref()
                 .and_then(NodeOrToken::as_token)
                 .map(|s| {
-                    let quote_type = match s.text().chars().nth(1) {
+                    let quote_type = match s.text().chars().next() {
                         Some('\'') => QuoteType::Single,
                         Some('"') => QuoteType::Double,
                         Some('`') => QuoteType::Backtick,
@@ -906,10 +898,6 @@ impl Key {
         })
     }
 
-    pub fn match_kind(&self) -> KeyMatchKind {
-        self.inner.match_kind
-    }
-
     pub fn text_range(&self) -> Option<TextRange> {
         self.syntax().map(|v| v.text_range())
     }
@@ -919,13 +907,6 @@ impl Key {
             .map(|v| vec![v].into_iter())
             .unwrap_or_else(|| vec![].into_iter())
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum KeyMatchKind {
-    Normal,
-    MatchOne,
-    MatchMulti,
 }
 
 impl Sealed for Key {}
@@ -971,10 +952,6 @@ impl AsRef<str> for Key {
 
 impl core::fmt::Display for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(s) = &self.inner.syntax {
-            return s.fmt(f);
-        }
-
         quote(self.value(), false).fmt(f)
     }
 }

@@ -1,3 +1,5 @@
+use rowan::NodeOrToken;
+
 use super::{
     error::Error,
     keys::KeyOrIndex,
@@ -8,7 +10,6 @@ use super::{
 };
 
 use crate::{
-    dom::KeyMatchKind,
     syntax::{SyntaxElement, SyntaxKind::*},
     util::shared::Shared,
 };
@@ -39,27 +40,52 @@ pub(crate) fn keys_from_syntax(
         .map(|syntax| {
             let mut keys = vec![];
             let mut after_at = false;
+            let mut after_bracket = false;
             for child in syntax.children_with_tokens() {
+                let child = match child {
+                    NodeOrToken::Node(_) => continue,
+                    NodeOrToken::Token(v) => v,
+                };
                 match child.kind() {
                     AT => after_at = true,
-                    PERIOD => after_at = false,
-
+                    BRACKET_START => after_bracket = true,
                     k if k.is_key() => {
-                        let match_kind = match_kind_from_syntax(&child);
+                        let text = child.text();
                         let key = KeyInner {
                             errors: Shared::default(),
-                            syntax: Some(child),
+                            syntax: Some(child.clone().into()),
                             is_valid: true,
-                            match_kind,
                             value: Default::default(),
                         }
                         .into();
-
                         if after_at {
-                            keys.push(KeyOrIndex::new_annotation_key(key));
+                            keys.push(KeyOrIndex::AnnotationKey(key));
+                        } else if after_bracket {
+                            if k == INTEGER {
+                                if let Ok(idx) = text.parse::<usize>() {
+                                    keys.push(KeyOrIndex::Index(idx));
+                                }
+                            } else if k == IDENT_WITH_GLOB {
+                                keys.push(KeyOrIndex::GlobIndex(text.to_string()));
+                            } else {
+                                keys.push(KeyOrIndex::ValueKey(key))
+                            }
+                        } else if k == IDENT_WITH_GLOB {
+                            if text == "**" {
+                                match keys.last() {
+                                    Some(KeyOrIndex::AnyRecursive) => {}
+                                    _ => {
+                                        keys.push(KeyOrIndex::AnyRecursive);
+                                    }
+                                }
+                            } else {
+                                keys.push(KeyOrIndex::GlobKey(text.to_string()));
+                            }
                         } else {
-                            keys.push(KeyOrIndex::new_value_key(key));
+                            keys.push(KeyOrIndex::ValueKey(key))
                         }
+                        after_at = false;
+                        after_bracket = false;
                     }
                     _ => {}
                 }
@@ -76,9 +102,8 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
     {
         KeyInner {
             errors: Shared::default(),
-            syntax: Some(child.clone()),
+            syntax: Some(child),
             is_valid: true,
-            match_kind: match_kind_from_syntax(&child),
             value: Default::default(),
         }
         .into()
@@ -88,7 +113,6 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
                 syntax: syntax.clone(),
             }])),
             is_valid: false,
-            match_kind: KeyMatchKind::Normal,
             value: Default::default(),
             syntax: Some(syntax),
         }
@@ -390,17 +414,4 @@ fn add_entry(entries: &mut Entries, errors: &mut Vec<Error>, key: Key, node: Nod
     }
 
     entries.add(key, node);
-}
-
-fn match_kind_from_syntax(syntax: &SyntaxElement) -> KeyMatchKind {
-    match syntax.kind() {
-        IDENT_WITH_GLOB => {
-            if syntax.to_string() == "**" {
-                KeyMatchKind::MatchMulti
-            } else {
-                KeyMatchKind::MatchOne
-            }
-        }
-        _ => KeyMatchKind::Normal,
-    }
 }

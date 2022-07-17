@@ -1,5 +1,5 @@
 pub(crate) mod shared;
 
-pub mod pattern;
+pub mod glob_key;
 pub mod quote;
 pub mod text_range;

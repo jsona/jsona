@@ -317,7 +317,7 @@ impl<'p> Parser<'p> {
                     }
                 }
                 PERIOD => {
-                    if after_period || virgin {
+                    if after_period {
                         return self.consume_error_token(r#"unexpected ".""#);
                     } else {
                         self.consume_current_token()?;
@@ -349,7 +349,7 @@ impl<'p> Parser<'p> {
                     }
                 }
                 BRACKET_START => {
-                    self.next_token();
+                    self.consume_current_token()?;
 
                     self.parse_key()?;
 
@@ -358,7 +358,8 @@ impl<'p> Parser<'p> {
                     if !matches!(token, BRACKET_END) {
                         self.consume_error_token(r#"expected "]""#)?;
                     }
-                    self.next_token();
+                    self.consume_current_token()?;
+
                     after_period = false;
                 }
                 _ => {
@@ -413,7 +414,7 @@ impl<'p> Parser<'p> {
                 self.validate_string();
                 self.consume_current_token()
             }
-            FLOAT => {
+            FLOAT if !self.glob_key => {
                 if self.lexer.slice().starts_with('0') {
                     self.consume_error_token("zero-padded numbers are not allowed")
                 } else if self.lexer.slice().starts_with('+') {

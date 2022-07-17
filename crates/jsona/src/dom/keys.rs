@@ -1,9 +1,8 @@
 use super::error::{Error, QueryError};
 use super::from_syntax::keys_from_syntax;
 use super::node::Key;
-use super::KeyMatchKind;
 use crate::parser::Parser;
-use crate::util::pattern::Pattern;
+use crate::util::glob_key::glob_key;
 use crate::util::text_range::join_ranges;
 
 use rowan::TextRange;
@@ -16,6 +15,9 @@ pub enum KeyOrIndex {
     Index(usize),
     ValueKey(Key),
     AnnotationKey(Key),
+    GlobIndex(String),
+    GlobKey(String),
+    AnyRecursive,
 }
 
 impl<N> From<N> for KeyOrIndex
@@ -30,80 +32,31 @@ where
 impl core::fmt::Display for KeyOrIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KeyOrIndex::Index(v) => v.fmt(f),
-            KeyOrIndex::ValueKey(v) => v.fmt(f),
+            KeyOrIndex::Index(v) => write!(f, "[{}]", v),
+            KeyOrIndex::ValueKey(v) => write!(f, ".{}", v),
             KeyOrIndex::AnnotationKey(v) => write!(f, "@{}", v),
+            KeyOrIndex::GlobIndex(v) => write!(f, "[{}]", v),
+            KeyOrIndex::GlobKey(v) => write!(f, ".{}", v),
+            KeyOrIndex::AnyRecursive => write!(f, "**"),
         }
     }
 }
 
 impl KeyOrIndex {
-    pub fn new_value_key(k: Key) -> Self {
-        Self::ValueKey(k)
-    }
-
-    pub fn new_annotation_key(k: Key) -> Self {
-        Self::AnnotationKey(k)
-    }
-
-    /// Returns `true` if the key or index is [`Index`].
-    ///
-    /// [`Index`]: KeyOrIndex::Index
-    pub fn is_index(&self) -> bool {
-        matches!(self, Self::Index(..))
-    }
-
-    /// Returns `true` if the key or index is [`ValueKey`].
-    ///
-    /// [`ValueKey`]: KeyOrIndex::ValueKey
-    pub fn is_value_key(&self) -> bool {
-        matches!(self, Self::ValueKey(..))
-    }
-
-    /// Returns `true` if the key or index is [`AnnotationKey`].
-    ///
-    /// [`AnnotationKey`]: KeyOrIndex::AnnotationKey
-    pub fn is_annotation_key(&self) -> bool {
-        matches!(self, Self::AnnotationKey(..))
-    }
-
-    pub fn as_index(&self) -> Option<&usize> {
-        if let Self::Index(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_value_key(&self) -> Option<&Key> {
-        if let Self::ValueKey(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_annotation_key(&self) -> Option<&Key> {
-        if let Self::AnnotationKey(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn to_join_string(&self) -> String {
+    pub fn is_match(&self, other: &Self) -> bool {
         match self {
-            KeyOrIndex::Index(_) => format!(".{}", self),
-            KeyOrIndex::ValueKey(_) => format!(".{}", self),
-            KeyOrIndex::AnnotationKey(_) => format!("{}", self),
-        }
-    }
-
-    pub fn match_kind(&self) -> KeyMatchKind {
-        match self {
-            KeyOrIndex::Index(_) => KeyMatchKind::Normal,
-            KeyOrIndex::ValueKey(v) => v.match_kind(),
-            KeyOrIndex::AnnotationKey(v) => v.match_kind(),
+            KeyOrIndex::Index(_) | KeyOrIndex::ValueKey(_) | KeyOrIndex::AnnotationKey(_) => {
+                self == other
+            }
+            KeyOrIndex::GlobIndex(k) => match other {
+                KeyOrIndex::Index(v) => glob_key(k, &v.to_string()),
+                _ => false,
+            },
+            KeyOrIndex::GlobKey(k) => match other {
+                KeyOrIndex::ValueKey(v) => glob_key(k, v.value()),
+                _ => false,
+            },
+            KeyOrIndex::AnyRecursive => true,
         }
     }
 }
@@ -112,6 +65,8 @@ impl KeyOrIndex {
 pub struct Keys {
     dotted: Arc<str>,
     keys: Arc<[KeyOrIndex]>,
+    all_plain: bool,
+    exist_any_recursive: bool,
 }
 
 impl Keys {
@@ -127,15 +82,28 @@ impl Keys {
     pub fn new(keys: impl Iterator<Item = KeyOrIndex>) -> Self {
         let keys: Arc<[KeyOrIndex]> = keys.collect();
         let mut dotted = String::new();
-        for (i, k) in keys.iter().enumerate() {
-            if i == 0 {
-                dotted.push_str(&k.to_string());
-            } else {
-                dotted.push_str(&k.to_join_string());
+        let mut all_plain = true;
+        let mut exist_any_recursive = false;
+        for k in keys.iter() {
+            match k {
+                KeyOrIndex::Index(_) | KeyOrIndex::ValueKey(_) | KeyOrIndex::AnnotationKey(_) => {}
+                KeyOrIndex::GlobIndex(_) | KeyOrIndex::GlobKey(_) => {
+                    all_plain = false;
+                }
+                KeyOrIndex::AnyRecursive => {
+                    all_plain = false;
+                    exist_any_recursive = true;
+                }
             }
+            dotted.push_str(&k.to_string());
         }
         let dotted: Arc<str> = Arc::from(dotted);
-        Self { keys, dotted }
+        Self {
+            keys,
+            dotted,
+            all_plain,
+            exist_any_recursive,
+        }
     }
 
     pub fn join(&self, key: impl Into<KeyOrIndex>) -> Self {
@@ -177,6 +145,9 @@ impl Keys {
     pub fn is_empty(&self) -> bool {
         self.keys.len() == 0
     }
+    pub fn is_plain(&self) -> bool {
+        self.all_plain
+    }
 
     pub fn common_prefix_count(&self, other: &Self) -> usize {
         self.iter()
@@ -203,10 +174,76 @@ impl Keys {
 
     pub fn all_text_range(&self) -> TextRange {
         join_ranges(self.keys.iter().filter_map(|key| match key {
-            KeyOrIndex::Index(_) => None,
             KeyOrIndex::ValueKey(k) => k.text_range(),
             KeyOrIndex::AnnotationKey(k) => k.text_range(),
+            _ => None,
         }))
+    }
+
+    pub fn is_match(&self, other: &Keys, match_children: bool) -> bool {
+        if !self.exist_any_recursive {
+            if self.len() > other.len() || !match_children && self.len() != other.len() {
+                false
+            } else {
+                self.iter()
+                    .zip(other.iter())
+                    .all(|(v1, v2)| v1.is_match(v2))
+            }
+        } else {
+            let keys: Vec<&KeyOrIndex> = self.iter().collect();
+            let target_keys: Vec<&KeyOrIndex> = other.iter().collect();
+            let mut i = 0;
+            let mut j = 0;
+            'outer: while i < self.len() {
+                let key = keys[i];
+                match key {
+                    KeyOrIndex::Index(_)
+                    | KeyOrIndex::ValueKey(_)
+                    | KeyOrIndex::AnnotationKey(_)
+                    | KeyOrIndex::GlobIndex(_)
+                    | KeyOrIndex::GlobKey(_) => match target_keys.get(j) {
+                        Some(target_key) => {
+                            if key.is_match(target_key) {
+                                j += 1;
+                                i += 1;
+                                continue;
+                            } else {
+                                return false;
+                            }
+                        }
+                        _ => return false,
+                    },
+                    KeyOrIndex::AnyRecursive => {
+                        if let Some(key) = keys.get(i + 1) {
+                            let mut matched_target = false;
+                            while let Some(target_key) = target_keys.get(j) {
+                                if key.is_match(target_key) {
+                                    matched_target = true;
+                                } else if matched_target {
+                                    j -= 1;
+                                    i += 2;
+                                    continue 'outer;
+                                }
+                                j += 1;
+                            }
+                            if matched_target {
+                                i += 2;
+                                continue 'outer;
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            return true;
+                        }
+                    }
+                }
+            }
+            if match_children {
+                true
+            } else {
+                j >= target_keys.len() - 1
+            }
+        }
     }
 }
 
@@ -264,161 +301,109 @@ where
     }
 }
 
-#[derive(Debug)]
-pub struct KeysMatcher {
-    keys1: Pattern,
-    keys2: Pattern,
-    match_kind: KeyMatchKind,
-    match_children: bool,
-    keys: Keys,
-    value: String,
-}
-
-impl KeysMatcher {
-    pub fn new(keys: &Keys, match_children: bool) -> Result<Self, Error> {
-        let mut keys1 = String::new();
-        let mut keys2 = String::new();
-        let mut match_kind = KeyMatchKind::Normal;
-        let mut at = false;
-        for k in keys.iter() {
-            if !at && k.is_annotation_key() {
-                at = true;
-            }
-            let keys = match at {
-                true => &mut keys2,
-                false => &mut keys1,
-            };
-            if keys.is_empty() {
-                keys.push_str(&k.to_string());
-            } else {
-                keys.push_str(&k.to_join_string());
-            }
-            match_kind = match_kind.max(k.match_kind())
-        }
-        Ok(Self {
-            value: format!("{}{}", keys1, keys2),
-            keys1: Pattern::new(&keys1).map_err(QueryError::InvalidGlob)?,
-            keys2: Pattern::new(&keys2).map_err(QueryError::InvalidGlob)?,
-            match_kind,
-            match_children,
-            keys: keys.clone(),
-        })
-    }
-    pub fn is_match(&self, keys: &Keys) -> bool {
-        match (self.match_kind, self.match_children) {
-            (KeyMatchKind::Normal, true) => {
-                if self.keys.len() > keys.len() {
-                    return false;
-                }
-                keys.to_string().starts_with(&self.value)
-            }
-            (KeyMatchKind::Normal, false) => {
-                if self.keys.len() != keys.len() {
-                    return false;
-                }
-                keys.to_string() == self.value
-            }
-            (KeyMatchKind::MatchOne, true) => {
-                if self.keys.len() > keys.len() {
-                    return false;
-                }
-                let (k1, k2) = Self::split(keys);
-                self.keys1.matches(&k1) && self.keys2.matches(&k2)
-            }
-            (KeyMatchKind::MatchOne, false) => {
-                let (k1, k2) = Self::split(keys);
-                if self.keys.len() != keys.len() {
-                    return false;
-                }
-                self.keys1.matches(&k1) && self.keys2.matches(&k2)
-            }
-            (KeyMatchKind::MatchMulti, _) => {
-                if self.keys.len() > keys.len() {
-                    return false;
-                }
-                let (k1, k2) = Self::split(keys);
-                self.keys1.matches(&k1) && self.keys2.matches(&k2)
-            }
-        }
-    }
-
-    fn split(keys: &Keys) -> (String, String) {
-        let mut keys1 = String::new();
-        let mut keys2 = String::new();
-        let mut at = false;
-        for k in keys.iter() {
-            if !at && k.is_annotation_key() {
-                at = true;
-            }
-            let keys = match at {
-                true => &mut keys2,
-                false => &mut keys1,
-            };
-            if keys.is_empty() {
-                keys.push_str(&k.to_string());
-            } else {
-                keys.push_str(&k.to_join_string());
-            }
-        }
-        (keys1, keys2)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    macro_rules! assert_parse_keys {
+        ($v1:literal) => {
+            assert_eq!($v1.parse::<Keys>().unwrap().to_string(), $v1);
+        };
+        ($v1:literal, $v2:literal) => {
+            assert_eq!($v1.parse::<Keys>().unwrap().to_string(), $v2);
+        };
+    }
+
+    macro_rules! assert_match_keys {
+        ($v1:literal, $v2:literal) => {
+            assert_eq!(
+                $v1.parse::<Keys>()
+                    .unwrap()
+                    .is_match(&$v2.parse::<Keys>().unwrap(), false),
+                true
+            );
+        };
+        ($v1:literal, $v2:literal, $v3:literal) => {
+            assert_eq!(
+                $v1.parse::<Keys>()
+                    .unwrap()
+                    .is_match(&$v2.parse::<Keys>().unwrap(), false),
+                $v3
+            );
+        };
+        ($v1:literal, $v2:literal, $v3:literal, $v4:literal) => {
+            assert_eq!(
+                $v1.parse::<Keys>()
+                    .unwrap()
+                    .is_match(&$v2.parse::<Keys>().unwrap(), $v4),
+                $v3
+            );
+        };
+    }
+
     #[test]
     fn test_parse_keys() {
-        assert!("object.array.1.foo".parse::<Keys>().is_ok());
-        assert!("object.array.1.foo".parse::<Keys>().is_ok());
-        assert!("object.array[1].foo".parse::<Keys>().is_ok());
-        assert!("object.array[*].foo".parse::<Keys>().is_ok());
-        assert!("object.array.*.foo".parse::<Keys>().is_ok());
-        assert!("dependencies.tokio*.version".parse::<Keys>().is_ok());
-        assert!("object.array.1.foo@bar".parse::<Keys>().is_ok());
-        assert!(r#"object."a-b""#.parse::<Keys>().is_ok());
-        assert!("*@foo".parse::<Keys>().is_ok());
-        assert!("**@foo".parse::<Keys>().is_ok());
-        assert!("".parse::<Keys>().is_ok());
+        assert_parse_keys!("");
+        assert_parse_keys!("[1]");
+        assert_parse_keys!("[*]");
+        assert_parse_keys!(".foo");
+        assert_parse_keys!("foo", ".foo");
+        assert_parse_keys!(".*");
+        assert_parse_keys!("**");
+        assert_parse_keys!("**.**", "**");
+        assert_parse_keys!(".foo.bar");
+        assert_parse_keys!(".foo@bar");
+        assert_parse_keys!("@foo");
+        assert_parse_keys!("[0].foo");
+        assert_parse_keys!("[0][1]");
+        assert_parse_keys!("[*].foo");
+        assert_parse_keys!("[*][1]");
+        assert_parse_keys!("[*]@foo");
+        assert_parse_keys!(".*@foo");
+        assert_parse_keys!(".foo*");
+        assert_parse_keys!(".foo.*");
+        assert_parse_keys!(".foo.*.bar");
+        assert_parse_keys!(r#".foo."ba-z""#, ".foo.'ba-z'");
+        assert_parse_keys!(r#".foo."ba z""#, ".foo.'ba z'");
+        assert_parse_keys!(".foo.1");
+        assert_parse_keys!(".foo.1.baz");
+        assert_parse_keys!(r#".foo."1".baz"#, ".foo.1.baz");
+        assert_parse_keys!("*foo", ".*foo");
+        assert_parse_keys!("**@foo");
+        assert_parse_keys!("**.*");
     }
 
     #[test]
     fn test_parse_keys_fails() {
-        assert!("object..1".parse::<Keys>().is_err());
-        assert!("object.a-b".parse::<Keys>().is_err());
-        assert!("object.a-*".parse::<Keys>().is_err());
-        assert!("object.a**".parse::<Keys>().is_err());
-        assert!("*@foo@bar".parse::<Keys>().is_err());
+        assert!("..foo".parse::<Keys>().is_err());
+        assert!("foo.b-z".parse::<Keys>().is_err());
+        assert!("foo.".parse::<Keys>().is_err());
+        assert!("foo.b-*".parse::<Keys>().is_err());
+        assert!("foo.b**".parse::<Keys>().is_err());
     }
 
     #[test]
-    fn test_keys_to_string() {
-        assert_eq!(
-            "object.array[1].foo".parse::<Keys>().unwrap().to_string(),
-            "object.array.1.foo"
-        );
-        assert_eq!(
-            "object.array.'1'.foo".parse::<Keys>().unwrap().to_string(),
-            "object.array.'1'.foo"
-        );
-        assert_eq!(
-            "object.array.'a-b'.foo"
-                .parse::<Keys>()
-                .unwrap()
-                .to_string(),
-            "object.array.'a-b'.foo"
-        );
-        assert_eq!(
-            "dependencies.tokio*.version"
-                .parse::<Keys>()
-                .unwrap()
-                .to_string(),
-            "dependencies.tokio*.version"
-        );
-        assert_eq!(
-            r#"object."a-b""#.parse::<Keys>().unwrap().to_string(),
-            r#"object."a-b""#
-        );
+    fn test_match_keys() {
+        assert_match_keys!("**", ".foo");
+        assert_match_keys!("**", "[1]");
+        assert_match_keys!("**", ".foo.bar");
+        assert_match_keys!(".*", ".foo");
+        assert_match_keys!(".*", ".foo.bar", false);
+        assert_match_keys!("**.a?c", ".abc");
+        assert_match_keys!("**.a?c", ".foo.abc");
+        assert_match_keys!("**.*", ".foo");
+        assert_match_keys!("**.*", ".foo.bar");
+        assert_match_keys!("**.*", "[1]", false);
+        assert_match_keys!("**[*]", "[1]");
+        assert_match_keys!("**[*]", ".foo", false);
+        assert_match_keys!(".abc", ".abc");
+        assert_match_keys!(".a*c", ".abc");
+        assert_match_keys!(".a*c", ".abbc");
+        assert_match_keys!(".a?c", ".abc");
+        assert_match_keys!(".a?c", ".abdc", false);
+        assert_match_keys!(".abc@foo", ".abc@foo");
+        assert_match_keys!("@foo", "@foo");
+        assert_match_keys!("**@foo", ".a.b@foo");
+        assert_match_keys!("**@foo", ".a@foo");
     }
 }
