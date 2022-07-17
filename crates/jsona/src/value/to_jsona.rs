@@ -29,10 +29,7 @@ fn write_value(scope: Scope, value: &Value) {
         Value::Bool(Bool { value, annotations }) => {
             write_scalar(scope, value, annotations);
         }
-        Value::Integer(Integer { value, annotations }) => {
-            write_scalar(scope, value, annotations);
-        }
-        Value::Float(Float { value, annotations }) => {
+        Value::Number(Number { value, annotations }) => {
             write_scalar(scope, value, annotations);
         }
         Value::Str(Str { value, annotations }) => {
@@ -99,8 +96,7 @@ fn write_annotations(scope: Scope, annotations: &IndexMap<String, PlainValue>) {
                 scope.write(format!(" @{}", key));
             }
             PlainValue::Bool(inner) => write_scalar_annotaion(scope.clone(), key, inner),
-            PlainValue::Integer(inner) => write_scalar_annotaion(scope.clone(), key, inner),
-            PlainValue::Float(inner) => write_scalar_annotaion(scope.clone(), key, inner),
+            PlainValue::Number(inner) => write_scalar_annotaion(scope.clone(), key, inner),
             PlainValue::Str(inner) => write_scalar_annotaion(scope.clone(), key, inner),
             PlainValue::Array(_) | PlainValue::Object(_) => {
                 scope.write("\n");

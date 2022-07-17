@@ -24,21 +24,12 @@ impl Node {
             }
             .wrap()
             .into(),
-            Value::Integer(value::Integer { value, .. }) => IntegerInner {
+            Value::Number(value::Number { value, .. }) => NumberInner {
                 errors: Default::default(),
                 syntax: None,
                 value_syntax: None,
                 annotations,
-                repr: IntegerRepr::Dec,
-                value: (*value).into(),
-            }
-            .wrap()
-            .into(),
-            Value::Float(value::Float { value, .. }) => FloatInner {
-                errors: Default::default(),
-                syntax: None,
-                value_syntax: None,
-                annotations,
+                repr: NumberRepr::Dec,
                 value: (*value).into(),
             }
             .wrap()

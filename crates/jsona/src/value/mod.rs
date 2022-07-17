@@ -13,8 +13,7 @@ use std::fmt::Formatter;
 pub enum Value {
     Null(Null),
     Bool(Bool),
-    Integer(Integer),
-    Float(Float),
+    Number(Number),
     Str(Str),
     Array(Array),
     Object(Object),
@@ -26,8 +25,7 @@ pub enum Value {
 pub enum PlainValue {
     Null,
     Bool(bool),
-    Integer(IntegerValue),
-    Float(f64),
+    Number(NumberValue),
     Str(String),
     Array(Vec<PlainValue>),
     Object(IndexMap<String, PlainValue>),
@@ -48,15 +46,8 @@ pub struct Bool {
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Integer {
-    pub value: IntegerValue,
-    pub annotations: IndexMap<String, PlainValue>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Float {
-    pub value: f64,
+pub struct Number {
+    pub value: NumberValue,
     pub annotations: IndexMap<String, PlainValue>,
 }
 
@@ -81,27 +72,37 @@ pub struct Object {
     pub annotations: IndexMap<String, PlainValue>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(untagged))]
-pub enum IntegerValue {
+pub enum NumberValue {
     Negative(i64),
     Positive(u64),
+    Float(f64),
 }
 
-impl IntegerValue {
+impl Eq for NumberValue {}
+
+impl NumberValue {
     /// Returns `true` if the integer value is [`Negative`].
     ///
-    /// [`Negative`]: IntegerValue::Negative
+    /// [`Negative`]: NumberValue::Negative
     pub fn is_negative(&self) -> bool {
         matches!(self, Self::Negative(..))
     }
 
     /// Returns `true` if the integer value is [`Positive`].
     ///
-    /// [`Positive`]: IntegerValue::Positive
+    /// [`Positive`]: NumberValue::Positive
     pub fn is_positive(&self) -> bool {
         matches!(self, Self::Positive(..))
+    }
+
+    /// Returns `true` if the float value is [`Float`].
+    ///
+    /// [`Float`]: NumberValue::Float
+    pub fn is_float(&self) -> bool {
+        matches!(self, Self::Float(..))
     }
 
     pub fn as_negative(&self) -> Option<i64> {
@@ -119,13 +120,22 @@ impl IntegerValue {
             None
         }
     }
+
+    pub fn as_float(&self) -> Option<f64> {
+        if let Self::Float(v) = self {
+            Some(*v)
+        } else {
+            None
+        }
+    }
 }
 
-impl core::fmt::Display for IntegerValue {
+impl core::fmt::Display for NumberValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            IntegerValue::Negative(v) => v.fmt(f),
-            IntegerValue::Positive(v) => v.fmt(f),
+            NumberValue::Negative(v) => v.fmt(f),
+            NumberValue::Positive(v) => v.fmt(f),
+            NumberValue::Float(v) => v.fmt(f),
         }
     }
 }
@@ -146,7 +156,7 @@ macro_rules! value_from {
     };
 }
 
-value_from!(Null, Float, Integer, Str, Bool, Array, Object,);
+value_from!(Null, Number, Str, Bool, Array, Object,);
 
 macro_rules! define_value_fns {
     ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident) => {
@@ -168,8 +178,7 @@ macro_rules! define_value_fns {
 impl Value {
     define_value_fns!(Null, Null, is_null, as_null);
     define_value_fns!(Bool, Bool, is_bool, as_bool);
-    define_value_fns!(Integer, Integer, is_integer, as_integer);
-    define_value_fns!(Float, Float, is_float, as_float);
+    define_value_fns!(Number, Number, is_number, as_nubmer);
     define_value_fns!(Str, Str, is_str, as_str);
     define_value_fns!(Object, Object, is_object, as_object);
     define_value_fns!(Array, Array, is_array, as_array);
@@ -193,8 +202,7 @@ impl Value {
         match self {
             Value::Null(Null { annotations, .. }) => annotations,
             Value::Bool(Bool { annotations, .. }) => annotations,
-            Value::Integer(Integer { annotations, .. }) => annotations,
-            Value::Float(Float { annotations, .. }) => annotations,
+            Value::Number(Number { annotations, .. }) => annotations,
             Value::Str(Str { annotations, .. }) => annotations,
             Value::Array(Array { annotations, .. }) => annotations,
             Value::Object(Object { annotations, .. }) => annotations,
@@ -204,8 +212,7 @@ impl Value {
         match self {
             Value::Null(Null { annotations, .. }) => annotations,
             Value::Bool(Bool { annotations, .. }) => annotations,
-            Value::Integer(Integer { annotations, .. }) => annotations,
-            Value::Float(Float { annotations, .. }) => annotations,
+            Value::Number(Number { annotations, .. }) => annotations,
             Value::Str(Str { annotations, .. }) => annotations,
             Value::Array(Array { annotations, .. }) => annotations,
             Value::Object(Object { annotations, .. }) => annotations,
@@ -219,8 +226,7 @@ impl From<PlainValue> for Value {
         match annotation {
             PlainValue::Null => Null { annotations }.into(),
             PlainValue::Bool(value) => Bool { value, annotations }.into(),
-            PlainValue::Integer(value) => Integer { value, annotations }.into(),
-            PlainValue::Float(value) => Float { value, annotations }.into(),
+            PlainValue::Number(value) => Number { value, annotations }.into(),
             PlainValue::Str(value) => Str { value, annotations }.into(),
             PlainValue::Array(value) => Array {
                 value: value.into_iter().map(|v| v.into()).collect(),
@@ -264,8 +270,7 @@ impl PlainValue {
         }
     }
     define_annotation_value_fns!(Bool, bool, is_bool, as_bool);
-    define_annotation_value_fns!(Integer, IntegerValue, is_integer, as_integer);
-    define_annotation_value_fns!(Float, f64, is_float, as_float);
+    define_annotation_value_fns!(Number, NumberValue, is_number, as_number);
     define_annotation_value_fns!(Str, String, is_str, as_str);
     define_annotation_value_fns!(Object, IndexMap<String, PlainValue>, is_object, as_object);
     define_annotation_value_fns!(Array, Vec<PlainValue>, is_array, as_array);
@@ -282,8 +287,7 @@ impl From<Value> for PlainValue {
         match annotation {
             Value::Null(_) => PlainValue::Null,
             Value::Bool(v) => PlainValue::Bool(v.value),
-            Value::Integer(v) => PlainValue::Integer(v.value),
-            Value::Float(v) => PlainValue::Float(v.value),
+            Value::Number(v) => PlainValue::Number(v.value),
             Value::Str(v) => PlainValue::Str(v.value),
             Value::Array(v) => PlainValue::Array(v.value.into_iter().map(|v| v.into()).collect()),
             Value::Object(v) => {

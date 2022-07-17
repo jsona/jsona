@@ -4,7 +4,7 @@ use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
 use crate::util::quote::{quote, unquote, QuoteType};
 use crate::util::shared::Shared;
-use crate::value::IntegerValue;
+use crate::value::NumberValue;
 
 use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};
@@ -82,8 +82,7 @@ pub trait DomNode: Sized + Sealed {
 pub enum Node {
     Null(Null),
     Bool(Bool),
-    Integer(Integer),
-    Float(Float),
+    Number(Number),
     Str(Str),
     Array(Array),
     Object(Object),
@@ -150,7 +149,7 @@ impl DomNode for Node {
 
 impl Sealed for Node {}
 
-impl_dom_node_for_node!(Null, Float, Integer, Str, Bool, Array, Object, Invalid,);
+impl_dom_node_for_node!(Null, Number, Str, Bool, Array, Object, Invalid,);
 
 impl Node {
     pub fn path(&self, keys: &Keys) -> Option<Node> {
@@ -251,14 +250,7 @@ impl Node {
                 };
                 Some(text)
             }
-            Node::Integer(v) => {
-                let text = match self.syntax() {
-                    Some(syntax) => syntax.to_string(),
-                    None => v.value().to_string(),
-                };
-                Some(text)
-            }
-            Node::Float(v) => {
+            Node::Number(v) => {
                 let text = match self.syntax() {
                     Some(syntax) => syntax.to_string(),
                     None => v.value().to_string(),
@@ -314,8 +306,7 @@ impl Node {
             }
             Node::Bool(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
             Node::Str(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-            Node::Integer(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-            Node::Float(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+            Node::Number(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
             Node::Null(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
             Node::Invalid(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
         }
@@ -426,12 +417,7 @@ impl Node {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
             }
-            Node::Integer(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
-                }
-            }
-            Node::Float(v) => {
+            Node::Number(v) => {
                 if let Err(errs) = v.validate_node() {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
@@ -490,8 +476,7 @@ macro_rules! define_value_fns {
 impl Node {
     define_value_fns!(Null, Null, is_null, as_null, try_info_null);
     define_value_fns!(Bool, Bool, is_bool, as_bool, try_into_bool);
-    define_value_fns!(Integer, Integer, is_integer, as_integer, try_into_integer);
-    define_value_fns!(Float, Float, is_float, as_float, try_into_float);
+    define_value_fns!(Number, Number, is_integer, as_integer, try_into_integer);
     define_value_fns!(Str, Str, is_str, as_str, try_into_str);
     define_value_fns!(Object, Object, is_object, as_object, try_into_object);
     define_value_fns!(Array, Array, is_array, as_array, try_into_array);
@@ -514,7 +499,7 @@ macro_rules! value_from {
     };
 }
 
-value_from!(Null, Float, Integer, Str, Bool, Array, Object, Invalid,);
+value_from!(Null, Number, Str, Bool, Array, Object, Invalid,);
 
 #[derive(Debug, Default)]
 pub(crate) struct NullInner {
@@ -574,50 +559,50 @@ impl Bool {
 }
 
 #[derive(Debug)]
-pub(crate) struct IntegerInner {
+pub(crate) struct NumberInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
-    pub(crate) repr: IntegerRepr,
-    pub(crate) value: OnceCell<IntegerValue>,
+    pub(crate) repr: NumberRepr,
+    pub(crate) value: OnceCell<NumberValue>,
 }
 
 wrap_node! {
     #[derive(Debug, Clone)]
-    pub struct Integer { inner: IntegerInner }
+    pub struct Number { inner: NumberInner }
 }
 
-impl Integer {
-    /// An integer value.
-    pub fn value(&self) -> IntegerValue {
+impl Number {
+    /// An nubmer value.
+    pub fn value(&self) -> NumberValue {
         *self.inner.value.get_or_init(|| {
             if let Some(s) = self.syntax().and_then(|s| s.as_token()) {
-                let int_text = s.text().replace('_', "");
+                let text = s.text().replace('_', "");
 
                 match self.inner.repr {
-                    IntegerRepr::Dec => {
+                    NumberRepr::Dec => {
                         if s.text().starts_with('-') {
-                            IntegerValue::Negative(int_text.parse().unwrap_or_default())
+                            NumberValue::Negative(text.parse().unwrap_or_default())
                         } else {
-                            IntegerValue::Positive(int_text.parse().unwrap_or_default())
+                            NumberValue::Positive(text.parse().unwrap_or_default())
                         }
                     }
-                    IntegerRepr::Bin => IntegerValue::Positive(
-                        u64::from_str_radix(int_text.trim_start_matches("0b"), 2)
-                            .unwrap_or_default(),
+                    NumberRepr::Bin => NumberValue::Positive(
+                        u64::from_str_radix(text.trim_start_matches("0b"), 2).unwrap_or_default(),
                     ),
-                    IntegerRepr::Oct => IntegerValue::Positive(
-                        u64::from_str_radix(int_text.trim_start_matches("0o"), 8)
-                            .unwrap_or_default(),
+                    NumberRepr::Oct => NumberValue::Positive(
+                        u64::from_str_radix(text.trim_start_matches("0o"), 8).unwrap_or_default(),
                     ),
-                    IntegerRepr::Hex => IntegerValue::Positive(
-                        u64::from_str_radix(int_text.trim_start_matches("0x"), 16)
-                            .unwrap_or_default(),
+                    NumberRepr::Hex => NumberValue::Positive(
+                        u64::from_str_radix(text.trim_start_matches("0x"), 16).unwrap_or_default(),
                     ),
+                    NumberRepr::Float => {
+                        NumberValue::Float(text.replace('_', "").parse().unwrap_or_default())
+                    }
                 }
             } else {
-                IntegerValue::Positive(0)
+                NumberValue::Positive(0)
             }
         })
     }
@@ -632,47 +617,12 @@ impl Integer {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum IntegerRepr {
+pub enum NumberRepr {
     Dec,
     Bin,
     Oct,
     Hex,
-}
-
-#[derive(Debug)]
-pub(crate) struct FloatInner {
-    pub(crate) errors: Shared<Vec<Error>>,
-    pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) value_syntax: Option<SyntaxElement>,
-    pub(crate) annotations: Option<Annotations>,
-    pub(crate) value: OnceCell<f64>,
-}
-
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Float { inner: FloatInner }
-}
-
-impl Float {
-    /// A float value.
-    pub fn value(&self) -> f64 {
-        *self.inner.value.get_or_init(|| {
-            if let Some(text) = self.syntax().and_then(|s| s.as_token()).map(|s| s.text()) {
-                text.replace('_', "").parse().unwrap()
-            } else {
-                0_f64
-            }
-        })
-    }
-
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        let _ = self.value();
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
-    }
+    Float,
 }
 
 #[derive(Debug)]

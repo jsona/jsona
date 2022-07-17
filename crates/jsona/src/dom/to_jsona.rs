@@ -21,7 +21,7 @@ impl Display for Node {
 
 fn write_value(scope: Scope, value: &Node) {
     match value {
-        Node::Null(_) | Node::Bool(_) | Node::Integer(_) | Node::Float(_) | Node::Str(_) => {
+        Node::Null(_) | Node::Bool(_) | Node::Number(_) | Node::Str(_) => {
             if let Some(text) = value.jsona_text() {
                 write_scalar(scope, text, value.annotations());
             }
@@ -91,7 +91,7 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
                     Node::Null(_) | Node::Invalid(_) => {
                         scope.write(format!(" @{}", key));
                     }
-                    Node::Bool(_) | Node::Integer(_) | Node::Float(_) | Node::Str(_) => {
+                    Node::Bool(_) | Node::Number(_) | Node::Str(_) => {
                         if let Some(text) = value.jsona_text() {
                             write_scalar_annotaion(scope.clone(), key, text);
                         }

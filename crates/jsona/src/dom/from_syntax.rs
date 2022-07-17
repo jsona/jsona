@@ -4,8 +4,8 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, FloatInner, IntegerInner,
-        IntegerRepr, InvalidInner, Key, KeyInner, Node, NullInner, ObjectInner, StrInner, StrRepr,
+        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, InvalidInner, Key, KeyInner,
+        Node, NullInner, NumberInner, NumberRepr, ObjectInner, StrInner, StrRepr,
     },
 };
 
@@ -149,52 +149,53 @@ fn scalar_from_syntax(
         }
         .wrap()
         .into(),
-        INTEGER => IntegerInner {
+        INTEGER => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
             value_syntax: Some(root),
             annotations,
             value: Default::default(),
-            repr: IntegerRepr::Dec,
+            repr: NumberRepr::Dec,
         }
         .wrap()
         .into(),
-        INTEGER_BIN => IntegerInner {
+        INTEGER_BIN => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
             value_syntax: Some(root),
             annotations,
             value: Default::default(),
-            repr: IntegerRepr::Bin,
+            repr: NumberRepr::Bin,
         }
         .wrap()
         .into(),
-        INTEGER_HEX => IntegerInner {
+        INTEGER_HEX => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
             value_syntax: Some(root),
             annotations,
             value: Default::default(),
-            repr: IntegerRepr::Hex,
+            repr: NumberRepr::Hex,
         }
         .wrap()
         .into(),
-        INTEGER_OCT => IntegerInner {
+        INTEGER_OCT => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
             value_syntax: Some(root),
             annotations,
             value: Default::default(),
-            repr: IntegerRepr::Oct,
+            repr: NumberRepr::Oct,
         }
         .wrap()
         .into(),
-        FLOAT => FloatInner {
+        FLOAT => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
             value_syntax: Some(root),
             annotations,
             value: Default::default(),
+            repr: NumberRepr::Float,
         }
         .wrap()
         .into(),

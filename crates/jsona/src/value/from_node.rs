@@ -16,12 +16,7 @@ impl From<&Node> for Value {
                 annotations,
             }
             .into(),
-            Node::Integer(v) => Integer {
-                value: v.value(),
-                annotations,
-            }
-            .into(),
-            Node::Float(v) => Float {
+            Node::Number(v) => Number {
                 value: v.value(),
                 annotations,
             }
@@ -53,8 +48,7 @@ impl From<&Node> for PlainValue {
         match node {
             Node::Invalid(_) | Node::Null(_) => PlainValue::Null,
             Node::Bool(v) => PlainValue::Bool(v.value()),
-            Node::Integer(v) => PlainValue::Integer(v.value()),
-            Node::Float(v) => PlainValue::Float(v.value()),
+            Node::Number(v) => PlainValue::Number(v.value()),
             Node::Str(v) => PlainValue::Str(v.value().to_string()),
             Node::Array(v) => {
                 let value = v.items().read().iter().map(|v| v.into()).collect();
