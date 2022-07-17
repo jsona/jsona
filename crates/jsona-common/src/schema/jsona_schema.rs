@@ -1,21 +1,17 @@
 use jsona::dom::{Keys, Node};
-use serde::{Deserialize, Serialize};
+use jsona::value::Value;
 use std::fmt::{self, Formatter};
 
-pub struct JSONASchema {}
+pub struct JsonaSchema {}
 
-impl JSONASchema {
-    pub fn compile(_value: &JSONASchemaValue) -> Result<Self, anyhow::Error> {
+impl JsonaSchema {
+    pub fn compile(_value: &Value) -> Result<Self, anyhow::Error> {
         todo!()
     }
     pub fn validate(&self, _node: &Node) -> Result<(), Vec<ValidationError>> {
         todo!()
     }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JSONASchemaValue {}
-
 /// An error that can occur during validation.
 #[derive(Debug)]
 pub struct ValidationError {
@@ -37,9 +33,3 @@ impl fmt::Display for ValidationError {
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub enum ValidationErrorKind {}
-
-impl JSONASchemaValue {
-    pub fn from_slice(_data: &[u8]) -> Result<Self, anyhow::Error> {
-        todo!()
-    }
-}

@@ -1,5 +1,9 @@
 use anyhow::{anyhow, bail, Context};
-use jsona::dom::Node;
+use jsona::{
+    dom::{Keys, Node},
+    parser::parse,
+    value::Value as JsonaValue,
+};
 use parking_lot::Mutex;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -8,7 +12,7 @@ use url::Url;
 use self::{
     associations::SchemaAssociations,
     cache::Cache,
-    jsona_schema::{JSONASchema, JSONASchemaValue, ValidationError},
+    jsona_schema::{JsonaSchema, ValidationError},
 };
 use crate::{environment::Environment, LruCache};
 
@@ -22,7 +26,7 @@ pub struct Schemas<E: Environment> {
     associations: SchemaAssociations,
     concurrent_requests: Arc<Semaphore>,
     http: reqwest::Client,
-    validators: Arc<Mutex<LruCache<Url, Arc<JSONASchema>>>>,
+    validators: Arc<Mutex<LruCache<Url, Arc<JsonaSchema>>>>,
     cache: Cache<E>,
 }
 
@@ -80,15 +84,12 @@ impl<E: Environment> Schemas<E> {
         }
     }
 
-    pub async fn add_schema(&self, schema_url: &Url, schema: Arc<JSONASchemaValue>) {
+    pub async fn add_schema(&self, schema_url: &Url, schema: Arc<JsonaValue>) {
         drop(self.cache.store(schema_url.clone(), schema).await);
     }
 
     #[tracing::instrument(skip_all, fields(%schema_url))]
-    pub async fn load_schema(
-        &self,
-        schema_url: &Url,
-    ) -> Result<Arc<JSONASchemaValue>, anyhow::Error> {
+    pub async fn load_schema(&self, schema_url: &Url) -> Result<Arc<JsonaValue>, anyhow::Error> {
         if let Ok(s) = self.cache.load(schema_url, false).await {
             tracing::debug!(%schema_url, "schema was found in cache");
             return Ok(s);
@@ -113,7 +114,28 @@ impl<E: Environment> Schemas<E> {
         Ok(schema)
     }
 
-    fn get_validator(&self, schema_url: &Url) -> Option<Arc<JSONASchema>> {
+    #[tracing::instrument(skip_all, fields(%schema_url, %path))]
+    pub async fn schemas_at_path(
+        &self,
+        schema_url: &Url,
+        _node: &Node,
+        path: &Keys,
+    ) -> Result<Vec<(Keys, Arc<JsonaSchema>)>, anyhow::Error> {
+        todo!()
+    }
+
+    #[tracing::instrument(skip_all, fields(%schema_url, %path))]
+    pub async fn possible_schemas_from(
+        &self,
+        schema_url: &Url,
+        _node: &Node,
+        path: &Keys,
+        _max_depth: usize,
+    ) -> Result<Vec<(Keys, Keys, Arc<JsonaSchema>)>, anyhow::Error> {
+        todo!()
+    }
+
+    fn get_validator(&self, schema_url: &Url) -> Option<Arc<JsonaSchema>> {
         if self.cache().lru_expired() {
             self.validators.lock().clear();
         }
@@ -124,18 +146,18 @@ impl<E: Environment> Schemas<E> {
     fn add_validator(
         &self,
         schema_url: Url,
-        schema: &JSONASchemaValue,
-    ) -> Result<Arc<JSONASchema>, anyhow::Error> {
+        schema: &JsonaValue,
+    ) -> Result<Arc<JsonaSchema>, anyhow::Error> {
         let v = Arc::new(self.create_validator(schema)?);
         self.validators.lock().put(schema_url, v.clone());
         Ok(v)
     }
 
-    fn create_validator(&self, schema: &JSONASchemaValue) -> Result<JSONASchema, anyhow::Error> {
-        JSONASchema::compile(schema).map_err(|err| anyhow!("invalid schema: {err}"))
+    fn create_validator(&self, schema: &JsonaValue) -> Result<JsonaSchema, anyhow::Error> {
+        JsonaSchema::compile(schema).map_err(|err| anyhow!("invalid schema: {err}"))
     }
 
-    async fn fetch_external(&self, index_url: &Url) -> Result<JSONASchemaValue, anyhow::Error> {
+    async fn fetch_external(&self, index_url: &Url) -> Result<JsonaValue, anyhow::Error> {
         let _permit = self.concurrent_requests.acquire().await?;
         let data: Vec<u8> = match index_url.scheme() {
             "http" | "https" => self
@@ -158,6 +180,13 @@ impl<E: Environment> Schemas<E> {
             }
             scheme => bail!("the scheme `{scheme}` is not supported"),
         };
-        JSONASchemaValue::from_slice(&data)
+        let data = std::str::from_utf8(&data)?;
+        let root = parse(data).into_dom();
+        if let Err(errors) = root.validate() {
+            for error in errors {
+                tracing::warn!(?error, "err was found in schema `{}`", index_url);
+            }
+        }
+        Ok(JsonaValue::from(&root))
     }
 }

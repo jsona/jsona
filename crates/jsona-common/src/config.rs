@@ -132,6 +132,10 @@ impl Config {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SchemaOptions {
+    /// The name of the rule.
+    ///
+    /// Used in `taplo::<name>` comments.
+    pub name: Option<String>,
     /// Files to include.
     ///
     /// A list of Unix-like [glob](https://en.wikipedia.org/wiki/Glob_(programming)) path patterns.

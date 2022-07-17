@@ -8,7 +8,7 @@ use url::Url;
 #[cfg(not(target_family = "wasm"))]
 pub mod native;
 
-/// An environment in which the operations with Taplo are executed.
+/// An environment in which the operations with Jsona are executed.
 ///
 /// This is mostly needed for sandboxed environments such as WebAssembly.
 #[async_trait(?Send)]
