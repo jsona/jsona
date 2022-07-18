@@ -15,7 +15,7 @@ impl Node {
             Value::Bool(v) => BoolInner {
                 errors: Default::default(),
                 syntax: None,
-                value_syntax: None,
+                all_syntax: None,
                 annotations,
                 value: (*v).into(),
             }
@@ -30,7 +30,7 @@ impl Node {
                 NumberInner {
                     errors: Default::default(),
                     syntax: None,
-                    value_syntax: None,
+                    all_syntax: None,
                     annotations,
                     repr,
                     value: v.clone().into(),
@@ -41,7 +41,7 @@ impl Node {
             Value::String(v) => StringInner {
                 errors: Default::default(),
                 syntax: None,
-                value_syntax: None,
+                all_syntax: None,
                 annotations,
                 repr: StrRepr::Double,
                 value: v.clone().into(),
@@ -53,7 +53,7 @@ impl Node {
                 ArrayInner {
                     errors: Default::default(),
                     syntax: None,
-                    value_syntax: None,
+                    all_syntax: None,
                     annotations,
                     items: items.into(),
                 }
@@ -68,7 +68,7 @@ impl Node {
                 ObjectInner {
                     errors: Default::default(),
                     syntax: None,
-                    value_syntax: None,
+                    all_syntax: None,
                     annotations,
                     properties: entries.into(),
                 }
@@ -84,7 +84,7 @@ impl Node {
             None => {
                 return NullInner {
                     errors: Default::default(),
-                    value_syntax: None,
+                    all_syntax: None,
                     syntax: None,
                     annotations: None,
                 }
@@ -116,7 +116,7 @@ impl Node {
             Value::Bool(v) => BoolInner {
                 errors: Default::default(),
                 syntax: None,
-                value_syntax: None,
+                all_syntax: None,
                 annotations,
                 value: (*v).into(),
             }
@@ -131,7 +131,7 @@ impl Node {
                 NumberInner {
                     errors: Default::default(),
                     syntax: None,
-                    value_syntax: None,
+                    all_syntax: None,
                     annotations: None,
                     repr,
                     value: v.clone().into(),
@@ -142,7 +142,7 @@ impl Node {
             Value::String(v) => StringInner {
                 errors: Default::default(),
                 syntax: None,
-                value_syntax: None,
+                all_syntax: None,
                 annotations: None,
                 repr: StrRepr::Double,
                 value: v.clone().into(),
@@ -154,7 +154,7 @@ impl Node {
                 ArrayInner {
                     errors: Default::default(),
                     syntax: None,
-                    value_syntax: None,
+                    all_syntax: None,
                     annotations: None,
                     items: items.into(),
                 }
@@ -169,7 +169,7 @@ impl Node {
                 ObjectInner {
                     errors: Default::default(),
                     syntax: None,
-                    value_syntax: None,
+                    all_syntax: None,
                     annotations: None,
                     properties: entries.into(),
                 }
