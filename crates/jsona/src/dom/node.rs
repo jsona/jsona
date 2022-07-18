@@ -29,6 +29,7 @@ macro_rules! wrap_node {
             fn value_syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
                 self.inner.value_syntax.as_ref()
             }
+
             fn syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
                 self.inner.syntax.as_ref()
             }
@@ -39,10 +40,6 @@ macro_rules! wrap_node {
 
             fn annotations(&self) -> Option<&$crate::dom::node::Annotations> {
                 self.inner.annotations.as_ref()
-            }
-            fn get_annotation(&self, key: impl Into<Key>) -> Option<$crate::dom::node::Node> {
-                let key = key.into();
-                self.annotations().and_then(|v| v.get(&key))
             }
 
             fn validate_node(&self) -> Result<(), &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>>> {
@@ -72,7 +69,6 @@ pub trait DomNode: Sized + Sealed {
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
     fn annotations(&self) -> Option<&Annotations>;
-    fn get_annotation(&self, key: impl Into<Key>) -> Option<Node>;
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>>;
     fn is_valid_node(&self) -> bool {
         self.validate_node().is_ok()
@@ -87,7 +83,6 @@ pub enum Node {
     Str(Str),
     Array(Array),
     Object(Object),
-    Invalid(Invalid),
 }
 
 macro_rules! impl_dom_node_for_node {
@@ -129,14 +124,6 @@ impl DomNode for Node {
         }
     }
 
-    fn get_annotation(&self, key: impl Into<Key>) -> Option<Node> {
-        match self {
-            $(
-            Node::$elm(v) => v.get_annotation(key),
-            )*
-        }
-    }
-
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
         match self {
             $(
@@ -150,37 +137,47 @@ impl DomNode for Node {
 
 impl Sealed for Node {}
 
-impl_dom_node_for_node!(Null, Number, Str, Bool, Array, Object, Invalid,);
+impl_dom_node_for_node!(Null, Number, Str, Bool, Array, Object,);
 
 impl Node {
     pub fn path(&self, keys: &Keys) -> Option<Node> {
         let mut node = self.clone();
         for key in keys.iter() {
-            node = node.get(key);
+            node = node.get(key)?;
         }
-        if node.is_invalid() {
-            None
-        } else {
-            Some(node)
-        }
+        Some(node)
     }
 
-    pub fn get(&self, idx: &KeyOrIndex) -> Node {
-        self.get_impl(idx).unwrap_or_else(|| {
-            Node::from(
-                InvalidInner {
-                    errors: Shared::from(Vec::from([Error::Query(QueryError::NotFound)])),
-                    value_syntax: None,
-                    syntax: None,
-                    annotations: None,
+    pub fn get(&self, key: &KeyOrIndex) -> Option<Node> {
+        match key {
+            KeyOrIndex::Index(v) => {
+                if let Node::Array(arr) = self {
+                    let items = arr.value().read();
+                    items.get(*v).cloned()
+                } else {
+                    None
                 }
-                .wrap(),
-            )
-        })
+            }
+            KeyOrIndex::ValueKey(k) => {
+                if let Node::Object(obj) = self {
+                    obj.get(k)
+                } else {
+                    None
+                }
+            }
+            KeyOrIndex::AnnotationKey(k) => {
+                if let Some(annotations) = self.annotations() {
+                    annotations.get(k)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     }
 
     pub fn try_get(&self, idx: &KeyOrIndex) -> Result<Node, Error> {
-        self.get_impl(idx).ok_or(Error::Query(QueryError::NotFound))
+        self.get(idx).ok_or(Error::Query(QueryError::NotFound))
     }
 
     pub fn validate(&self) -> Result<(), impl Iterator<Item = Error> + core::fmt::Debug> {
@@ -241,9 +238,15 @@ impl Node {
         Ok(output.into_iter())
     }
 
-    pub fn jsona_text(&self) -> Option<String> {
+    pub fn scalar_text(&self) -> Option<String> {
         match self {
-            Node::Null(_) => Some("null".to_string()),
+            Node::Null(v) => {
+                if v.is_valid_node() {
+                    Some("null".to_string())
+                } else {
+                    None
+                }
+            }
             Node::Bool(v) => {
                 let text = match self.syntax() {
                     Some(syntax) => syntax.to_string(),
@@ -265,9 +268,7 @@ impl Node {
                 };
                 Some(text)
             }
-            Node::Array(_) => None,
-            Node::Object(_) => None,
-            Node::Invalid(_) => None,
+            Node::Array(_) | Node::Object(_) => None,
         }
     }
 
@@ -309,7 +310,6 @@ impl Node {
             Node::Str(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
             Node::Number(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
             Node::Null(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-            Node::Invalid(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
         }
 
         if let Some(v) = self.annotations() {
@@ -322,34 +322,6 @@ impl Node {
         }
 
         ranges.into_iter()
-    }
-
-    fn get_impl(&self, key: &KeyOrIndex) -> Option<Node> {
-        match key {
-            KeyOrIndex::Index(v) => {
-                if let Node::Array(arr) = self {
-                    let items = arr.value().read();
-                    items.get(*v).cloned()
-                } else {
-                    None
-                }
-            }
-            KeyOrIndex::ValueKey(k) => {
-                if let Node::Object(obj) = self {
-                    obj.get(k)
-                } else {
-                    None
-                }
-            }
-            KeyOrIndex::AnnotationKey(k) => {
-                if let Some(annotations) = self.annotations() {
-                    annotations.get(k)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
     }
 
     fn collect_flat(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {
@@ -428,11 +400,6 @@ impl Node {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
             }
-            Node::Invalid(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
-                }
-            }
         }
         if let Some(v) = self.annotations() {
             if let Err(errs) = v.validate_node() {
@@ -451,7 +418,7 @@ impl Node {
 }
 
 macro_rules! define_value_fns {
-    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident, $try_fn:ident) => {
+    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident) => {
         pub fn $is_fn(&self) -> bool {
             matches!(self, Self::$elm(..))
         }
@@ -463,25 +430,16 @@ macro_rules! define_value_fns {
                 None
             }
         }
-
-        pub fn $try_fn(self) -> Result<$t, Self> {
-            if let Self::$elm(v) = self {
-                Ok(v)
-            } else {
-                Err(self)
-            }
-        }
     };
 }
 
 impl Node {
-    define_value_fns!(Null, Null, is_null, as_null, try_info_null);
-    define_value_fns!(Bool, Bool, is_bool, as_bool, try_into_bool);
-    define_value_fns!(Number, Number, is_number, as_number, try_into_number);
-    define_value_fns!(Str, Str, is_str, as_str, try_into_str);
-    define_value_fns!(Object, Object, is_object, as_object, try_into_object);
-    define_value_fns!(Array, Array, is_array, as_array, try_into_array);
-    define_value_fns!(Invalid, Invalid, is_invalid, as_invalid, try_into_invalid);
+    define_value_fns!(Null, Null, is_null, as_null);
+    define_value_fns!(Bool, Bool, is_bool, as_bool);
+    define_value_fns!(Number, Number, is_number, as_number);
+    define_value_fns!(Str, Str, is_str, as_str);
+    define_value_fns!(Object, Object, is_object, as_object);
+    define_value_fns!(Array, Array, is_array, as_array);
 }
 
 macro_rules! value_from {
@@ -500,7 +458,7 @@ macro_rules! value_from {
     };
 }
 
-value_from!(Null, Number, Str, Bool, Array, Object, Invalid,);
+value_from!(Null, Number, Str, Bool, Array, Object,);
 
 #[derive(Debug, Default)]
 pub(crate) struct NullInner {
@@ -756,33 +714,9 @@ impl Object {
 }
 
 #[derive(Debug)]
-pub(crate) struct InvalidInner {
-    pub(crate) errors: Shared<Vec<Error>>,
-    pub(crate) value_syntax: Option<SyntaxElement>,
-    pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) annotations: Option<Annotations>,
-}
-
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Invalid { inner: InvalidInner }
-}
-
-impl Invalid {
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
-    }
-}
-
-#[derive(Debug)]
 pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) is_valid: bool,
     pub(crate) value: OnceCell<String>,
 }
 
@@ -818,7 +752,6 @@ impl Key {
         KeyInner {
             errors: Default::default(),
             syntax: None,
-            is_valid: true,
             value: OnceCell::from(key.into()),
         }
         .into()
@@ -885,14 +818,7 @@ impl DomNode for Key {
         None
     }
 
-    fn get_annotation(&self, _key: impl Into<Key>) -> Option<Node> {
-        None
-    }
-
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if !self.inner.is_valid {
-            return Err(self.errors());
-        }
         let _ = self.value();
         if self.errors().read().as_ref().is_empty() {
             Ok(())
@@ -916,10 +842,9 @@ impl core::fmt::Display for Key {
 
 impl PartialEq for Key {
     fn eq(&self, other: &Self) -> bool {
-        if !self.inner.is_valid || !other.inner.is_valid {
+        if !self.is_valid_node() || !other.is_valid_node() {
             return false;
         }
-
         self.value().eq(other.value())
     }
 }
@@ -928,7 +853,7 @@ impl Eq for Key {}
 
 impl std::hash::Hash for Key {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        if !self.inner.is_valid {
+        if !self.is_valid_node() {
             return 0.hash(state);
         }
 
@@ -1015,10 +940,6 @@ impl DomNode for Annotations {
     }
 
     fn annotations(&self) -> Option<&Annotations> {
-        None
-    }
-
-    fn get_annotation(&self, _key: impl Into<Key>) -> Option<Node> {
         None
     }
 

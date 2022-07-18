@@ -4,8 +4,8 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, InvalidInner, Key, KeyInner,
-        Node, NullInner, NumberInner, NumberRepr, ObjectInner, StrInner, StrRepr,
+        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, Key, KeyInner, Node,
+        NullInner, NumberInner, NumberRepr, ObjectInner, StrInner, StrRepr,
     },
 };
 use serde_json::Number as JsonNumber;
@@ -55,7 +55,6 @@ pub(crate) fn keys_from_syntax(
                         let key = KeyInner {
                             errors: Shared::default(),
                             syntax: Some(child.clone().into()),
-                            is_valid: true,
                             value: Default::default(),
                         }
                         .into();
@@ -104,7 +103,6 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
         KeyInner {
             errors: Shared::default(),
             syntax: Some(child),
-            is_valid: true,
             value: Default::default(),
         }
         .into()
@@ -113,7 +111,6 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
             errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
                 syntax: syntax.clone(),
             }])),
-            is_valid: false,
             value: Default::default(),
             syntax: Some(syntax),
         }
@@ -401,7 +398,7 @@ fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) 
     let errors = Vec::from([Error::UnexpectedSyntax {
         syntax: syntax.clone(),
     }]);
-    InvalidInner {
+    NullInner {
         errors: errors.into(),
         value_syntax: Some(syntax.clone()),
         syntax: Some(syntax),

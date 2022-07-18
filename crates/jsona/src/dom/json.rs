@@ -82,7 +82,7 @@ impl Node {
         let value = match data.get("value") {
             Some(v) => v,
             None => {
-                return InvalidInner {
+                return NullInner {
                     errors: Default::default(),
                     value_syntax: None,
                     syntax: None,
@@ -181,7 +181,7 @@ impl Node {
 
     pub fn to_plain_json(&self) -> Value {
         match self {
-            Node::Invalid(_) | Node::Null(_) => Value::Null,
+            Node::Null(_) => Value::Null,
             Node::Bool(v) => v.value().into(),
             Node::Number(v) => v.value().clone().into(),
             Node::Str(v) => v.value().into(),
@@ -209,7 +209,7 @@ impl Node {
             )
         });
         match self {
-            Node::Invalid(_) | Node::Null(_) => {
+            Node::Null(_) => {
                 json!({
                     "value": null,
                     "annotations": annotations
