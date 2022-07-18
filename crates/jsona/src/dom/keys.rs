@@ -70,11 +70,6 @@ pub struct Keys {
 }
 
 impl Keys {
-    #[inline]
-    pub fn empty() -> Self {
-        Self::new(empty())
-    }
-
     pub fn single(key: impl Into<KeyOrIndex>) -> Self {
         Self::new(once(key.into()))
     }
@@ -106,8 +101,8 @@ impl Keys {
         }
     }
 
-    pub fn join(&self, key: impl Into<KeyOrIndex>) -> Self {
-        self.extend(once(key.into()))
+    pub fn join(&self, key: KeyOrIndex) -> Self {
+        self.extend(once(key))
     }
 
     pub fn extend<I, K>(&self, keys: I) -> Self
@@ -244,6 +239,12 @@ impl Keys {
                 j >= target_keys.len() - 1
             }
         }
+    }
+}
+
+impl Default for Keys {
+    fn default() -> Self {
+        Self::new(empty())
     }
 }
 

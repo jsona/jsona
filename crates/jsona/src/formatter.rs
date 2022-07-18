@@ -11,7 +11,6 @@ use crate::{
 };
 
 use rowan::{NodeOrToken, WalkEvent};
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 macro_rules! create_options {
@@ -99,7 +98,7 @@ macro_rules! create_options {
 
         $(#[$attr])*
         #[derive(Default)]
-        #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+        #[serde(rename_all = "camelCase")]
         pub struct OptionsIncompleteCamel {
             $(
                 $(#[$field_attr])*
@@ -123,8 +122,7 @@ macro_rules! create_options {
 
 create_options!(
     /// All the formatting options.
-    #[derive(Debug, Clone, Eq, PartialEq)]
-    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
     pub struct Options {
         /// Indentation to use, should be tabs or spaces
         /// but technically could be anything.

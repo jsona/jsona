@@ -1,5 +1,5 @@
 use jsona::dom::{Keys, Node};
-use jsona::value::Value;
+use serde_json::Value;
 use std::fmt::{self, Formatter};
 
 pub struct JsonaSchema {}

@@ -2,8 +2,8 @@ pub mod error;
 pub mod keys;
 pub mod node;
 
-pub(crate) mod from_syntax;
-mod from_value;
+mod from_syntax;
+mod json;
 mod to_jsona;
 
 pub use error::Error;

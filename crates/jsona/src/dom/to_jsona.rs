@@ -36,7 +36,7 @@ fn write_value(scope: Scope, value: &Node) {
             let scope = scope.enter(ScopeKind::Array);
             write_annotations(scope.clone(), v.annotations());
             scope.newline();
-            let value = v.items().read();
+            let value = v.value().read();
             for item in value.iter() {
                 write_value(scope.clone(), item);
                 scope.newline();
@@ -55,7 +55,7 @@ fn write_value(scope: Scope, value: &Node) {
             let scope = scope.enter(ScopeKind::Object);
             write_annotations(scope.clone(), v.annotations());
             scope.newline();
-            let value = v.entries().read();
+            let value = v.value().read();
             for (k, v) in value.iter() {
                 scope.write_ident();
                 scope.write(format!("{}: ", k));
@@ -85,7 +85,7 @@ fn write_scalar<T: Display>(scope: Scope, value: T, annotations: Option<&Annotat
 fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
     match annotations {
         Some(annotations) => {
-            let annotations = annotations.entries().read();
+            let annotations = annotations.value().read();
             for (key, value) in annotations.iter() {
                 match value {
                     Node::Null(_) | Node::Invalid(_) => {

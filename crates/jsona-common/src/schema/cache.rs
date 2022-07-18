@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
-use jsona::value::Value as JsonaValue;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::{path::PathBuf, sync::Arc, time::Duration};
 use time::OffsetDateTime;
@@ -18,7 +18,7 @@ pub struct Cache<E: Environment> {
     env: E,
     expiration_times: Arc<ArcSwap<(Duration, Duration)>>,
     lru_expires_by: Arc<Mutex<OffsetDateTime>>,
-    schemas: Arc<Mutex<LruCache<Url, Arc<JsonaValue>>>>,
+    schemas: Arc<Mutex<LruCache<Url, Arc<Value>>>>,
     cache_path: Arc<ArcSwap<Option<PathBuf>>>,
 }
 
@@ -36,7 +36,7 @@ impl<E: Environment> Cache<E> {
         }
     }
 
-    pub fn get_schema(&self, url: &Url) -> Option<Arc<JsonaValue>> {
+    pub fn get_schema(&self, url: &Url) -> Option<Arc<Value>> {
         self.schemas.lock().get(url).cloned()
     }
 
@@ -52,7 +52,7 @@ impl<E: Environment> Cache<E> {
         &self,
         value_url: &Url,
         include_expired: bool,
-    ) -> Result<Arc<JsonaValue>, anyhow::Error> {
+    ) -> Result<Arc<Value>, anyhow::Error> {
         let now = self.env.now();
 
         // We invalidate the in-memory cache at a regular interval.
@@ -82,12 +82,12 @@ impl<E: Environment> Cache<E> {
         }
     }
 
-    pub async fn store(&self, url: Url, value: Arc<JsonaValue>) -> Result<(), anyhow::Error> {
+    pub async fn store(&self, url: Url, value: Arc<Value>) -> Result<(), anyhow::Error> {
         self.schemas.lock().put(url.clone(), value.clone());
         self.save(url, value).await
     }
 
-    pub async fn save(&self, url: Url, value: Arc<JsonaValue>) -> Result<(), anyhow::Error> {
+    pub async fn save(&self, url: Url, value: Arc<Value>) -> Result<(), anyhow::Error> {
         let expires_by = self.env.now() + self.expiration_times.load().1;
 
         match &**self.cache_path.load() {
@@ -131,7 +131,7 @@ impl<E: Environment> Cache<E> {
 pub struct CachedJson {
     pub expires_by: OffsetDateTime,
     pub url: Url,
-    pub value: JsonaValue,
+    pub value: Value,
 }
 
 fn cache_hash(url: &Url) -> String {

@@ -2,9 +2,9 @@ use anyhow::{anyhow, bail, Context};
 use jsona::{
     dom::{Keys, Node},
     parser::parse,
-    value::Value as JsonaValue,
 };
 use parking_lot::Mutex;
+use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use url::Url;
@@ -84,12 +84,12 @@ impl<E: Environment> Schemas<E> {
         }
     }
 
-    pub async fn add_schema(&self, schema_url: &Url, schema: Arc<JsonaValue>) {
+    pub async fn add_schema(&self, schema_url: &Url, schema: Arc<Value>) {
         drop(self.cache.store(schema_url.clone(), schema).await);
     }
 
     #[tracing::instrument(skip_all, fields(%schema_url))]
-    pub async fn load_schema(&self, schema_url: &Url) -> Result<Arc<JsonaValue>, anyhow::Error> {
+    pub async fn load_schema(&self, schema_url: &Url) -> Result<Arc<Value>, anyhow::Error> {
         if let Ok(s) = self.cache.load(schema_url, false).await {
             tracing::debug!(%schema_url, "schema was found in cache");
             return Ok(s);
@@ -146,18 +146,18 @@ impl<E: Environment> Schemas<E> {
     fn add_validator(
         &self,
         schema_url: Url,
-        schema: &JsonaValue,
+        schema: &Value,
     ) -> Result<Arc<JsonaSchema>, anyhow::Error> {
         let v = Arc::new(self.create_validator(schema)?);
         self.validators.lock().put(schema_url, v.clone());
         Ok(v)
     }
 
-    fn create_validator(&self, schema: &JsonaValue) -> Result<JsonaSchema, anyhow::Error> {
+    fn create_validator(&self, schema: &Value) -> Result<JsonaSchema, anyhow::Error> {
         JsonaSchema::compile(schema).map_err(|err| anyhow!("invalid schema: {err}"))
     }
 
-    async fn fetch_external(&self, index_url: &Url) -> Result<JsonaValue, anyhow::Error> {
+    async fn fetch_external(&self, index_url: &Url) -> Result<Value, anyhow::Error> {
         let _permit = self.concurrent_requests.acquire().await?;
         let data: Vec<u8> = match index_url.scheme() {
             "http" | "https" => self
@@ -181,12 +181,12 @@ impl<E: Environment> Schemas<E> {
             scheme => bail!("the scheme `{scheme}` is not supported"),
         };
         let data = std::str::from_utf8(&data)?;
-        let root = parse(data).into_dom();
-        if let Err(errors) = root.validate() {
+        let node = parse(data).into_dom();
+        if let Err(errors) = node.validate() {
             for error in errors {
                 tracing::warn!(?error, "err was found in schema `{}`", index_url);
             }
         }
-        Ok(JsonaValue::from(&root))
+        Ok(node.to_json())
     }
 }

@@ -3,12 +3,9 @@ use crate::App;
 use anyhow::anyhow;
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
-use jsona::{
-    dom::Keys,
-    parser,
-    value::{PlainValue, Value},
-};
+use jsona::{dom::Keys, parser};
 use jsona_common::environment::Environment;
+use serde_json::Value;
 use std::{borrow::Cow, path::PathBuf};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -65,19 +62,21 @@ impl<E: Environment> App<E> {
             }
             None => vec![node],
         };
-        let buf = if cmd.annotation {
-            let values: Vec<Value> = nodes.iter().map(Value::from).collect();
-            if values.len() == 1 {
-                serde_json::to_vec_pretty(&values[0]).unwrap()
+        let buf = {
+            let items: Vec<Value> = if cmd.annotation {
+                nodes.iter().map(|v| v.to_json()).collect()
             } else {
-                serde_json::to_vec_pretty(&Value::new_array(values)).unwrap()
-            }
-        } else {
-            let values: Vec<PlainValue> = nodes.iter().map(PlainValue::from).collect();
-            if values.len() == 1 {
-                serde_json::to_vec_pretty(&values[0]).unwrap()
+                nodes.iter().map(|v| v.to_plain_json()).collect()
+            };
+            let value = if items.len() == 1 {
+                items[0].clone()
             } else {
-                serde_json::to_vec_pretty(&PlainValue::new_array(values)).unwrap()
+                Value::Array(items)
+            };
+            if let Some(value) = value.as_str() {
+                value.as_bytes().to_vec()
+            } else {
+                serde_json::to_vec_pretty(&value).unwrap()
             }
         };
         stdout.write_all(&buf).await?;

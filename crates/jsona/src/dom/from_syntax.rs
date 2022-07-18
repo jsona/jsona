@@ -8,6 +8,7 @@ use super::{
         Node, NullInner, NumberInner, NumberRepr, ObjectInner, StrInner, StrRepr,
     },
 };
+use serde_json::Number as JsonNumber;
 
 use crate::{
     syntax::{SyntaxElement, SyntaxKind::*},
@@ -189,16 +190,27 @@ fn scalar_from_syntax(
         }
         .wrap()
         .into(),
-        FLOAT => NumberInner {
-            errors: errors.into(),
-            syntax: Some(syntax),
-            value_syntax: Some(root),
-            annotations,
-            value: Default::default(),
-            repr: NumberRepr::Float,
+        FLOAT => {
+            if let Some(v) = syntax
+                .to_string()
+                .parse::<f64>()
+                .ok()
+                .and_then(JsonNumber::from_f64)
+            {
+                NumberInner {
+                    errors: errors.into(),
+                    syntax: Some(syntax),
+                    value_syntax: Some(root),
+                    annotations,
+                    value: v.into(),
+                    repr: NumberRepr::Float,
+                }
+                .wrap()
+                .into()
+            } else {
+                invalid_from_syntax(root, annotations)
+            }
         }
-        .wrap()
-        .into(),
         SINGLE_QUOTE => StrInner {
             errors: errors.into(),
             syntax: Some(syntax),

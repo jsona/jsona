@@ -17,6 +17,5 @@ fn main() {
             eprintln!("{}", err);
         }
     }
-    let value = jsona::value::Value::from(&node);
-    println!("{}", value.to_jsona());
+    println!("{}", serde_json::to_string_pretty(&node.to_json()).unwrap());
 }

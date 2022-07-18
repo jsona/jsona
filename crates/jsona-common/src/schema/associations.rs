@@ -8,6 +8,8 @@ use url::Url;
 
 use crate::{config::Config, util::GlobRule};
 
+pub const SCHEMA_KEY: &str = "__schema__";
+
 pub mod priority {
     pub const CONFIG: usize = 50;
     pub const LSP_CONFIG: usize = 60;
@@ -52,7 +54,7 @@ impl SchemaAssociations {
             _ => true,
         });
         if let Some(url) = root
-            .get_annotation(&"__schema__".into())
+            .get_annotation(SCHEMA_KEY)
             .and_then(|v| v.as_str().cloned())
         {
             let url_value = url.value();

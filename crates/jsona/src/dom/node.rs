@@ -4,10 +4,10 @@ use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
 use crate::util::quote::{quote, unquote, QuoteType};
 use crate::util::shared::Shared;
-use crate::value::NumberValue;
 
 use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};
+use serde_json::Number as JsonNumber;
 use std::collections::HashMap;
 use std::iter::{once, FromIterator};
 use std::sync::Arc;
@@ -276,7 +276,7 @@ impl Node {
 
         match self {
             Node::Object(v) => {
-                let entries = v.entries().read();
+                let entries = v.value().read();
 
                 for (k, entry) in entries.iter() {
                     ranges.extend(k.text_ranges());
@@ -292,7 +292,7 @@ impl Node {
                 }
             }
             Node::Array(v) => {
-                let items = v.items().read();
+                let items = v.value().read();
                 for item in items.iter() {
                     ranges.extend(item.text_ranges());
                 }
@@ -313,7 +313,7 @@ impl Node {
         }
 
         if let Some(v) = self.annotations() {
-            let entries = v.entries().read();
+            let entries = v.value().read();
 
             for (k, entry) in entries.iter() {
                 ranges.extend(k.text_ranges());
@@ -328,7 +328,7 @@ impl Node {
         match key {
             KeyOrIndex::Index(v) => {
                 if let Node::Array(arr) = self {
-                    let items = arr.items().read();
+                    let items = arr.value().read();
                     items.get(*v).cloned()
                 } else {
                     None
@@ -365,7 +365,7 @@ impl Node {
                 all.push((parent.clone(), self.clone()));
                 let items = arr.inner.items.read();
                 for (idx, item) in items.iter().enumerate() {
-                    item.collect_flat(parent.join(idx), all);
+                    item.collect_flat(parent.join(KeyOrIndex::Index(idx)), all);
                 }
             }
             _ => {
@@ -477,7 +477,7 @@ macro_rules! define_value_fns {
 impl Node {
     define_value_fns!(Null, Null, is_null, as_null, try_info_null);
     define_value_fns!(Bool, Bool, is_bool, as_bool, try_into_bool);
-    define_value_fns!(Number, Number, is_integer, as_integer, try_into_integer);
+    define_value_fns!(Number, Number, is_number, as_number, try_into_number);
     define_value_fns!(Str, Str, is_str, as_str, try_into_str);
     define_value_fns!(Object, Object, is_object, as_object, try_into_object);
     define_value_fns!(Array, Array, is_array, as_array, try_into_array);
@@ -566,7 +566,7 @@ pub(crate) struct NumberInner {
     pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: NumberRepr,
-    pub(crate) value: OnceCell<NumberValue>,
+    pub(crate) value: OnceCell<JsonNumber>,
 }
 
 wrap_node! {
@@ -576,35 +576,42 @@ wrap_node! {
 
 impl Number {
     /// An nubmer value.
-    pub fn value(&self) -> NumberValue {
-        *self.inner.value.get_or_init(|| {
-            if let Some(s) = self.syntax().and_then(|s| s.as_token()) {
-                let text = s.text().replace('_', "");
+    pub fn value(&self) -> &JsonNumber {
+        self.inner.value.get_or_init(|| {
+            self.inner
+                .syntax
+                .as_ref()
+                .map(|s| {
+                    let text = s.as_token().unwrap().text().replace('_', "");
 
-                match self.inner.repr {
-                    NumberRepr::Dec => {
-                        if s.text().starts_with('-') {
-                            NumberValue::Negative(text.parse().unwrap_or_default())
-                        } else {
-                            NumberValue::Positive(text.parse().unwrap_or_default())
+                    match self.inner.repr {
+                        NumberRepr::Dec => {
+                            if text.starts_with('-') {
+                                JsonNumber::from(text.parse::<i64>().unwrap_or_default())
+                            } else {
+                                JsonNumber::from(text.parse::<u64>().unwrap_or_default())
+                            }
                         }
+                        NumberRepr::Bin => JsonNumber::from(
+                            u64::from_str_radix(text.trim_start_matches("0b"), 2)
+                                .unwrap_or_default(),
+                        ),
+                        NumberRepr::Oct => JsonNumber::from(
+                            u64::from_str_radix(text.trim_start_matches("0o"), 8)
+                                .unwrap_or_default(),
+                        ),
+                        NumberRepr::Hex => JsonNumber::from(
+                            u64::from_str_radix(text.trim_start_matches("0x"), 16)
+                                .unwrap_or_default(),
+                        ),
+                        NumberRepr::Float => text
+                            .parse::<f64>()
+                            .ok()
+                            .and_then(JsonNumber::from_f64)
+                            .unwrap_or_else(|| JsonNumber::from_f64(0.0).unwrap()),
                     }
-                    NumberRepr::Bin => NumberValue::Positive(
-                        u64::from_str_radix(text.trim_start_matches("0b"), 2).unwrap_or_default(),
-                    ),
-                    NumberRepr::Oct => NumberValue::Positive(
-                        u64::from_str_radix(text.trim_start_matches("0o"), 8).unwrap_or_default(),
-                    ),
-                    NumberRepr::Hex => NumberValue::Positive(
-                        u64::from_str_radix(text.trim_start_matches("0x"), 16).unwrap_or_default(),
-                    ),
-                    NumberRepr::Float => {
-                        NumberValue::Float(text.replace('_', "").parse().unwrap_or_default())
-                    }
-                }
-            } else {
-                NumberValue::Positive(0)
-            }
+                })
+                .unwrap_or_else(|| JsonNumber::from(0))
         })
     }
 
@@ -702,7 +709,7 @@ wrap_node! {
 }
 
 impl Array {
-    pub fn items(&self) -> &Shared<Vec<Node>> {
+    pub fn value(&self) -> &Shared<Vec<Node>> {
         &self.inner.items
     }
 
@@ -735,7 +742,7 @@ impl Object {
         entries.lookup.get(key).cloned()
     }
 
-    pub fn entries(&self) -> &Shared<Entries> {
+    pub fn value(&self) -> &Shared<Entries> {
         &self.inner.properties
     }
 
@@ -988,7 +995,7 @@ impl Annotations {
         entries.lookup.get(key).cloned()
     }
 
-    pub fn entries(&self) -> &Shared<Entries> {
+    pub fn value(&self) -> &Shared<Entries> {
         &self.inner.entries
     }
 }
