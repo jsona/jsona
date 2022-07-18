@@ -38,7 +38,7 @@ impl Node {
                 .wrap()
                 .into()
             }
-            Value::String(v) => StrInner {
+            Value::String(v) => StringInner {
                 errors: Default::default(),
                 syntax: None,
                 value_syntax: None,
@@ -139,7 +139,7 @@ impl Node {
                 .wrap()
                 .into()
             }
-            Value::String(v) => StrInner {
+            Value::String(v) => StringInner {
                 errors: Default::default(),
                 syntax: None,
                 value_syntax: None,
@@ -184,7 +184,7 @@ impl Node {
             Node::Null(_) => Value::Null,
             Node::Bool(v) => v.value().into(),
             Node::Number(v) => v.value().clone().into(),
-            Node::Str(v) => v.value().into(),
+            Node::String(v) => v.value().into(),
             Node::Array(v) => {
                 Value::Array(v.value().read().iter().map(|v| v.to_plain_json()).collect())
             }
@@ -227,7 +227,7 @@ impl Node {
                     "annotations": annotations
                 })
             }
-            Node::Str(v) => {
+            Node::String(v) => {
                 json!({
                     "value": v.value(),
                     "annotations": annotations

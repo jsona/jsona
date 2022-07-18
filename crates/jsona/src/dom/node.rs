@@ -10,6 +10,7 @@ use rowan::{NodeOrToken, TextRange};
 use serde_json::Number as JsonNumber;
 use std::collections::HashMap;
 use std::iter::{once, FromIterator};
+use std::string::String as StdString;
 use std::sync::Arc;
 
 macro_rules! wrap_node {
@@ -80,7 +81,7 @@ pub enum Node {
     Null(Null),
     Bool(Bool),
     Number(Number),
-    Str(Str),
+    String(String),
     Array(Array),
     Object(Object),
 }
@@ -137,7 +138,7 @@ impl DomNode for Node {
 
 impl Sealed for Node {}
 
-impl_dom_node_for_node!(Null, Number, Str, Bool, Array, Object,);
+impl_dom_node_for_node!(Null, Number, String, Bool, Array, Object,);
 
 impl Node {
     pub fn path(&self, keys: &Keys) -> Option<Node> {
@@ -244,7 +245,7 @@ impl Node {
         Ok(output.into_iter())
     }
 
-    pub fn scalar_text(&self) -> Option<String> {
+    pub fn scalar_text(&self) -> Option<StdString> {
         match self {
             Node::Null(v) => {
                 if v.is_valid_node() {
@@ -267,7 +268,7 @@ impl Node {
                 };
                 Some(text)
             }
-            Node::Str(v) => {
+            Node::String(v) => {
                 let text = match self.syntax() {
                     Some(syntax) => syntax.to_string(),
                     None => quote(v.value(), true),
@@ -313,7 +314,7 @@ impl Node {
                 }
             }
             Node::Bool(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-            Node::Str(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
+            Node::String(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
             Node::Number(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
             Node::Null(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
         }
@@ -391,7 +392,7 @@ impl Node {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
             }
-            Node::Str(v) => {
+            Node::String(v) => {
                 if let Err(errs) = v.validate_node() {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
@@ -456,7 +457,7 @@ impl Node {
     define_value_fns!(Null, Null, is_null, as_null, get_as_null);
     define_value_fns!(Bool, Bool, is_bool, as_bool, get_as_bool);
     define_value_fns!(Number, Number, is_number, as_number, get_as_number);
-    define_value_fns!(Str, Str, is_str, as_str, get_as_str);
+    define_value_fns!(String, String, is_string, as_string, get_as_string);
     define_value_fns!(Object, Object, is_object, as_object, get_as_object);
     define_value_fns!(Array, Array, is_array, as_array, get_as_array);
 }
@@ -477,7 +478,7 @@ macro_rules! value_from {
     };
 }
 
-value_from!(Null, Number, Str, Bool, Array, Object,);
+value_from!(Null, Number, String, Bool, Array, Object,);
 
 #[derive(Debug, Default)]
 pub(crate) struct NullInner {
@@ -611,21 +612,21 @@ pub enum NumberRepr {
 }
 
 #[derive(Debug)]
-pub(crate) struct StrInner {
+pub(crate) struct StringInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: StrRepr,
-    pub(crate) value: OnceCell<String>,
+    pub(crate) value: OnceCell<StdString>,
 }
 
 wrap_node! {
     #[derive(Debug, Clone)]
-    pub struct Str { inner: StrInner }
+    pub struct String { inner: StringInner }
 }
 
-impl Str {
+impl String {
     /// An unescaped value of the string.
     pub fn value(&self) -> &str {
         self.inner.value.get_or_init(|| {
@@ -646,7 +647,7 @@ impl Str {
                             self.inner.errors.update(|errors| {
                                 errors.push(Error::InvalidEscapeSequence { string: s.clone() })
                             });
-                            String::new()
+                            StdString::new()
                         }
                     }
                 })
@@ -736,7 +737,7 @@ impl Object {
 pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) value: OnceCell<String>,
+    pub(crate) value: OnceCell<StdString>,
 }
 
 #[derive(Debug, Clone)]
@@ -754,7 +755,7 @@ impl From<KeyInner> for Key {
 
 impl<S> From<S> for Key
 where
-    S: Into<String>,
+    S: Into<StdString>,
 {
     fn from(s: S) -> Self {
         Key::new(s)
@@ -767,7 +768,7 @@ impl Key {
     /// # Remarks
     ///
     /// This **does not** check or modify the input string.
-    pub fn new(key: impl Into<String>) -> Self {
+    pub fn new(key: impl Into<StdString>) -> Self {
         KeyInner {
             errors: Default::default(),
             syntax: None,
@@ -800,7 +801,7 @@ impl Key {
                                     string: s.clone().into(),
                                 })
                             });
-                            String::new()
+                            StdString::new()
                         }
                     }
                 })

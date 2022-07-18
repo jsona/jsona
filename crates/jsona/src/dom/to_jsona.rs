@@ -1,9 +1,10 @@
-use super::*;
+use super::{Annotations, DomNode, Key, Node};
 use crate::formatter::{Scope, ScopeKind};
 use std::fmt::{Display, Formatter, Result};
+use std::string::String as StdString;
 
 impl Node {
-    pub fn to_jsona(&self) -> String {
+    pub fn to_jsona(&self) -> StdString {
         let scope = Scope::default();
         write_value(scope.clone(), self);
         if scope.is_last_char(',') {
@@ -24,7 +25,7 @@ fn write_value(scope: Scope, value: &Node) {
         return;
     }
     match value {
-        Node::Null(_) | Node::Bool(_) | Node::Number(_) | Node::Str(_) => {
+        Node::Null(_) | Node::Bool(_) | Node::Number(_) | Node::String(_) => {
             if let Some(text) = value.scalar_text() {
                 write_scalar(scope, text, value.annotations());
             }
@@ -96,7 +97,7 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
                     Node::Null(_) => {
                         scope.write(format!(" @{}", key));
                     }
-                    Node::Bool(_) | Node::Number(_) | Node::Str(_) => {
+                    Node::Bool(_) | Node::Number(_) | Node::String(_) => {
                         if let Some(text) = value.scalar_text() {
                             write_scalar_annotaion(scope.clone(), key, text);
                         }

@@ -1,4 +1,4 @@
-use jsona::dom::{DomNode, Node};
+use jsona::dom::Node;
 use parking_lot::{RwLock, RwLockReadGuard};
 use regex::Regex;
 use serde_json::{json, Value};
@@ -55,7 +55,7 @@ impl SchemaAssociations {
         });
         if let Some(url) = root
             .get_annotation(SCHEMA_KEY)
-            .and_then(|v| v.as_str().cloned())
+            .and_then(|v| v.as_string().cloned())
         {
             let url_value = url.value();
             let schema_url = if url_value.starts_with('.') {
