@@ -197,7 +197,7 @@ impl Node {
 
         match self {
             Node::Object(t) => {
-                let entries = t.inner.entries.read();
+                let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
                     entry
                         .collect_flat(Keys::new(once(KeyOrIndex::ValueKey(key.clone()))), &mut all);
@@ -355,7 +355,7 @@ impl Node {
         match self {
             Node::Object(t) => {
                 all.push((parent.clone(), self.clone()));
-                let entries = t.inner.entries.read();
+                let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
                     entry.collect_flat(parent.join(KeyOrIndex::ValueKey(key.clone())), all);
                 }
@@ -387,7 +387,7 @@ impl Node {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
 
-                let items = v.inner.entries.read();
+                let items = v.inner.properties.read();
                 for (k, entry) in items.as_ref().all.iter() {
                     if let Err(errs) = k.validate_node() {
                         errors.extend(errs.read().as_ref().iter().cloned())
@@ -720,7 +720,7 @@ pub(crate) struct ObjectInner {
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) value_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
-    pub(crate) entries: Shared<Entries>,
+    pub(crate) properties: Shared<Entries>,
 }
 
 wrap_node! {
@@ -730,12 +730,12 @@ wrap_node! {
 
 impl Object {
     pub fn get(&self, key: &Key) -> Option<Node> {
-        let entries = self.inner.entries.read();
+        let entries = self.inner.properties.read();
         entries.lookup.get(key).cloned()
     }
 
     pub fn entries(&self) -> &Shared<Entries> {
-        &self.inner.entries
+        &self.inner.properties
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {

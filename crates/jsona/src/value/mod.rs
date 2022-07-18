@@ -61,14 +61,14 @@ pub struct Str {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Array {
-    pub value: Vec<Value>,
+    pub items: Vec<Value>,
     pub annotations: IndexMap<String, PlainValue>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Object {
-    pub value: IndexMap<String, Value>,
+    pub properties: IndexMap<String, Value>,
     pub annotations: IndexMap<String, PlainValue>,
 }
 
@@ -186,14 +186,14 @@ impl Value {
     pub fn new_array(arr: impl IntoIterator<Item = Self>) -> Self {
         Array {
             annotations: Default::default(),
-            value: arr.into_iter().collect(),
+            items: arr.into_iter().collect(),
         }
         .into()
     }
     pub fn new_object(obj: impl IntoIterator<Item = (String, Self)>) -> Self {
         Object {
             annotations: Default::default(),
-            value: obj.into_iter().collect(),
+            properties: obj.into_iter().collect(),
         }
         .into()
     }
@@ -229,12 +229,12 @@ impl From<PlainValue> for Value {
             PlainValue::Number(value) => Number { value, annotations }.into(),
             PlainValue::Str(value) => Str { value, annotations }.into(),
             PlainValue::Array(value) => Array {
-                value: value.into_iter().map(|v| v.into()).collect(),
+                items: value.into_iter().map(|v| v.into()).collect(),
                 annotations,
             }
             .into(),
             PlainValue::Object(value) => Object {
-                value: value.into_iter().map(|(k, v)| (k, v.into())).collect(),
+                properties: value.into_iter().map(|(k, v)| (k, v.into())).collect(),
                 annotations,
             }
             .into(),
@@ -289,9 +289,9 @@ impl From<Value> for PlainValue {
             Value::Bool(v) => PlainValue::Bool(v.value),
             Value::Number(v) => PlainValue::Number(v.value),
             Value::Str(v) => PlainValue::Str(v.value),
-            Value::Array(v) => PlainValue::Array(v.value.into_iter().map(|v| v.into()).collect()),
+            Value::Array(v) => PlainValue::Array(v.items.into_iter().map(|v| v.into()).collect()),
             Value::Object(v) => {
-                PlainValue::Object(v.value.into_iter().map(|(k, v)| (k, v.into())).collect())
+                PlainValue::Object(v.properties.into_iter().map(|(k, v)| (k, v.into())).collect())
             }
         }
     }

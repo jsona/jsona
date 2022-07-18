@@ -36,7 +36,7 @@ fn write_value(scope: Scope, value: &Value) {
             let value = quote(value, true);
             write_scalar(scope, value, annotations);
         }
-        Value::Array(Array { value, annotations }) => {
+        Value::Array(Array { items, annotations }) => {
             if scope.kind == ScopeKind::Array {
                 scope.write_ident();
                 scope.write("[");
@@ -46,7 +46,7 @@ fn write_value(scope: Scope, value: &Value) {
             let scope = scope.enter(ScopeKind::Array);
             write_annotations(scope.clone(), annotations);
             scope.newline();
-            for item in value {
+            for item in items {
                 write_value(scope.clone(), item);
                 scope.newline();
             }
@@ -54,7 +54,7 @@ fn write_value(scope: Scope, value: &Value) {
             scope.write_ident();
             scope.write("],");
         }
-        Value::Object(Object { value, annotations }) => {
+        Value::Object(Object { properties, annotations }) => {
             if scope.kind == ScopeKind::Array {
                 scope.write_ident();
                 scope.write("{");
@@ -64,7 +64,7 @@ fn write_value(scope: Scope, value: &Value) {
             let scope = scope.enter(ScopeKind::Object);
             write_annotations(scope.clone(), annotations);
             scope.newline();
-            for (k, v) in value {
+            for (k, v) in properties {
                 scope.write_ident();
                 scope.write(format!("{}: ", k));
                 write_value(scope.clone(), v);

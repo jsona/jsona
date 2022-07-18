@@ -280,7 +280,7 @@ fn object_from_syntax(
         value_syntax: Some(root),
         syntax: Some(syntax.into()),
         annotations,
-        entries: entries.into(),
+        properties: entries.into(),
     }
     .wrap()
     .into()

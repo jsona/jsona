@@ -44,8 +44,8 @@ impl Node {
             }
             .wrap()
             .into(),
-            Value::Array(value::Array { value, .. }) => {
-                let items: Vec<Node> = value.iter().map(|v| v.into()).collect();
+            Value::Array(value::Array { items, .. }) => {
+                let items: Vec<Node> = items.iter().map(|v| v.into()).collect();
                 ArrayInner {
                     errors: Default::default(),
                     syntax: None,
@@ -56,9 +56,9 @@ impl Node {
                 .wrap()
                 .into()
             }
-            Value::Object(value::Object { value, .. }) => {
+            Value::Object(value::Object { properties, .. }) => {
                 let mut entries = Entries::default();
-                for (k, v) in value {
+                for (k, v) in properties {
                     entries.add(k.into(), v.into());
                 }
                 ObjectInner {
@@ -66,7 +66,7 @@ impl Node {
                     syntax: None,
                     value_syntax: None,
                     annotations,
-                    entries: entries.into(),
+                    properties: entries.into(),
                 }
                 .wrap()
                 .into()
