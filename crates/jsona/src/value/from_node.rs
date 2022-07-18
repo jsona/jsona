@@ -28,7 +28,11 @@ impl From<&Node> for Value {
             .into(),
             Node::Array(v) => {
                 let value = v.items().read().iter().map(|v| v.into()).collect();
-                Array { items: value, annotations }.into()
+                Array {
+                    items: value,
+                    annotations,
+                }
+                .into()
             }
             Node::Object(v) => {
                 let value = v
@@ -37,7 +41,11 @@ impl From<&Node> for Value {
                     .iter()
                     .map(|(k, v)| (k.value().to_string(), v.into()))
                     .collect();
-                Object { properties: value, annotations }.into()
+                Object {
+                    properties: value,
+                    annotations,
+                }
+                .into()
             }
         }
     }

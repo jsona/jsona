@@ -290,9 +290,12 @@ impl From<Value> for PlainValue {
             Value::Number(v) => PlainValue::Number(v.value),
             Value::Str(v) => PlainValue::Str(v.value),
             Value::Array(v) => PlainValue::Array(v.items.into_iter().map(|v| v.into()).collect()),
-            Value::Object(v) => {
-                PlainValue::Object(v.properties.into_iter().map(|(k, v)| (k, v.into())).collect())
-            }
+            Value::Object(v) => PlainValue::Object(
+                v.properties
+                    .into_iter()
+                    .map(|(k, v)| (k, v.into()))
+                    .collect(),
+            ),
         }
     }
 }

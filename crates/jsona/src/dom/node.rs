@@ -40,8 +40,9 @@ macro_rules! wrap_node {
             fn annotations(&self) -> Option<&$crate::dom::node::Annotations> {
                 self.inner.annotations.as_ref()
             }
-            fn get_annotation(&self,  key: &Key) -> Option<$crate::dom::node::Node> {
-                self.annotations().and_then(|v| v.get(key))
+            fn get_annotation(&self, key: impl Into<Key>) -> Option<$crate::dom::node::Node> {
+                let key = key.into();
+                self.annotations().and_then(|v| v.get(&key))
             }
 
             fn validate_node(&self) -> Result<(), &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>>> {
@@ -71,7 +72,7 @@ pub trait DomNode: Sized + Sealed {
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
     fn annotations(&self) -> Option<&Annotations>;
-    fn get_annotation(&self, key: &Key) -> Option<Node>;
+    fn get_annotation(&self, key: impl Into<Key>) -> Option<Node>;
     fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>>;
     fn is_valid_node(&self) -> bool {
         self.validate_node().is_ok()
@@ -128,7 +129,7 @@ impl DomNode for Node {
         }
     }
 
-    fn get_annotation(&self, key: &Key) -> Option<Node> {
+    fn get_annotation(&self, key: impl Into<Key>) -> Option<Node> {
         match self {
             $(
             Node::$elm(v) => v.get_annotation(key),
@@ -877,7 +878,7 @@ impl DomNode for Key {
         None
     }
 
-    fn get_annotation(&self, _key: &Key) -> Option<Node> {
+    fn get_annotation(&self, _key: impl Into<Key>) -> Option<Node> {
         None
     }
 
@@ -1010,7 +1011,7 @@ impl DomNode for Annotations {
         None
     }
 
-    fn get_annotation(&self, _key: &Key) -> Option<Node> {
+    fn get_annotation(&self, _key: impl Into<Key>) -> Option<Node> {
         None
     }
 

@@ -54,7 +54,10 @@ fn write_value(scope: Scope, value: &Value) {
             scope.write_ident();
             scope.write("],");
         }
-        Value::Object(Object { properties, annotations }) => {
+        Value::Object(Object {
+            properties,
+            annotations,
+        }) => {
             if scope.kind == ScopeKind::Array {
                 scope.write_ident();
                 scope.write("{");
