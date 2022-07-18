@@ -1,8 +1,6 @@
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let jsona_file = args
-        .get(1)
-        .expect("Usage: value <jsona-file> [compact]");
+    let jsona_file = args.get(1).expect("Usage: value <jsona-file> [compact]");
     let jsona_file_path = std::path::Path::new(&jsona_file);
     let jsona_content = std::fs::read_to_string(jsona_file_path).unwrap();
 
