@@ -13,7 +13,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyOrIndex {
     Index(usize),
-    ValueKey(Key),
+    PropertyKey(Key),
     AnnotationKey(Key),
     GlobIndex(String),
     GlobKey(String),
@@ -33,7 +33,7 @@ impl core::fmt::Display for KeyOrIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             KeyOrIndex::Index(v) => write!(f, "[{}]", v),
-            KeyOrIndex::ValueKey(v) => write!(f, ".{}", v),
+            KeyOrIndex::PropertyKey(v) => write!(f, ".{}", v),
             KeyOrIndex::AnnotationKey(v) => write!(f, "@{}", v),
             KeyOrIndex::GlobIndex(v) => write!(f, "[{}]", v),
             KeyOrIndex::GlobKey(v) => write!(f, ".{}", v),
@@ -43,9 +43,15 @@ impl core::fmt::Display for KeyOrIndex {
 }
 
 impl KeyOrIndex {
+    pub fn annotation(value: &str) -> Self {
+        KeyOrIndex::AnnotationKey(value.into())
+    }
+    pub fn property(value: &str) -> Self {
+        KeyOrIndex::PropertyKey(value.into())
+    }
     pub fn is_match(&self, other: &Self) -> bool {
         match self {
-            KeyOrIndex::Index(_) | KeyOrIndex::ValueKey(_) | KeyOrIndex::AnnotationKey(_) => {
+            KeyOrIndex::Index(_) | KeyOrIndex::PropertyKey(_) | KeyOrIndex::AnnotationKey(_) => {
                 self == other
             }
             KeyOrIndex::GlobIndex(k) => match other {
@@ -53,7 +59,7 @@ impl KeyOrIndex {
                 _ => false,
             },
             KeyOrIndex::GlobKey(k) => match other {
-                KeyOrIndex::ValueKey(v) => glob_key(k, v.value()),
+                KeyOrIndex::PropertyKey(v) => glob_key(k, v.value()),
                 _ => false,
             },
             KeyOrIndex::AnyRecursive => true,
@@ -81,7 +87,9 @@ impl Keys {
         let mut exist_any_recursive = false;
         for k in keys.iter() {
             match k {
-                KeyOrIndex::Index(_) | KeyOrIndex::ValueKey(_) | KeyOrIndex::AnnotationKey(_) => {}
+                KeyOrIndex::Index(_)
+                | KeyOrIndex::PropertyKey(_)
+                | KeyOrIndex::AnnotationKey(_) => {}
                 KeyOrIndex::GlobIndex(_) | KeyOrIndex::GlobKey(_) => {
                     all_plain = false;
                 }
@@ -169,7 +177,7 @@ impl Keys {
 
     pub fn all_text_range(&self) -> TextRange {
         join_ranges(self.keys.iter().filter_map(|key| match key {
-            KeyOrIndex::ValueKey(k) => k.text_range(),
+            KeyOrIndex::PropertyKey(k) => k.text_range(),
             KeyOrIndex::AnnotationKey(k) => k.text_range(),
             _ => None,
         }))
@@ -193,7 +201,7 @@ impl Keys {
                 let key = keys[i];
                 match key {
                     KeyOrIndex::Index(_)
-                    | KeyOrIndex::ValueKey(_)
+                    | KeyOrIndex::PropertyKey(_)
                     | KeyOrIndex::AnnotationKey(_)
                     | KeyOrIndex::GlobIndex(_)
                     | KeyOrIndex::GlobKey(_) => match target_keys.get(j) {

@@ -18,6 +18,8 @@ pub enum Error {
 pub enum QueryError {
     #[error("the key or index was not found")]
     NotFound,
+    #[error("mismatch type")]
+    MismatchType,
     #[error("the given key is invalid: {0}")]
     InvalidKey(crate::parser::Error),
 }

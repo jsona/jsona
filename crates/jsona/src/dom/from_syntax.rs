@@ -68,7 +68,7 @@ pub(crate) fn keys_from_syntax(
                             } else if k == IDENT_WITH_GLOB {
                                 keys.push(KeyOrIndex::GlobIndex(text.to_string()));
                             } else {
-                                keys.push(KeyOrIndex::ValueKey(key))
+                                keys.push(KeyOrIndex::PropertyKey(key))
                             }
                         } else if k == IDENT_WITH_GLOB {
                             if text == "**" {
@@ -82,7 +82,7 @@ pub(crate) fn keys_from_syntax(
                                 keys.push(KeyOrIndex::GlobKey(text.to_string()));
                             }
                         } else {
-                            keys.push(KeyOrIndex::ValueKey(key))
+                            keys.push(KeyOrIndex::PropertyKey(key))
                         }
                         after_at = false;
                         after_bracket = false;

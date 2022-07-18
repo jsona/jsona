@@ -158,7 +158,7 @@ impl Node {
                     None
                 }
             }
-            KeyOrIndex::ValueKey(k) => {
+            KeyOrIndex::PropertyKey(k) => {
                 if let Node::Object(obj) = self {
                     obj.get(k)
                 } else {
@@ -176,8 +176,12 @@ impl Node {
         }
     }
 
-    pub fn try_get(&self, idx: &KeyOrIndex) -> Result<Node, Error> {
-        self.get(idx).ok_or(Error::Query(QueryError::NotFound))
+    pub fn try_get(&self, idx: &KeyOrIndex) -> Result<Node, QueryError> {
+        self.get(idx).ok_or(QueryError::NotFound)
+    }
+
+    pub fn get_annotation<T: AsRef<str>>(&self, name: T) -> Option<Self> {
+        self.annotations().and_then(|v| v.get(name))
     }
 
     pub fn validate(&self) -> Result<(), impl Iterator<Item = Error> + core::fmt::Debug> {
@@ -197,8 +201,10 @@ impl Node {
             Node::Object(t) => {
                 let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
-                    entry
-                        .collect_flat(Keys::new(once(KeyOrIndex::ValueKey(key.clone()))), &mut all);
+                    entry.collect_flat(
+                        Keys::new(once(KeyOrIndex::PropertyKey(key.clone()))),
+                        &mut all,
+                    );
                 }
             }
             Node::Array(arr) => {
@@ -330,7 +336,7 @@ impl Node {
                 all.push((parent.clone(), self.clone()));
                 let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_flat(parent.join(KeyOrIndex::ValueKey(key.clone())), all);
+                    entry.collect_flat(parent.join(KeyOrIndex::PropertyKey(key.clone())), all);
                 }
             }
             Node::Array(arr) => {
@@ -418,7 +424,7 @@ impl Node {
 }
 
 macro_rules! define_value_fns {
-    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident) => {
+    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident, $get_as_fn:ident) => {
         pub fn $is_fn(&self) -> bool {
             matches!(self, Self::$elm(..))
         }
@@ -430,16 +436,29 @@ macro_rules! define_value_fns {
                 None
             }
         }
+
+        pub fn $get_as_fn(&self, key: &KeyOrIndex) -> Result<Option<$t>, QueryError> {
+            match self.get(key) {
+                None => Ok(None),
+                Some(v) => {
+                    if let Node::$elm(v) = v {
+                        Ok(Some(v))
+                    } else {
+                        Err(QueryError::MismatchType)
+                    }
+                }
+            }
+        }
     };
 }
 
 impl Node {
-    define_value_fns!(Null, Null, is_null, as_null);
-    define_value_fns!(Bool, Bool, is_bool, as_bool);
-    define_value_fns!(Number, Number, is_number, as_number);
-    define_value_fns!(Str, Str, is_str, as_str);
-    define_value_fns!(Object, Object, is_object, as_object);
-    define_value_fns!(Array, Array, is_array, as_array);
+    define_value_fns!(Null, Null, is_null, as_null, get_as_null);
+    define_value_fns!(Bool, Bool, is_bool, as_bool, get_as_bool);
+    define_value_fns!(Number, Number, is_number, as_number, get_as_number);
+    define_value_fns!(Str, Str, is_str, as_str, get_as_str);
+    define_value_fns!(Object, Object, is_object, as_object, get_as_object);
+    define_value_fns!(Array, Array, is_array, as_array, get_as_array);
 }
 
 macro_rules! value_from {
@@ -915,9 +934,9 @@ pub struct Annotations {
 }
 
 impl Annotations {
-    pub fn get(&self, key: &Key) -> Option<Node> {
+    pub fn get<T: AsRef<str>>(&self, key: T) -> Option<Node> {
         let entries = self.inner.entries.read();
-        entries.lookup.get(key).cloned()
+        entries.lookup.get(&key.as_ref().into()).cloned()
     }
 
     pub fn value(&self) -> &Shared<Entries> {
