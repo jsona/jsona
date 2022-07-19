@@ -1,4 +1,5 @@
 use super::error::{Error, QueryError};
+use super::index::Index;
 use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
@@ -149,36 +150,12 @@ impl Node {
         Some(node)
     }
 
-    pub fn get(&self, key: &KeyOrIndex) -> Option<Node> {
-        match key {
-            KeyOrIndex::Index(v) => {
-                if let Node::Array(arr) = self {
-                    let items = arr.value().read();
-                    items.get(*v).cloned()
-                } else {
-                    None
-                }
-            }
-            KeyOrIndex::PropertyKey(k) => {
-                if let Node::Object(obj) = self {
-                    obj.get(k)
-                } else {
-                    None
-                }
-            }
-            KeyOrIndex::AnnotationKey(k) => {
-                if let Some(annotations) = self.annotations() {
-                    annotations.get(k)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
+    pub fn get(&self, idx: impl Index) -> Option<Node> {
+        idx.index_into(self)
     }
 
-    pub fn try_get(&self, idx: &KeyOrIndex) -> Result<Node, QueryError> {
-        self.get(idx).ok_or(QueryError::NotFound)
+    pub fn try_get(&self, idx: impl Index) -> Result<Node, QueryError> {
+        idx.index_into(self).ok_or(QueryError::NotFound)
     }
 
     pub fn get_annotation<T: AsRef<str>>(&self, name: T) -> Option<Self> {
@@ -225,6 +202,41 @@ impl Node {
                     &mut all,
                 );
             }
+        }
+
+        all.into_iter()
+    }
+
+    pub fn annotation_iter(&self) -> impl DoubleEndedIterator<Item = (Keys, Node)> {
+        let mut all = Vec::new();
+
+        if let Some(annotations) = self.annotations() {
+            let entries = annotations.inner.entries.read();
+            for (key, entry) in &entries.all {
+                all.push((
+                    Keys::new(once(KeyOrIndex::AnnotationKey(key.clone()))),
+                    entry.clone(),
+                ))
+            }
+        }
+
+        match self {
+            Node::Object(t) => {
+                let entries = t.inner.properties.read();
+                for (key, entry) in &entries.all {
+                    entry.collect_annotation(
+                        Keys::new(once(KeyOrIndex::PropertyKey(key.clone()))),
+                        &mut all,
+                    );
+                }
+            }
+            Node::Array(arr) => {
+                let items = arr.inner.items.read();
+                for (idx, item) in items.iter().enumerate() {
+                    item.collect_annotation(Keys::from(idx), &mut all);
+                }
+            }
+            _ => {}
         }
 
         all.into_iter()
@@ -360,6 +372,36 @@ impl Node {
         }
     }
 
+    fn collect_annotation(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {
+        if let Some(annotations) = self.annotations() {
+            let entries = annotations.inner.entries.read();
+            for (key, entry) in &entries.all {
+                all.push((
+                    Keys::new(once(KeyOrIndex::AnnotationKey(key.clone()))),
+                    entry.clone(),
+                ))
+            }
+        }
+        match self {
+            Node::Object(t) => {
+                all.push((parent.clone(), self.clone()));
+                let entries = t.inner.properties.read();
+                for (key, entry) in &entries.all {
+                    entry
+                        .collect_annotation(parent.join(KeyOrIndex::PropertyKey(key.clone())), all);
+                }
+            }
+            Node::Array(arr) => {
+                all.push((parent.clone(), self.clone()));
+                let items = arr.inner.items.read();
+                for (idx, item) in items.iter().enumerate() {
+                    item.collect_annotation(parent.join(KeyOrIndex::Index(idx)), all);
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn validate_all_impl(&self, errors: &mut Vec<Error>) {
         match self {
             Node::Object(v) => {
@@ -425,7 +467,7 @@ impl Node {
 }
 
 macro_rules! define_value_fns {
-    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident, $get_as_fn:ident) => {
+    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident, $try_get_as_fn:ident) => {
         pub fn $is_fn(&self) -> bool {
             matches!(self, Self::$elm(..))
         }
@@ -438,8 +480,8 @@ macro_rules! define_value_fns {
             }
         }
 
-        pub fn $get_as_fn(&self, key: &KeyOrIndex) -> Result<Option<$t>, QueryError> {
-            match self.get(key) {
+        pub fn $try_get_as_fn(&self, idx: impl Index) -> Result<Option<$t>, QueryError> {
+            match idx.index_into(self) {
                 None => Ok(None),
                 Some(v) => {
                     if let Node::$elm(v) = v {
@@ -454,12 +496,12 @@ macro_rules! define_value_fns {
 }
 
 impl Node {
-    define_value_fns!(Null, Null, is_null, as_null, get_as_null);
-    define_value_fns!(Bool, Bool, is_bool, as_bool, get_as_bool);
-    define_value_fns!(Number, Number, is_number, as_number, get_as_number);
-    define_value_fns!(String, String, is_string, as_string, get_as_string);
-    define_value_fns!(Object, Object, is_object, as_object, get_as_object);
-    define_value_fns!(Array, Array, is_array, as_array, get_as_array);
+    define_value_fns!(Null, Null, is_null, as_null, try_get_as_null);
+    define_value_fns!(Bool, Bool, is_bool, as_bool, try_get_as_bool);
+    define_value_fns!(Number, Number, is_number, as_number, try_get_as_number);
+    define_value_fns!(String, String, is_string, as_string, try_get_as_string);
+    define_value_fns!(Object, Object, is_object, as_object, try_get_as_object);
+    define_value_fns!(Array, Array, is_array, as_array, try_get_as_array);
 }
 
 macro_rules! value_from {

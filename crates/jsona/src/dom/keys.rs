@@ -20,12 +20,19 @@ pub enum KeyOrIndex {
     AnyRecursive,
 }
 
-impl<N> From<N> for KeyOrIndex
-where
-    N: Into<usize>,
-{
-    fn from(v: N) -> Self {
-        Self::Index(v.into())
+impl From<usize> for KeyOrIndex {
+    fn from(v: usize) -> Self {
+        Self::Index(v)
+    }
+}
+
+impl From<&'static str> for KeyOrIndex {
+    fn from(v: &str) -> Self {
+        if v.starts_with('@') {
+            KeyOrIndex::AnnotationKey(Key::new(v.chars().skip(1).collect::<String>()))
+        } else {
+            KeyOrIndex::PropertyKey(Key::new(v.to_string()))
+        }
     }
 }
 
@@ -43,12 +50,6 @@ impl core::fmt::Display for KeyOrIndex {
 }
 
 impl KeyOrIndex {
-    pub fn annotation(value: &str) -> Self {
-        KeyOrIndex::AnnotationKey(value.into())
-    }
-    pub fn property(value: &str) -> Self {
-        KeyOrIndex::PropertyKey(value.into())
-    }
     pub fn is_match(&self, other: &Self) -> bool {
         match self {
             KeyOrIndex::Index(_) | KeyOrIndex::PropertyKey(_) | KeyOrIndex::AnnotationKey(_) => {
@@ -124,6 +125,10 @@ impl Keys {
                 .cloned()
                 .chain(keys.into_iter().map(Into::into)),
         )
+    }
+
+    pub fn last(&self) -> Option<&KeyOrIndex> {
+        self.keys.last()
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &KeyOrIndex> + DoubleEndedIterator {
