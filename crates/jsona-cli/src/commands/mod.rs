@@ -22,9 +22,19 @@ impl<E: Environment> App<E> {
         };
 
         match args.cmd {
-            JsonaCommand::Format(fmt) => self.execute_format(fmt).await,
+            JsonaCommand::Format(cmd) => self.execute_format(cmd).await,
             #[cfg(feature = "lsp")]
-            JsonaCommand::Lsp { cmd } => self.execute_lsp(cmd).await,
+            JsonaCommand::Lsp { cmd } => {
+                #[cfg(feature = "lsp")]
+                {
+                    self.execute_lsp(cmd).await
+                }
+                #[cfg(not(feature = "lsp"))]
+                {
+                    let _ = cmd;
+                    return Err(anyhow::anyhow!("the LSP is not part of this build, please consult the documentation about enabling the functionality"));
+                }
+            }
             JsonaCommand::Lint(cmd) => self.execute_lint(cmd).await,
             JsonaCommand::Get(cmd) => self.execute_get(cmd).await,
         }
@@ -84,8 +94,10 @@ pub enum JsonaCommand {
     #[clap(visible_aliases = &["fmt"])]
     Format(FormatCommand),
     /// Language server operations.
-    #[cfg(feature = "lsp")]
-    Lsp(LspCommand),
+    Lsp {
+        #[clap(subcommand)]
+        cmd: LspCommand,
+    },
     /// Extract a value from the given JSONA document.
     Get(GetCommand),
 }
