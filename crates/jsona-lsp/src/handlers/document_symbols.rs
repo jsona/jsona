@@ -1,5 +1,8 @@
 use crate::world::{DocumentState, World};
-use jsona::dom::{self, DomNode, Node};
+use jsona::{
+    dom::{self, DomNode, Node},
+    rowan::TextRange,
+};
 use jsona_util::environment::Environment;
 use lsp_async_stub::{
     rpc::Error,
@@ -44,18 +47,30 @@ pub(crate) fn create_symbols(doc: &DocumentState) -> Vec<DocumentSymbol> {
 #[allow(deprecated)]
 fn symbols_for_value(
     name: String,
+    key_range: Option<TextRange>,
     node: &Node,
     mapper: &Mapper,
     symbols: &mut Vec<DocumentSymbol>,
 ) {
-    let range = node
-        .node_text_range()
-        .and_then(|v| mapper.range(v))
-        .unwrap();
-    let selection_range = node.text_range().and_then(|v| mapper.range(v)).unwrap();
+    let (selection_range, range) = match (key_range, node.node_text_range()) {
+        (None, None) => return,
+        (None, Some(range)) | (Some(range), None) => (range, range),
+        (Some(range1), Some(range2)) => (range1, range1.cover(range2)),
+    };
+    let range = mapper.range(range).unwrap();
+    let selection_range = mapper.range(selection_range).unwrap();
 
     match node {
-        Node::Null(_) => {}
+        Node::Null(_) => symbols.push(DocumentSymbol {
+            name,
+            kind: SymbolKind::NULL,
+            range: range.into_lsp(),
+            selection_range: selection_range.into_lsp(),
+            detail: None,
+            deprecated: None,
+            tags: Default::default(),
+            children: None,
+        }),
         Node::Bool(_) => symbols.push(DocumentSymbol {
             name,
             kind: SymbolKind::BOOLEAN,
@@ -113,8 +128,14 @@ fn symbols_for_value(
 
 fn symbols_for_annotaions(node: &Node, mapper: &Mapper, symbols: &mut Vec<DocumentSymbol>) {
     if let Some(annotations) = node.annotations() {
-        for (k, v) in annotations.value().read().iter() {
-            symbols_for_value(k.annotation_name(), v, mapper, symbols);
+        for (key, value) in annotations.value().read().iter() {
+            symbols_for_value(
+                key.annotation_name(),
+                key.text_range(),
+                value,
+                mapper,
+                symbols,
+            );
         }
     }
 }
@@ -125,7 +146,7 @@ fn symbols_for_array(arr: &dom::Array, mapper: &Mapper) -> Vec<DocumentSymbol> {
 
     for (index, value) in items.iter().enumerate() {
         symbols_for_annotaions(value, mapper, &mut symbols);
-        symbols_for_value(index.to_string(), value, mapper, &mut symbols);
+        symbols_for_value(index.to_string(), None, value, mapper, &mut symbols);
     }
 
     symbols
@@ -136,7 +157,13 @@ fn symbols_for_object(obj: &dom::Object, mapper: &Mapper) -> Vec<DocumentSymbol>
     let mut symbols = vec![];
     for (key, value) in properties.iter() {
         symbols_for_annotaions(value, mapper, &mut symbols);
-        symbols_for_value(key.to_string(), value, mapper, &mut symbols);
+        symbols_for_value(
+            key.to_string(),
+            key.text_range(),
+            value,
+            mapper,
+            &mut symbols,
+        );
     }
     symbols
 }

@@ -2,7 +2,7 @@
 
 use jsona::syntax::{
     SyntaxElement,
-    SyntaxKind::{BLOCK_COMMENT, LINE_COMMENT, VALUE},
+    SyntaxKind::{ANNOTATION_VALUE, ARRAY, BLOCK_COMMENT, LINE_COMMENT, OBJECT},
     SyntaxNode,
 };
 use jsona_util::environment::Environment;
@@ -32,7 +32,7 @@ pub(crate) async fn folding_ranges<E: Environment>(
         syntax
             .descendants_with_tokens()
             .filter_map(|d| match d.kind() {
-                VALUE | BLOCK_COMMENT => {
+                OBJECT | ARRAY | ANNOTATION_VALUE | BLOCK_COMMENT => {
                     doc.mapper.range(d.text_range()).map(|range| FoldingRange {
                         start_line: range.start.line as u32,
                         end_line: range.end.line as u32,
