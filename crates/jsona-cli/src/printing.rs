@@ -9,7 +9,7 @@ use codespan_reporting::{
 };
 use itertools::Itertools;
 use jsona::{dom, parser, rowan::TextRange};
-use jsona_common::{environment::Environment, schema::jsona_schema::ValidationError};
+use jsona_common::{environment::Environment, jsona_schema::NodeValidationError};
 use std::ops::Range;
 use tokio::io::AsyncWriteExt;
 
@@ -91,26 +91,24 @@ impl<E: Environment> App<E> {
     pub(crate) async fn print_schema_errors(
         &self,
         file: &SimpleFile<&str, &str>,
-        errors: &[ValidationError],
+        errors: &[NodeValidationError],
     ) -> Result<(), anyhow::Error> {
         let config = codespan_reporting::term::Config::default();
 
         let mut out_diag = Vec::<u8>::new();
         for err in errors {
-            let msg = err.to_string();
-            for text_range in err.node.text_ranges() {
-                let diag = Diagnostic::error()
-                    .with_message(&msg)
-                    .with_labels(Vec::from([
-                        Label::primary((), std_range(text_range)).with_message(&msg)
-                    ]));
+            let text_range = err.node.text_range().unwrap_or_default();
+            let diag = Diagnostic::error()
+                .with_message(&err.info)
+                .with_labels(Vec::from([
+                    Label::primary((), std_range(text_range)).with_message(&err.info)
+                ]));
 
-                if self.colors {
-                    term::emit(&mut Ansi::new(&mut out_diag), &config, file, &diag)?;
-                } else {
-                    term::emit(&mut NoColor::new(&mut out_diag), &config, file, &diag)?;
-                };
-            }
+            if self.colors {
+                term::emit(&mut Ansi::new(&mut out_diag), &config, file, &diag)?;
+            } else {
+                term::emit(&mut NoColor::new(&mut out_diag), &config, file, &diag)?;
+            };
         }
         let mut stderr = self.env.stderr();
         stderr.write_all(&out_diag).await?;

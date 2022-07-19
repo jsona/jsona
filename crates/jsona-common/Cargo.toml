@@ -19,6 +19,7 @@ reqwest = "0.11"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 jsona = { path = "../jsona" }
+jsona-schema = { path = "../jsona-schema" }
 globset = "0.4"
 arc-swap = "1.5"
 parking_lot = "0.12"
@@ -29,6 +30,7 @@ hex = "0.4"
 indexmap = { version = "1.9", features = ["serde", "rayon"] }
 regex = "1.6"
 tap = "1.0"
+jsonschema = { version = "0.16", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1", features = [

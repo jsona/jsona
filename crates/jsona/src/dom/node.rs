@@ -291,56 +291,8 @@ impl Node {
         }
     }
 
-    pub fn text_ranges(&self) -> impl ExactSizeIterator<Item = TextRange> {
-        let mut ranges = Vec::with_capacity(1);
-
-        match self {
-            Node::Object(v) => {
-                let entries = v.value().read();
-
-                for (k, entry) in entries.iter() {
-                    ranges.extend(k.text_ranges());
-                    ranges.extend(entry.text_ranges());
-                }
-
-                if let Some(mut r) = v.syntax().map(|s| s.text_range()) {
-                    for range in &ranges {
-                        r = r.cover(*range);
-                    }
-
-                    ranges.insert(0, r);
-                }
-            }
-            Node::Array(v) => {
-                let items = v.value().read();
-                for item in items.iter() {
-                    ranges.extend(item.text_ranges());
-                }
-
-                if let Some(mut r) = v.syntax().map(|s| s.text_range()) {
-                    for range in &ranges {
-                        r = r.cover(*range);
-                    }
-
-                    ranges.insert(0, r);
-                }
-            }
-            Node::Bool(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-            Node::String(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-            Node::Number(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-            Node::Null(v) => ranges.push(v.syntax().map(|s| s.text_range()).unwrap_or_default()),
-        }
-
-        if let Some(v) = self.annotations() {
-            let entries = v.value().read();
-
-            for (k, entry) in entries.iter() {
-                ranges.extend(k.text_ranges());
-                ranges.extend(entry.text_ranges());
-            }
-        }
-
-        ranges.into_iter()
+    pub fn text_range(&self) -> Option<TextRange> {
+        self.syntax().map(|v| v.text_range())
     }
 
     fn collect_flat(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {

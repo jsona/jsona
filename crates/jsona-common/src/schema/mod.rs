@@ -1,24 +1,20 @@
 use anyhow::{anyhow, bail, Context};
-use jsona::{
-    dom::{Keys, Node},
-    parser::parse,
-};
+use jsona::dom::{Keys, Node};
 use parking_lot::Mutex;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use url::Url;
 
-use self::{
-    associations::SchemaAssociations,
-    cache::Cache,
-    jsona_schema::{JsonaSchema, ValidationError},
+use self::{associations::SchemaAssociations, cache::Cache};
+use crate::{
+    environment::Environment,
+    jsona_schema::{JSONASchema, JSONASchemaValue, NodeValidationError},
+    LruCache,
 };
-use crate::{environment::Environment, LruCache};
 
 pub mod associations;
 pub mod cache;
-pub mod jsona_schema;
 
 #[derive(Clone)]
 pub struct Schemas<E: Environment> {
@@ -26,7 +22,7 @@ pub struct Schemas<E: Environment> {
     associations: SchemaAssociations,
     concurrent_requests: Arc<Semaphore>,
     http: reqwest::Client,
-    validators: Arc<Mutex<LruCache<Url, Arc<JsonaSchema>>>>,
+    validators: Arc<Mutex<LruCache<Url, Arc<JSONASchema>>>>,
     cache: Cache<E>,
 }
 
@@ -65,7 +61,7 @@ impl<E: Environment> Schemas<E> {
         &self,
         schema_url: &Url,
         value: &Node,
-    ) -> Result<Vec<ValidationError>, anyhow::Error> {
+    ) -> Result<Vec<NodeValidationError>, anyhow::Error> {
         let validator = match self.get_validator(schema_url) {
             Some(s) => s,
             None => {
@@ -78,18 +74,18 @@ impl<E: Environment> Schemas<E> {
                     .with_context(|| format!("invalid schema {schema_url}"))?
             }
         };
-        match validator.validate(value) {
-            Ok(_) => Ok(vec![]),
-            Err(errs) => Ok(errs),
-        }
+        validator.validate(value)
     }
 
-    pub async fn add_schema(&self, schema_url: &Url, schema: Arc<Value>) {
+    pub async fn add_schema(&self, schema_url: &Url, schema: Arc<JSONASchemaValue>) {
         drop(self.cache.store(schema_url.clone(), schema).await);
     }
 
     #[tracing::instrument(skip_all, fields(%schema_url))]
-    pub async fn load_schema(&self, schema_url: &Url) -> Result<Arc<Value>, anyhow::Error> {
+    pub async fn load_schema(
+        &self,
+        schema_url: &Url,
+    ) -> Result<Arc<JSONASchemaValue>, anyhow::Error> {
         if let Ok(s) = self.cache.load(schema_url, false).await {
             tracing::debug!(%schema_url, "schema was found in cache");
             return Ok(s);
@@ -120,7 +116,7 @@ impl<E: Environment> Schemas<E> {
         schema_url: &Url,
         _node: &Node,
         path: &Keys,
-    ) -> Result<Vec<(Keys, Arc<JsonaSchema>)>, anyhow::Error> {
+    ) -> Result<Vec<(Keys, Arc<Value>)>, anyhow::Error> {
         todo!()
     }
 
@@ -131,11 +127,11 @@ impl<E: Environment> Schemas<E> {
         _node: &Node,
         path: &Keys,
         _max_depth: usize,
-    ) -> Result<Vec<(Keys, Keys, Arc<JsonaSchema>)>, anyhow::Error> {
+    ) -> Result<Vec<(Keys, Keys, Arc<Value>)>, anyhow::Error> {
         todo!()
     }
 
-    fn get_validator(&self, schema_url: &Url) -> Option<Arc<JsonaSchema>> {
+    fn get_validator(&self, schema_url: &Url) -> Option<Arc<JSONASchema>> {
         if self.cache().lru_expired() {
             self.validators.lock().clear();
         }
@@ -146,18 +142,18 @@ impl<E: Environment> Schemas<E> {
     fn add_validator(
         &self,
         schema_url: Url,
-        schema: &Value,
-    ) -> Result<Arc<JsonaSchema>, anyhow::Error> {
+        schema: &JSONASchemaValue,
+    ) -> Result<Arc<JSONASchema>, anyhow::Error> {
         let v = Arc::new(self.create_validator(schema)?);
         self.validators.lock().put(schema_url, v.clone());
         Ok(v)
     }
 
-    fn create_validator(&self, schema: &Value) -> Result<JsonaSchema, anyhow::Error> {
-        JsonaSchema::compile(schema).map_err(|err| anyhow!("invalid schema: {err}"))
+    fn create_validator(&self, schema: &JSONASchemaValue) -> Result<JSONASchema, anyhow::Error> {
+        JSONASchema::new(schema).map_err(|err| anyhow!("invalid schema: {err}"))
     }
 
-    async fn fetch_external(&self, index_url: &Url) -> Result<Value, anyhow::Error> {
+    async fn fetch_external(&self, index_url: &Url) -> Result<JSONASchemaValue, anyhow::Error> {
         let _permit = self.concurrent_requests.acquire().await?;
         let data: Vec<u8> = match index_url.scheme() {
             "http" | "https" => self
@@ -180,13 +176,9 @@ impl<E: Environment> Schemas<E> {
             }
             scheme => bail!("the scheme `{scheme}` is not supported"),
         };
-        let data = std::str::from_utf8(&data)?;
-        let node = parse(data).into_dom();
-        if let Err(errors) = node.validate() {
-            for error in errors {
-                tracing::warn!(?error, "err was found in schema `{}`", index_url);
-            }
-        }
-        Ok(node.to_json())
+        JSONASchemaValue::from_slice(&data).map_err(|error| {
+            tracing::warn!(?error, "fail to parse schema `{}`", index_url);
+            error
+        })
     }
 }

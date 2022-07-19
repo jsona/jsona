@@ -52,7 +52,7 @@ impl<E: Environment> App<E> {
 
     #[tracing::instrument(skip_all)]
     async fn lint_files(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
-        let config = self.load_config(&cmd.general).await?;
+        let config = self.config.as_ref().unwrap();
 
         let cwd = self
             .env
@@ -60,7 +60,7 @@ impl<E: Environment> App<E> {
             .ok_or_else(|| anyhow!("could not figure the current working directory"))?;
 
         let files = self
-            .collect_files(&cwd, &config, cmd.files.into_iter())
+            .collect_files(&cwd, config, cmd.files.into_iter())
             .await?;
 
         let mut result = Ok(());
@@ -100,13 +100,6 @@ impl<E: Environment> App<E> {
             return Err(anyhow!("semantic errors found"));
         }
 
-        let config = self.config.as_ref().unwrap();
-
-        if config.schema_for(Path::new(file_path)).is_none() {
-            tracing::debug!("no schema validation");
-            return Ok(());
-        }
-
         let file_uri: Url = format!("file://{file_path}").parse().unwrap();
 
         self.schemas
@@ -143,16 +136,6 @@ pub struct LintCommand {
     /// URL to the schema to be used for validation.
     #[clap(long)]
     pub schema: Option<Url>,
-
-    /// URL to a schema catalog (index) that is compatible with Schema Store or Jsona catalogs.
-    ///
-    /// Can be specified multiple times.
-    #[clap(long)]
-    pub schema_catalog: Vec<Url>,
-
-    /// Use the default online catalogs for schemas.
-    #[clap(long)]
-    pub default_schema_catalogs: bool,
 
     /// Disable all schema validations.
     #[clap(long)]
