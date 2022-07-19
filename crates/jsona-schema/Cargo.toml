@@ -11,4 +11,3 @@ indexmap = { version = "1.9", features = ["serde-1"] }
 jsona = { path = "../jsona" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-thiserror = "1"
