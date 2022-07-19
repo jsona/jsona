@@ -1,6 +1,6 @@
 use super::update_configuration;
 use crate::world::{WorkspaceState, World};
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use lsp_async_stub::{Context, Params};
 use lsp_types::DidChangeWorkspaceFoldersParams;
 

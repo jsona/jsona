@@ -24,7 +24,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 tap = "1.0"
 jsona = { path = "../jsona" }
-jsona-common = { path = "../jsona-common" }
+jsona-util = { path = "../jsona-util" }
 time = { version = "0.3", features = ["formatting", "parsing"] }
 toml = "0.5"
 tracing = "0.1"

@@ -4,7 +4,7 @@ use super::update_configuration;
 use crate::config::InitConfig;
 use crate::world::WorkspaceState;
 use crate::World;
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use lsp_async_stub::{rpc::Error, Context, Params};
 use lsp_types::{
     CompletionOptions, FoldingRangeProviderCapability, HoverProviderCapability, InitializedParams,

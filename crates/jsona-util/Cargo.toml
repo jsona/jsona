@@ -1,5 +1,5 @@
 [package]
-name = "jsona-common"
+name = "jsona-util"
 version = "0.1.0"
 edition = "2021"
 description = "Shared code for jsona utilities."

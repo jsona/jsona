@@ -1,6 +1,6 @@
 use crate::world::{World, DEFAULT_WORKSPACE_URL};
 use anyhow::Context as AnyhowContext;
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use lsp_async_stub::{Context, Params, RequestWriter};
 use lsp_types::{
     request::WorkspaceConfiguration, ConfigurationItem, ConfigurationParams,

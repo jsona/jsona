@@ -9,7 +9,7 @@ use crate::{
     },
     world::World,
 };
-use jsona_common::{
+use jsona_util::{
     environment::Environment,
     schema::associations::{priority, source, AssociationRule, SchemaAssociation},
 };

@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::{formatter, parser};
-use jsona_common::{config::Config, environment::Environment};
+use jsona_util::{config::Config, environment::Environment};
 use std::{mem, path::Path};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 

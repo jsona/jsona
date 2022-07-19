@@ -13,7 +13,7 @@ use jsona::{
     parser,
     rowan::TextRange,
 };
-use jsona_common::{environment::Environment, jsona_schema::NodeValidationError};
+use jsona_util::{environment::Environment, jsona_schema::NodeValidationError};
 use std::ops::Range;
 use tokio::io::AsyncWriteExt;
 

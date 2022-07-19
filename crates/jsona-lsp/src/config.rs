@@ -1,5 +1,5 @@
 use figment::{providers::Serialized, Figment};
-use jsona_common::{schema::cache::DEFAULT_LRU_CACHE_EXPIRATION_TIME, HashMap};
+use jsona_util::{schema::cache::DEFAULT_LRU_CACHE_EXPIRATION_TIME, HashMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;

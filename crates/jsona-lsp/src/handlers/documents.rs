@@ -1,4 +1,4 @@
-use jsona_common::{
+use jsona_util::{
     environment::Environment,
     schema::associations::{source, AssociationRule},
 };

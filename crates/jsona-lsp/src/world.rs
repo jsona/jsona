@@ -5,7 +5,7 @@ use crate::{
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
 use jsona::{dom::Node, parser::Parse};
-use jsona_common::{
+use jsona_util::{
     config::Config,
     environment::Environment,
     schema::{

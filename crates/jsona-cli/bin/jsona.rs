@@ -3,7 +3,7 @@ use jsona_cli::{
     commands::{AppArgs, Colors},
     App,
 };
-use jsona_common::{environment::native::NativeEnvironment, log::setup_stderr_logging};
+use jsona_util::{environment::native::NativeEnvironment, log::setup_stderr_logging};
 use std::process::exit;
 use tracing::Instrument;
 

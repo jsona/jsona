@@ -1,6 +1,6 @@
 use crate::App;
 
-use jsona_common::environment::{native::NativeEnvironment, Environment};
+use jsona_util::environment::{native::NativeEnvironment, Environment};
 use std::sync::Arc;
 
 impl<E: Environment> App<E> {

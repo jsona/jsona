@@ -1,6 +1,6 @@
 use crate::world::{DocumentState, WorkspaceState, World};
 use jsona::dom::Node;
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use lsp_async_stub::{util::LspExt, Context, RequestWriter};
 use lsp_types::{
     notification, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Location,

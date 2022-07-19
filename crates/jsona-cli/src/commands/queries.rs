@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::{dom::Keys, parser};
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use serde_json::Value;
 use std::{borrow::Cow, path::PathBuf};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

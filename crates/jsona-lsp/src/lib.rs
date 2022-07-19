@@ -11,7 +11,7 @@
     clippy::too_many_lines
 )]
 
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use lsp_async_stub::Server;
 use lsp_types::{notification, request};
 use std::sync::Arc;

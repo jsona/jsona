@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::parser;
-use jsona_common::{
+use jsona_util::{
     environment::Environment,
     schema::associations::{AssociationRule, SchemaAssociation},
 };

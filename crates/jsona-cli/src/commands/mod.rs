@@ -10,7 +10,7 @@ mod lsp;
 mod queries;
 
 use clap::{crate_version, ArgEnum, Args, Parser, Subcommand};
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use std::path::PathBuf;
 
 impl<E: Environment> App<E> {

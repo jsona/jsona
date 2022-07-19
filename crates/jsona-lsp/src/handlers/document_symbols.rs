@@ -1,6 +1,6 @@
 use crate::world::{DocumentState, World};
 use jsona::dom::{self, DomNode, Node};
-use jsona_common::environment::Environment;
+use jsona_util::environment::Environment;
 use lsp_async_stub::{
     rpc::Error,
     util::{LspExt, Mapper},
