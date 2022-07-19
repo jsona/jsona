@@ -28,8 +28,8 @@ macro_rules! wrap_node {
 
         impl $crate::private::Sealed for $name {}
         impl $crate::dom::node::DomNode for $name {
-            fn all_syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
-                self.inner.all_syntax.as_ref()
+            fn node_syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
+                self.inner.node_syntax.as_ref()
             }
 
             fn syntax(&self) -> Option<&$crate::syntax::SyntaxElement> {
@@ -67,7 +67,7 @@ macro_rules! wrap_node {
 }
 
 pub trait DomNode: Sized + Sealed {
-    fn all_syntax(&self) -> Option<&SyntaxElement>;
+    fn node_syntax(&self) -> Option<&SyntaxElement>;
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
     fn annotations(&self) -> Option<&Annotations>;
@@ -94,10 +94,10 @@ macro_rules! impl_dom_node_for_node {
         )*
     ) => {
 impl DomNode for Node {
-    fn all_syntax(&self) -> Option<&SyntaxElement> {
+    fn node_syntax(&self) -> Option<&SyntaxElement> {
         match self {
             $(
-            Node::$elm(v) => v.all_syntax(),
+            Node::$elm(v) => v.node_syntax(),
             )*
         }
     }
@@ -242,6 +242,21 @@ impl Node {
         all.into_iter()
     }
 
+    pub fn text_range(&self) -> Option<TextRange> {
+        self.syntax().map(|v| v.text_range())
+    }
+
+    pub fn node_text_range(&self) -> Option<TextRange> {
+        self.node_syntax().map(|v| v.text_range())
+    }
+
+    pub fn is_scalar(&self) -> bool {
+        matches!(
+            self,
+            Node::Null(_) | Node::Bool(_) | Node::Number(_) | Node::String(_)
+        )
+    }
+
     pub fn matches_all(
         &self,
         keys: Keys,
@@ -289,10 +304,6 @@ impl Node {
             }
             Node::Array(_) | Node::Object(_) => None,
         }
-    }
-
-    pub fn text_range(&self) -> Option<TextRange> {
-        self.syntax().map(|v| v.text_range())
     }
 
     fn collect_flat(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {
@@ -478,7 +489,7 @@ value_from!(Null, Number, String, Bool, Array, Object,);
 pub(crate) struct NullInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) all_syntax: Option<SyntaxElement>,
+    pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
 }
 
@@ -501,7 +512,7 @@ impl Null {
 pub(crate) struct BoolInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) all_syntax: Option<SyntaxElement>,
+    pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<bool>,
 }
@@ -535,7 +546,7 @@ impl Bool {
 pub(crate) struct NumberInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) all_syntax: Option<SyntaxElement>,
+    pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: NumberRepr,
     pub(crate) value: OnceCell<JsonNumber>,
@@ -609,7 +620,7 @@ pub enum NumberRepr {
 pub(crate) struct StringInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) all_syntax: Option<SyntaxElement>,
+    pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: StrRepr,
     pub(crate) value: OnceCell<StdString>,
@@ -670,7 +681,7 @@ pub enum StrRepr {
 pub(crate) struct ArrayInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) all_syntax: Option<SyntaxElement>,
+    pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) items: Shared<Vec<Node>>,
 }
@@ -698,7 +709,7 @@ impl Array {
 pub(crate) struct ObjectInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
-    pub(crate) all_syntax: Option<SyntaxElement>,
+    pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) properties: Shared<Entries>,
 }
@@ -807,16 +818,14 @@ impl Key {
         self.syntax().map(|v| v.text_range())
     }
 
-    pub fn text_ranges(&self) -> impl ExactSizeIterator<Item = TextRange> {
-        self.text_range()
-            .map(|v| vec![v].into_iter())
-            .unwrap_or_else(|| vec![].into_iter())
+    pub fn annotation_name(&self) -> StdString {
+        format!("@{}", self)
     }
 }
 
 impl Sealed for Key {}
 impl DomNode for Key {
-    fn all_syntax(&self) -> Option<&SyntaxElement> {
+    fn node_syntax(&self) -> Option<&SyntaxElement> {
         self.inner.syntax.as_ref()
     }
 
@@ -941,7 +950,7 @@ impl Annotations {
 
 impl Sealed for Annotations {}
 impl DomNode for Annotations {
-    fn all_syntax(&self) -> Option<&SyntaxElement> {
+    fn node_syntax(&self) -> Option<&SyntaxElement> {
         None
     }
 

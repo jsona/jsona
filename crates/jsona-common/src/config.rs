@@ -10,7 +10,7 @@ use crate::util::GlobRule;
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsonarc"];
 
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// Files to include.
@@ -133,8 +133,6 @@ impl Config {
 #[serde(deny_unknown_fields)]
 pub struct SchemaOptions {
     /// The name of the rule.
-    ///
-    /// Used in `taplo::<name>` comments.
     pub name: Option<String>,
     /// Files to include.
     ///

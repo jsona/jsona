@@ -1,9 +1,9 @@
 use super::error::{Error, QueryError};
 use super::from_syntax::keys_from_syntax;
 use super::node::Key;
+use super::DomNode;
 use crate::parser::Parser;
 use crate::util::glob_key::glob_key;
-use crate::util::text_range::join_ranges;
 
 use rowan::TextRange;
 use std::iter::{empty, once};
@@ -131,6 +131,15 @@ impl Keys {
         self.keys.last()
     }
 
+    pub fn last_text_range(&self) -> Option<TextRange> {
+        match self.last() {
+            Some(KeyOrIndex::AnnotationKey(k)) | Some(KeyOrIndex::PropertyKey(k)) => {
+                k.syntax().map(|v| v.text_range())
+            }
+            _ => None,
+        }
+    }
+
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &KeyOrIndex> + DoubleEndedIterator {
         self.keys.iter()
     }
@@ -178,14 +187,6 @@ impl Keys {
 
     pub fn skip_right(&self, n: usize) -> Self {
         Self::new(self.keys.iter().rev().skip(n).cloned().rev())
-    }
-
-    pub fn all_text_range(&self) -> TextRange {
-        join_ranges(self.keys.iter().filter_map(|key| match key {
-            KeyOrIndex::PropertyKey(k) => k.text_range(),
-            KeyOrIndex::AnnotationKey(k) => k.text_range(),
-            _ => None,
-        }))
     }
 
     pub fn is_match(&self, other: &Keys, match_children: bool) -> bool {

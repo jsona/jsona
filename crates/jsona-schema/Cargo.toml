@@ -6,7 +6,7 @@ description = "A jsonschema dsl in jsona format"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-either = { version = "1.7.0", features = ["serde"] }
+either = { version = "1.7", features = ["serde"] }
 indexmap = { version = "1.9", features = ["serde-1"] }
 jsona = { path = "../jsona" }
 serde = { version = "1", features = ["derive"] }

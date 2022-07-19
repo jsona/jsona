@@ -8,7 +8,11 @@ use codespan_reporting::{
     },
 };
 use itertools::Itertools;
-use jsona::{dom, parser, rowan::TextRange};
+use jsona::{
+    dom::{self, DomNode},
+    parser,
+    rowan::TextRange,
+};
 use jsona_common::{environment::Environment, jsona_schema::NodeValidationError};
 use std::ops::Range;
 use tokio::io::AsyncWriteExt;
@@ -59,9 +63,9 @@ impl<E: Environment> App<E> {
                 dom::Error::ConflictingKeys { key, other } => Diagnostic::error()
                     .with_message(error.to_string())
                     .with_labels(Vec::from([
-                        Label::primary((), std_range(key.text_ranges().next().unwrap()))
+                        Label::primary((), std_range(key.text_range().unwrap()))
                             .with_message("duplicate key"),
-                        Label::secondary((), std_range(other.text_ranges().next().unwrap()))
+                        Label::secondary((), std_range(other.text_range().unwrap()))
                             .with_message("duplicate found here"),
                     ])),
                 dom::Error::InvalidEscapeSequence { string } => Diagnostic::error()
@@ -97,7 +101,11 @@ impl<E: Environment> App<E> {
 
         let mut out_diag = Vec::<u8>::new();
         for err in errors {
-            let text_range = err.node.text_range().unwrap_or_default();
+            let text_range = err
+                .node
+                .syntax()
+                .map(|v| v.text_range())
+                .unwrap_or_default();
             let diag = Diagnostic::error()
                 .with_message(&err.info)
                 .with_labels(Vec::from([
