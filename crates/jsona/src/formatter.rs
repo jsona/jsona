@@ -398,7 +398,7 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             NodeOrToken::Node(n) => {
                 is_empty = false;
                 match n.kind() {
-                    ENTRY => {
+                    PROPERTY => {
                         if let Some(c) = ctx.value_commas.last_mut() {
                             if n.next_sibling().is_none() {
                                 *c = ValueComma::Auto;
@@ -437,7 +437,7 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 }
 
 fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
-    if syntax.kind() != ENTRY {
+    if syntax.kind() != PROPERTY {
         scope.write(&syntax.to_string());
         return;
     }
@@ -525,7 +525,7 @@ fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => {
-                if n.kind() == ANNOTATION_ENTRY {
+                if n.kind() == ANNOTATION_PROPERTY {
                     format_annotation_entry(scope.clone(), n, ctx);
                 }
             }
@@ -540,7 +540,7 @@ fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 }
 
 fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
-    if syntax.kind() != ANNOTATION_ENTRY {
+    if syntax.kind() != ANNOTATION_PROPERTY {
         scope.write(&syntax.to_string());
         return;
     }

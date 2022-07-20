@@ -107,7 +107,7 @@ impl<'p> Parser<'p> {
         if let Ok(AT) = self.peek_token() {
             self.builder.start_node(ANNOTATIONS.into());
             while let Ok(AT) = self.peek_token() {
-                let _ = with_node!(self.builder, ANNOTATION_ENTRY, self.parse_anno_entry());
+                let _ = with_node!(self.builder, ANNOTATION_PROPERTY, self.parse_anno_entry());
             }
             self.builder.finish_node();
         }
@@ -140,11 +140,11 @@ impl<'p> Parser<'p> {
         ret
     }
 
-    fn parse_entry(&mut self) -> ParserResult<()> {
+    fn parse_property(&mut self) -> ParserResult<bool> {
         with_node!(self.builder, KEY, self.parse_key())?;
-        self.must_token_or(COLON, r#"expected ":""#)?;
-        with_node!(self.builder, VALUE, self.parse_value_with_annotations())?;
-        Ok(())
+        let _ = self.must_token_or(COLON, r#"expected ":""#);
+        let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
+        Ok(ret.ok().unwrap_or_default())
     }
 
     fn parse_value(&mut self) -> ParserResult<()> {
@@ -232,37 +232,47 @@ impl<'p> Parser<'p> {
         }
     }
 
-    fn parse_value_with_annotations(&mut self) -> ParserResult<()> {
+    fn parse_value_with_annotations(&mut self) -> ParserResult<bool> {
         self.parse_value()?;
-        let mut is_comma = false;
+        let mut has_comma = false;
         if let Ok(COMMA) = self.peek_token() {
-            is_comma = true;
+            has_comma = true;
             self.consume_current_token()?;
         }
         self.parse_annotations()?;
-        if !is_comma {
-            if let Ok(COMMA) = self.peek_token() {
-                self.consume_current_token()?;
-            }
-        }
-        Ok(())
+        Ok(has_comma)
     }
 
     fn parse_object(&mut self) -> ParserResult<()> {
         self.must_token_or(BRACE_START, r#"expected "{""#)?;
         self.parse_annotations()?;
+        let mut needs_comma = false;
 
         while let Ok(t) = self.must_peek_token() {
             match t {
                 BRACE_END => {
                     return self.consume_current_token();
                 }
+                COMMA => {
+                    if needs_comma {
+                        needs_comma = false;
+                        self.consume_current_token()?;
+                    } else {
+                        let _ = self.consume_error_token(r#"unexpected ",""#);
+                    }
+                }
                 AT => {
                     self.report_error(r#"unexpected "@""#);
                     self.parse_annotations()?;
                 }
                 _ => {
-                    let _ = with_node!(self.builder, ENTRY, self.parse_entry());
+                    if needs_comma {
+                        self.report_error(r#"expected ",""#);
+                    }
+                    let ret = with_node!(self.builder, PROPERTY, self.parse_property());
+                    if let Ok(has_comma) = ret {
+                        needs_comma = !has_comma;
+                    }
                 }
             }
         }
@@ -272,18 +282,31 @@ impl<'p> Parser<'p> {
     fn parse_array(&mut self) -> ParserResult<()> {
         self.must_token_or(BRACKET_START, r#"expected "[""#)?;
         let _ = self.parse_annotations();
+        let mut needs_comma = false;
 
         while let Ok(t) = self.must_peek_token() {
             match t {
                 BRACKET_END => {
                     return self.consume_current_token();
                 }
+                COMMA => {
+                    if needs_comma {
+                        needs_comma = false;
+                        self.consume_current_token()?;
+                    } else {
+                        let _ = self.consume_error_token(r#"unexpected ",""#);
+                    }
+                }
                 AT => {
                     self.report_error(r#"unexpected "@""#);
                     self.parse_annotations()?;
                 }
                 _ => {
-                    let _ = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
+                    if needs_comma {
+                        self.report_error(r#"expected ",""#);
+                    }
+                    let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
+                    needs_comma = !ret.ok().unwrap_or_default();
                 }
             }
         }

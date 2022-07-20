@@ -281,7 +281,7 @@ fn object_from_syntax(
     };
     let mut errors = Vec::new();
     let mut entries = Entries::default();
-    for child in syntax.children().filter(|v| v.kind() == ENTRY) {
+    for child in syntax.children().filter(|v| v.kind() == PROPERTY) {
         object_entry_from_syntax(child.into(), &mut entries, &mut errors)
     }
     ObjectInner {
@@ -296,7 +296,7 @@ fn object_from_syntax(
 }
 
 fn object_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: &mut Vec<Error>) {
-    assert!(syntax.kind() == ENTRY);
+    assert!(syntax.kind() == PROPERTY);
     let syntax = match syntax.into_node() {
         Some(v) => v,
         None => return,
@@ -365,7 +365,7 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
 }
 
 fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: &mut Vec<Error>) {
-    assert!(syntax.kind() == ANNOTATION_ENTRY);
+    assert!(syntax.kind() == ANNOTATION_PROPERTY);
     let syntax = match syntax.into_node() {
         Some(v) => v,
         None => return,

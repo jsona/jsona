@@ -94,11 +94,11 @@ pub enum SyntaxKind {
     // composite types
     KEY,
     SCALAR,
-    ENTRY,
+    PROPERTY,
     OBJECT,
     ARRAY,
 
-    ANNOTATION_ENTRY,
+    ANNOTATION_PROPERTY,
     ANNOTATION_VALUE,
 
     #[error]
