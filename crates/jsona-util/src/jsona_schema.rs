@@ -18,10 +18,10 @@ impl JSONASchema {
         let value = compile_json_schema(&schema.value)
             .map_err(|err| anyhow!("invalid value schema, {}", err))?;
         let mut annotations = IndexMap::default();
-        for (k, v) in &schema.annotations {
-            let annotation = compile_json_schema(&v.value)
-                .map_err(|err| anyhow!("invalid @{} schema, {}", k, err))?;
-            annotations.insert(k.to_string(), annotation);
+        for (key, value) in &schema.annotations {
+            let annotation = compile_json_schema(value)
+                .map_err(|err| anyhow!("invalid @{} schema, {}", key, err))?;
+            annotations.insert(key.to_string(), annotation);
         }
         Ok(JSONASchema { value, annotations })
     }
@@ -29,10 +29,12 @@ impl JSONASchema {
         let mut errors = vec![];
         jsona_schema_validate(&self.value, &mut errors, node, Keys::default())?;
         for (keys, annotation_node) in node.annotation_iter() {
-            if let Some(KeyOrIndex::AnnotationKey(k)) = keys.last() {
-                if let Some(schema) = self.annotations.get(k.as_ref()) {
-                    jsona_schema_validate(schema, &mut errors, &annotation_node, keys)?;
-                }
+            if let Some(schema) = keys
+                .last()
+                .and_then(|v| v.as_annotation_key())
+                .and_then(|v| self.annotations.get(&v.to_string()))
+            {
+                jsona_schema_validate(schema, &mut errors, &annotation_node, keys)?;
             }
         }
         Ok(errors)
@@ -67,14 +69,7 @@ fn jsona_schema_validate(
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct JSONASchemaValue {
     value: Box<Schema>,
-    annotations: IndexMap<String, AnnotaionSchemaValue>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
-pub struct AnnotaionSchemaValue {
-    desc: Option<String>,
-    value: Box<Schema>,
-    // scope: AnnotaionScope,
+    annotations: IndexMap<String, Schema>,
 }
 
 impl JSONASchemaValue {
@@ -92,37 +87,27 @@ impl JSONASchemaValue {
             bail!("invalid jsona");
         };
         let value_node = node
-            .try_get("value")
+            .try_get(&KeyOrIndex::property("value"))
             .map_err(|_| anyhow!("failed to get value at .value"))?;
         let value_schema =
-            from_node(value_node).map_err(|_| anyhow!("failed to parse schema at .value"))?;
-        let mut annotation_schemas: IndexMap<String, AnnotaionSchemaValue> = Default::default();
+            from_node(&value_node).map_err(|_| anyhow!("failed to parse schema at .value"))?;
+        let mut annotations: IndexMap<String, Schema> = Default::default();
         let annotations_value = node
-            .try_get_as_object("annotations")
+            .try_get_as_object(&KeyOrIndex::property("annotations"))
             .map_err(|_| anyhow!("failed to parse annotations"))?;
         if let Some(annotations_value) = annotations_value {
             for (key, value) in annotations_value.value().read().iter() {
-                let mut annotation_schema = AnnotaionSchemaValue::default();
-                let desc = value.try_get_as_string("desc").map_err(|_| {
-                    anyhow!("failed to get string value at .annotations.{}.desc", key)
-                })?;
-                annotation_schema.desc = desc.map(|v| v.value().to_string());
-                let annotation_node = value
-                    .try_get("value")
-                    .map_err(|_| anyhow!("failed to get value at .annotations.{}.value", key))?;
-                let value_schema = from_node(annotation_node)
-                    .map_err(|_| anyhow!("failed to parse schema at .annotations.{}.value", key))?;
-                annotation_schema.value = value_schema.into();
-                annotation_schemas.insert(key.value().to_string(), annotation_schema);
+                let schmea = from_node(value)
+                    .map_err(|_| anyhow!("failed to parse schema at .annotations.{}", key))?;
+                annotations.insert(key.value().to_string(), schmea);
             }
         }
         Ok(JSONASchemaValue {
             value: value_schema.into(),
-            annotations: annotation_schemas,
+            annotations,
         })
     }
 }
-
 /// A validation error that contains text ranges as well.
 #[derive(Debug)]
 pub struct NodeValidationError {
@@ -150,7 +135,7 @@ impl NodeValidationError {
                         let entries = t.value().read();
                         for (k, entry) in entries.iter() {
                             if k.value() == &**p {
-                                keys = keys.join(KeyOrIndex::PropertyKey(k.clone()));
+                                keys = keys.join(k.into());
                                 node = entry.clone();
                                 continue 'outer;
                             }
@@ -161,7 +146,7 @@ impl NodeValidationError {
                 },
                 jsonschema::paths::PathChunk::Index(idx) => {
                     node = node
-                        .try_get(idx)
+                        .try_get(&KeyOrIndex::Index(*idx))
                         .map_err(|_| anyhow!("invalid index {} at {}", idx, keys))?;
                     keys = keys.join((*idx).into());
                 }

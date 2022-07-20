@@ -1,6 +1,7 @@
 use either::Either;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct Schema {
@@ -105,6 +106,9 @@ pub struct Schema {
     pub read_only: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "writeOnly")]
     pub write_only: Option<bool>,
+
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub unknown: Option<Map<String, Value>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

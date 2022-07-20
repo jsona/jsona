@@ -1,4 +1,4 @@
-use jsona::dom::Node;
+use jsona::dom::{KeyOrIndex, Node};
 use parking_lot::{RwLock, RwLockReadGuard};
 use regex::Regex;
 use serde_json::{json, Value};
@@ -54,7 +54,7 @@ impl SchemaAssociations {
             _ => true,
         });
         if let Some(url) = root
-            .get_annotation(SCHEMA_KEY)
+            .get(&KeyOrIndex::annotation(SCHEMA_KEY))
             .and_then(|v| v.as_string().cloned())
         {
             let url_value = url.value();
