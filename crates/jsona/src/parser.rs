@@ -59,7 +59,7 @@ pub(crate) struct Parser<'p> {
     builder: GreenNodeBuilder<'p>,
     errors: Vec<Error>,
     annotation_scope: bool,
-    glob_key: bool,
+    parse_keys_mode: bool,
 }
 
 /// This is just a convenience type during parsing.
@@ -74,13 +74,13 @@ impl<'p> Parser<'p> {
             builder: Default::default(),
             errors: Default::default(),
             annotation_scope: false,
-            glob_key: false,
+            parse_keys_mode: false,
         }
     }
 
     pub(crate) fn parse_keys_only(mut self) -> Parse {
-        self.glob_key = true;
-        let _ = with_node!(self.builder, KEY, self.parse_keys());
+        self.parse_keys_mode = true;
+        let _ = with_node!(self.builder, KEYS, self.parse_keys());
 
         Parse {
             green_node: self.builder.finish(),
@@ -104,9 +104,9 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_annotations(&mut self) -> ParserResult<()> {
-        if let Ok(AT) = self.peek_token() {
+        if let Ok(ANNOATION_KEY) = self.peek_token() {
             self.builder.start_node(ANNOTATIONS.into());
-            while let Ok(AT) = self.peek_token() {
+            while let Ok(ANNOATION_KEY) = self.peek_token() {
                 let _ = with_node!(self.builder, ANNOTATION_PROPERTY, self.parse_anno_entry());
             }
             self.builder.finish_node();
@@ -115,11 +115,10 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_anno_entry(&mut self) -> ParserResult<()> {
-        self.must_token_or(AT, r#"expected "@""#)?;
+        self.must_token_or(ANNOATION_KEY, r#"expected annotation key"#)?;
         if self.annotation_scope {
             self.report_error("nested annotation");
         }
-        let _ = with_node!(self.builder, KEY, self.parse_key());
         if let Ok(PARENTHESES_START) = self.peek_token() {
             self.annotation_scope = true;
             let ret = with_node!(self.builder, ANNOTATION_VALUE, self.parse_anno_value());
@@ -261,10 +260,6 @@ impl<'p> Parser<'p> {
                         let _ = self.consume_error_token(r#"unexpected ",""#);
                     }
                 }
-                AT => {
-                    self.report_error(r#"unexpected "@""#);
-                    self.parse_annotations()?;
-                }
                 _ => {
                     if needs_comma {
                         self.report_error(r#"expected ",""#);
@@ -297,10 +292,6 @@ impl<'p> Parser<'p> {
                         let _ = self.consume_error_token(r#"unexpected ",""#);
                     }
                 }
-                AT => {
-                    self.report_error(r#"unexpected "@""#);
-                    self.parse_annotations()?;
-                }
                 _ => {
                     if needs_comma {
                         self.report_error(r#"expected ",""#);
@@ -315,14 +306,14 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_keys(&mut self) -> ParserResult<()> {
-        let mut virgin = true;
-        let mut after_period = false;
-        let mut caught_at = false;
+        let mut first = true;
+        let mut after_dot = false;
+        let mut exist_annotation_key = false;
         loop {
             let t = match self.peek_token() {
                 Ok(token) => token,
                 Err(_) => {
-                    if !after_period {
+                    if !after_dot {
                         return Ok(());
                     }
                     return self.consume_error_token("unexpected EOF");
@@ -330,32 +321,33 @@ impl<'p> Parser<'p> {
             };
 
             match t {
-                AT => {
-                    if after_period || caught_at {
-                        return self.consume_error_token(r#"unexpected "@""#);
+                ANNOATION_KEY => {
+                    if after_dot || exist_annotation_key {
+                        return self.consume_error_token("unexpected annotation key");
                     } else {
                         self.consume_current_token()?;
-                        caught_at = true;
-                        after_period = true;
+                        exist_annotation_key = true;
+                        after_dot = false;
+                        first = false;
                     }
                 }
                 PERIOD => {
-                    if after_period {
+                    if after_dot {
                         return self.consume_error_token(r#"unexpected ".""#);
                     } else {
                         self.consume_current_token()?;
-                        after_period = true;
+                        after_dot = true;
                     }
                 }
                 FLOAT => {
                     let value = self.lexer.slice();
                     if value.starts_with(['+', '-']) {
-                        return self.consume_error_token(r#"unexpect identifier"#);
+                        return self.consume_error_token("unexpect identifier");
                     } else {
                         let mut dot = false;
                         for (i, s) in value.split('.').enumerate() {
                             if s.is_empty() {
-                                if i == 0 && (after_period || virgin) {
+                                if i == 0 && after_dot {
                                     return self.consume_error_token(r#"unexpect ".""#);
                                 }
                                 self.consume_token(PERIOD, ".");
@@ -366,7 +358,7 @@ impl<'p> Parser<'p> {
                             }
                         }
                         if dot {
-                            after_period = true;
+                            after_dot = true;
                         }
                         self.next_token();
                     }
@@ -383,10 +375,10 @@ impl<'p> Parser<'p> {
                     }
                     self.consume_current_token()?;
 
-                    after_period = false;
+                    after_dot = false;
                 }
                 _ => {
-                    if after_period || virgin {
+                    if after_dot || first {
                         match self.parse_key() {
                             Ok(_) => {}
                             Err(_) => {
@@ -394,10 +386,10 @@ impl<'p> Parser<'p> {
                                 return Err(());
                             }
                         }
-                        after_period = false;
-                        virgin = false
+                        after_dot = false;
+                        first = false;
                     } else {
-                        return self.consume_error_token("unexpected identifier");
+                        return self.consume_error_token(r#"expect ".""#);
                     }
                 }
             };
@@ -409,7 +401,7 @@ impl<'p> Parser<'p> {
 
         match t {
             IDENT => self.consume_current_token(),
-            IDENT_WITH_GLOB if self.glob_key => {
+            IDENT_WITH_GLOB if self.parse_keys_mode => {
                 if let Err(err_indices) = validates::glob(self.lexer.slice()) {
                     for e in err_indices {
                         let span = self.lexer.span();
@@ -437,7 +429,7 @@ impl<'p> Parser<'p> {
                 self.validate_string();
                 self.consume_current_token()
             }
-            FLOAT if !self.glob_key => {
+            FLOAT if !self.parse_keys_mode => {
                 if self.lexer.slice().starts_with('0') {
                     self.consume_error_token("zero-padded numbers are not allowed")
                 } else if self.lexer.slice().starts_with('+') {

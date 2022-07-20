@@ -23,6 +23,9 @@ pub enum SyntaxKind {
     #[regex(r"[A-Za-z0-9_]+", priority = 2)]
     IDENT,
 
+    #[regex(r"@[A-Za-z0-9_]+")]
+    ANNOATION_KEY,
+
     /// Not part of the regular JSONA syntax, only used to allow
     /// glob patterns in keys.
     #[regex(r"[*?A-Za-z0-9_]+")]
@@ -36,9 +39,6 @@ pub enum SyntaxKind {
 
     #[token(":")]
     COLON,
-
-    #[token("@")]
-    AT,
 
     #[regex(r#"'"#, lex_single_quote)]
     SINGLE_QUOTE,
@@ -104,6 +104,7 @@ pub enum SyntaxKind {
     #[error]
     ERROR,
 
+    KEYS,
     ANNOTATIONS,
     VALUE,
 }
@@ -177,6 +178,13 @@ pub fn stringify_syntax(
     let mut buf: Vec<u8> = vec![];
     write_syntax(&mut buf, indent, element)?;
     Ok(std::str::from_utf8(&buf)?.to_string())
+}
+
+pub fn is_annotation_string(value: &str) -> bool {
+    matches!(
+        Lexer::<SyntaxKind>::new(value).next(),
+        Some(SyntaxKind::ANNOATION_KEY)
+    )
 }
 
 pub fn write_syntax<T: std::io::Write>(

@@ -34,13 +34,12 @@ pub fn from_syntax(root: SyntaxElement) -> Node {
 pub(crate) fn keys_from_syntax(
     syntax: &SyntaxElement,
 ) -> impl ExactSizeIterator<Item = KeyOrIndex> {
-    assert!(syntax.kind() == KEY);
+    assert!(syntax.kind() == KEYS);
 
     syntax
         .as_node()
         .map(|syntax| {
             let mut keys = vec![];
-            let mut after_at = false;
             let mut after_bracket = false;
             for child in syntax.children_with_tokens() {
                 let child = match child {
@@ -48,19 +47,27 @@ pub(crate) fn keys_from_syntax(
                     NodeOrToken::Token(v) => v,
                 };
                 match child.kind() {
-                    AT => after_at = true,
                     BRACKET_START => after_bracket = true,
+                    ANNOATION_KEY => {
+                        let key = KeyInner {
+                            errors: Shared::default(),
+                            syntax: Some(child.clone().into()),
+                            value: child.to_string().into(),
+                            is_annotation: true,
+                        }
+                        .into();
+                        keys.push(KeyOrIndex::AnnotationKey(key));
+                    }
                     k if k.is_key() => {
                         let text = child.text();
                         let key = KeyInner {
                             errors: Shared::default(),
                             syntax: Some(child.clone().into()),
                             value: Default::default(),
+                            is_annotation: false,
                         }
                         .into();
-                        if after_at {
-                            keys.push(KeyOrIndex::AnnotationKey(key));
-                        } else if after_bracket {
+                        if after_bracket {
                             if k == INTEGER {
                                 if let Ok(idx) = text.parse::<usize>() {
                                     keys.push(KeyOrIndex::Index(idx));
@@ -84,7 +91,6 @@ pub(crate) fn keys_from_syntax(
                         } else {
                             keys.push(KeyOrIndex::PropertyKey(key))
                         }
-                        after_at = false;
                         after_bracket = false;
                     }
                     _ => {}
@@ -104,6 +110,7 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
             errors: Shared::default(),
             syntax: Some(child),
             value: Default::default(),
+            is_annotation: false,
         }
         .into()
     } else {
@@ -111,8 +118,9 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
             errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
                 syntax: syntax.clone(),
             }])),
-            value: Default::default(),
             syntax: Some(syntax),
+            value: Default::default(),
+            is_annotation: false,
         }
         .into()
     }
@@ -370,8 +378,17 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
         Some(v) => v,
         None => return,
     };
-    let key = match syntax.children().find(|v| v.kind() == KEY) {
-        Some(key) => key_from_syntax(key.into()),
+    let key = match syntax
+        .children_with_tokens()
+        .find(|v| v.kind() == ANNOATION_KEY)
+    {
+        Some(key) => KeyInner {
+            errors: Shared::default(),
+            syntax: Some(key.clone()),
+            value: key.to_string().into(),
+            is_annotation: true,
+        }
+        .into(),
         None => {
             errors.push(Error::UnexpectedSyntax {
                 syntax: syntax.into(),

@@ -40,11 +40,11 @@ impl Index for str {
 impl Sealed for String {}
 impl Index for String {
     fn index_into(&self, v: &Node) -> Option<Node> {
-        if self.starts_with('@') {
-            KeyOrIndex::AnnotationKey(Key::new(self.chars().skip(1).collect::<String>()))
-                .index_into(v)
+        let key = Key::new(self);
+        if key.is_annotation() {
+            KeyOrIndex::AnnotationKey(key).index_into(v)
         } else {
-            KeyOrIndex::PropertyKey(Key::new(self.to_string())).index_into(v)
+            KeyOrIndex::PropertyKey(key).index_into(v)
         }
     }
 }

@@ -2,7 +2,7 @@ use super::error::{Error, QueryError};
 use super::index::Index;
 use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
-use crate::syntax::SyntaxElement;
+use crate::syntax::{is_annotation_string, SyntaxElement};
 use crate::util::quote::{quote, unquote, QuoteType};
 use crate::util::shared::Shared;
 
@@ -743,6 +743,7 @@ pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) value: OnceCell<StdString>,
+    pub(crate) is_annotation: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -774,10 +775,13 @@ impl Key {
     ///
     /// This **does not** check or modify the input string.
     pub fn new(key: impl Into<StdString>) -> Self {
+        let key: StdString = key.into();
+        let is_annotation = is_annotation_string(&key);
         KeyInner {
             errors: Default::default(),
             syntax: None,
-            value: OnceCell::from(key.into()),
+            value: OnceCell::from(key),
+            is_annotation,
         }
         .into()
     }
@@ -790,6 +794,9 @@ impl Key {
                 .as_ref()
                 .and_then(NodeOrToken::as_token)
                 .map(|s| {
+                    if self.inner.is_annotation {
+                        return s.to_string();
+                    }
                     let quote_type = match s.text().chars().next() {
                         Some('\'') => QuoteType::Single,
                         Some('"') => QuoteType::Double,
@@ -818,8 +825,8 @@ impl Key {
         self.syntax().map(|v| v.text_range())
     }
 
-    pub fn annotation_name(&self) -> StdString {
-        format!("@{}", self)
+    pub fn is_annotation(&self) -> bool {
+        self.inner.is_annotation
     }
 }
 
@@ -859,7 +866,10 @@ impl AsRef<str> for Key {
 
 impl core::fmt::Display for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        quote(self.value(), false).fmt(f)
+        match self.syntax() {
+            Some(v) => v.to_string().fmt(f),
+            None => self.value().fmt(f),
+        }
     }
 }
 

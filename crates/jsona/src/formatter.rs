@@ -548,18 +548,17 @@ fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => match n.kind() {
-                KEY => {
-                    if ctx.col_offset > 0 && !scope.is_last_char(' ') {
-                        ctx.col_offset += scope.write(" ");
-                    }
-                    let text = format!("@{}", n);
-                    ctx.ident(&scope);
-                    ctx.write(&scope, text);
-                }
                 ANNOTATION_VALUE => format_annotation_value(scope.clone(), n, ctx),
                 _ => {}
             },
             NodeOrToken::Token(t) => match t.kind() {
+                ANNOATION_KEY => {
+                    if ctx.col_offset > 0 && !scope.is_last_char(' ') {
+                        ctx.col_offset += scope.write(" ");
+                    }
+                    ctx.ident(&scope);
+                    ctx.write(&scope, t.text());
+                }
                 ERROR => format_error(scope.clone(), t, ctx),
                 NEWLINE => format_newline(scope.clone(), t, ctx),
                 k if k.is_comment() => format_comment(scope.clone(), t, ctx),

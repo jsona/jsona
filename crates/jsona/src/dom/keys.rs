@@ -28,10 +28,11 @@ impl From<usize> for KeyOrIndex {
 
 impl From<&'static str> for KeyOrIndex {
     fn from(v: &str) -> Self {
-        if v.starts_with('@') {
-            KeyOrIndex::AnnotationKey(Key::new(v.chars().skip(1).collect::<String>()))
+        let key = Key::new(v.to_string());
+        if key.is_annotation() {
+            KeyOrIndex::AnnotationKey(key)
         } else {
-            KeyOrIndex::PropertyKey(Key::new(v.to_string()))
+            KeyOrIndex::PropertyKey(key)
         }
     }
 }
@@ -41,7 +42,7 @@ impl core::fmt::Display for KeyOrIndex {
         match self {
             KeyOrIndex::Index(v) => write!(f, "[{}]", v),
             KeyOrIndex::PropertyKey(v) => write!(f, ".{}", v),
-            KeyOrIndex::AnnotationKey(v) => write!(f, "@{}", v),
+            KeyOrIndex::AnnotationKey(v) => write!(f, "{}", v),
             KeyOrIndex::GlobIndex(v) => write!(f, "[{}]", v),
             KeyOrIndex::GlobKey(v) => write!(f, ".{}", v),
             KeyOrIndex::AnyRecursive => write!(f, "**"),
@@ -378,11 +379,11 @@ mod tests {
         assert_parse_keys!(".foo*");
         assert_parse_keys!(".foo.*");
         assert_parse_keys!(".foo.*.bar");
-        assert_parse_keys!(r#".foo."ba-z""#, ".foo.'ba-z'");
-        assert_parse_keys!(r#".foo."ba z""#, ".foo.'ba z'");
+        assert_parse_keys!(r#".foo."ba-z""#);
+        assert_parse_keys!(r#".foo."ba z""#);
         assert_parse_keys!(".foo.1");
         assert_parse_keys!(".foo.1.baz");
-        assert_parse_keys!(r#".foo."1".baz"#, ".foo.1.baz");
+        assert_parse_keys!(r#".foo."1".baz"#);
         assert_parse_keys!("*foo", ".*foo");
         assert_parse_keys!("**@foo");
         assert_parse_keys!("**.*");

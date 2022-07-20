@@ -90,12 +90,12 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
         Some(annotations) => {
             let annotations = annotations.value().read();
             for (key, value) in annotations.iter() {
-                if value.is_valid_node() {
+                if !value.is_valid_node() {
                     continue;
                 }
                 match value {
                     Node::Null(_) => {
-                        scope.write(format!(" @{}", key));
+                        scope.write(format!(" {}", key));
                     }
                     Node::Bool(_) | Node::Number(_) | Node::String(_) => {
                         if let Some(text) = value.scalar_text() {
@@ -105,7 +105,7 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
                     Node::Array(_) | Node::Object(_) => {
                         scope.write("\n");
                         scope.write_ident();
-                        scope.write(format!("@{}(", key));
+                        scope.write(format!("{}(", key));
                         write_value(scope.clone(), value);
                         scope.exit();
                         if scope.is_last_char(',') {
@@ -122,5 +122,5 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
 }
 
 fn write_scalar_annotaion<T: Display>(scope: Scope, key: &Key, value: T) {
-    scope.write(format!(" @{}({})", key, value));
+    scope.write(format!(" {}({})", key, value));
 }

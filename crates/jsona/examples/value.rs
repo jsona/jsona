@@ -1,6 +1,9 @@
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let jsona_file = args.get(1).expect("Usage: value <jsona-file> [compact]");
+    let jsona_file = args
+        .get(1)
+        .expect("Usage: value <jsona-file> [json|plain|jsona]");
+    let output_format = args.get(2).map(|v| v.to_string()).unwrap_or_default();
     let jsona_file_path = std::path::Path::new(&jsona_file);
     let jsona_content = std::fs::read_to_string(jsona_file_path).unwrap();
 
@@ -15,5 +18,10 @@ fn main() {
             eprintln!("{}", err);
         }
     }
-    println!("{}", serde_json::to_string_pretty(&node.to_json()).unwrap());
+    let output = match output_format.as_str() {
+        "plain" => serde_json::to_string_pretty(&node.to_plain_json()).unwrap(),
+        "jsona" => node.to_jsona(),
+        _ => serde_json::to_string_pretty(&node.to_json()).unwrap(),
+    };
+    println!("{}", output);
 }
