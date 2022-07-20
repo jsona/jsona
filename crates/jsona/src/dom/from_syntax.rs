@@ -4,8 +4,8 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, Key, KeyInner, Node,
-        NullInner, NumberInner, NumberRepr, ObjectInner, StrRepr, StringInner,
+        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, Key, KeyInner, KeyKind,
+        Node, NullInner, NumberInner, NumberRepr, ObjectInner, StrRepr, StringInner,
     },
 };
 use serde_json::Number as JsonNumber;
@@ -53,10 +53,10 @@ pub(crate) fn keys_from_syntax(
                             errors: Shared::default(),
                             syntax: Some(child.clone().into()),
                             value: child.to_string().into(),
-                            is_annotation: true,
+                            kind: KeyKind::Annotation,
                         }
                         .into();
-                        keys.push(KeyOrIndex::AnnotationKey(key));
+                        keys.push(KeyOrIndex::Key(key));
                     }
                     k if k.is_key() => {
                         let text = child.text();
@@ -64,7 +64,7 @@ pub(crate) fn keys_from_syntax(
                             errors: Shared::default(),
                             syntax: Some(child.clone().into()),
                             value: Default::default(),
-                            is_annotation: false,
+                            kind: KeyKind::Property,
                         }
                         .into();
                         if after_bracket {
@@ -75,7 +75,7 @@ pub(crate) fn keys_from_syntax(
                             } else if k == IDENT_WITH_GLOB {
                                 keys.push(KeyOrIndex::GlobIndex(text.to_string()));
                             } else {
-                                keys.push(KeyOrIndex::PropertyKey(key))
+                                keys.push(KeyOrIndex::Key(key))
                             }
                         } else if k == IDENT_WITH_GLOB {
                             if text == "**" {
@@ -89,7 +89,7 @@ pub(crate) fn keys_from_syntax(
                                 keys.push(KeyOrIndex::GlobKey(text.to_string()));
                             }
                         } else {
-                            keys.push(KeyOrIndex::PropertyKey(key))
+                            keys.push(KeyOrIndex::Key(key))
                         }
                         after_bracket = false;
                     }
@@ -110,7 +110,7 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
             errors: Shared::default(),
             syntax: Some(child),
             value: Default::default(),
-            is_annotation: false,
+            kind: KeyKind::Property,
         }
         .into()
     } else {
@@ -120,7 +120,7 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
             }])),
             syntax: Some(syntax),
             value: Default::default(),
-            is_annotation: false,
+            kind: KeyKind::Property,
         }
         .into()
     }
@@ -386,7 +386,7 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
             errors: Shared::default(),
             syntax: Some(key.clone()),
             value: key.to_string().into(),
-            is_annotation: true,
+            kind: KeyKind::Annotation,
         }
         .into(),
         None => {

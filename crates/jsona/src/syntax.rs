@@ -180,13 +180,6 @@ pub fn stringify_syntax(
     Ok(std::str::from_utf8(&buf)?.to_string())
 }
 
-pub fn is_annotation_string(value: &str) -> bool {
-    matches!(
-        Lexer::<SyntaxKind>::new(value).next(),
-        Some(SyntaxKind::ANNOATION_KEY)
-    )
-}
-
 pub fn write_syntax<T: std::io::Write>(
     w: &mut T,
     indent: usize,

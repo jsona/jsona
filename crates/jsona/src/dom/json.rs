@@ -63,7 +63,7 @@ impl Node {
             Value::Object(properties) => {
                 let mut entries = Entries::default();
                 for (k, v) in properties {
-                    entries.add(k.into(), Node::from_plain_json(v));
+                    entries.add(Key::property(k), Node::from_plain_json(v));
                 }
                 ObjectInner {
                     errors: Default::default(),
@@ -98,7 +98,7 @@ impl Node {
             .map(|m| {
                 let mut entries = Entries::default();
                 for (k, v) in m {
-                    entries.add(k.into(), Node::from_plain_json(v))
+                    entries.add(Key::annotation(k), Node::from_plain_json(v))
                 }
                 AnnotationsInner {
                     errors: Default::default(),
@@ -164,7 +164,7 @@ impl Node {
             Value::Object(properties) => {
                 let mut entries = Entries::default();
                 for (k, v) in properties {
-                    entries.add(k.into(), Node::from_json(v));
+                    entries.add(Key::property(k), Node::from_json(v));
                 }
                 ObjectInner {
                     errors: Default::default(),

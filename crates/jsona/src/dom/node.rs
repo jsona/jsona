@@ -1,8 +1,7 @@
 use super::error::{Error, QueryError};
-use super::index::Index;
 use super::keys::{KeyOrIndex, Keys};
 use crate::private::Sealed;
-use crate::syntax::{is_annotation_string, SyntaxElement};
+use crate::syntax::SyntaxElement;
 use crate::util::quote::{quote, unquote, QuoteType};
 use crate::util::shared::Shared;
 
@@ -150,16 +149,22 @@ impl Node {
         Some(node)
     }
 
-    pub fn get(&self, idx: impl Index) -> Option<Node> {
-        idx.index_into(self)
+    pub fn get(&self, key: &KeyOrIndex) -> Option<Node> {
+        match key {
+            KeyOrIndex::Index(i) => self.as_array().and_then(|v| v.get(*i)),
+            KeyOrIndex::Key(k) => {
+                if k.is_property() {
+                    self.as_object().and_then(|v| v.get(k))
+                } else {
+                    self.annotations().and_then(|v| v.get(k))
+                }
+            }
+            _ => None,
+        }
     }
 
-    pub fn try_get(&self, idx: impl Index) -> Result<Node, QueryError> {
-        idx.index_into(self).ok_or(QueryError::NotFound)
-    }
-
-    pub fn get_annotation<T: AsRef<str>>(&self, name: T) -> Option<Self> {
-        self.annotations().and_then(|v| v.get(name))
+    pub fn try_get(&self, key: &KeyOrIndex) -> Result<Node, QueryError> {
+        self.get(key).ok_or(QueryError::NotFound)
     }
 
     pub fn validate(&self) -> Result<(), impl Iterator<Item = Error> + core::fmt::Debug> {
@@ -179,16 +184,13 @@ impl Node {
             Node::Object(t) => {
                 let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_flat(
-                        Keys::new(once(KeyOrIndex::PropertyKey(key.clone()))),
-                        &mut all,
-                    );
+                    entry.collect_flat(Keys::new(once(key.into())), &mut all);
                 }
             }
             Node::Array(arr) => {
                 let items = arr.inner.items.read();
                 for (idx, item) in items.iter().enumerate() {
-                    item.collect_flat(Keys::from(idx), &mut all);
+                    item.collect_flat(Keys::new(once(idx.into())), &mut all);
                 }
             }
             _ => {}
@@ -197,10 +199,7 @@ impl Node {
         if let Some(annotations) = self.annotations() {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                entry.collect_flat(
-                    Keys::new(once(KeyOrIndex::AnnotationKey(key.clone()))),
-                    &mut all,
-                );
+                entry.collect_flat(Keys::new(once(key.into())), &mut all);
             }
         }
 
@@ -213,10 +212,7 @@ impl Node {
         if let Some(annotations) = self.annotations() {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                all.push((
-                    Keys::new(once(KeyOrIndex::AnnotationKey(key.clone()))),
-                    entry.clone(),
-                ))
+                all.push((Keys::new(once(key.into())), entry.clone()))
             }
         }
 
@@ -224,16 +220,13 @@ impl Node {
             Node::Object(t) => {
                 let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_annotation(
-                        Keys::new(once(KeyOrIndex::PropertyKey(key.clone()))),
-                        &mut all,
-                    );
+                    entry.collect_annotation(Keys::new(once(key.into())), &mut all);
                 }
             }
             Node::Array(arr) => {
                 let items = arr.inner.items.read();
                 for (idx, item) in items.iter().enumerate() {
-                    item.collect_annotation(Keys::from(idx), &mut all);
+                    item.collect_annotation(Keys::new(once(idx.into())), &mut all);
                 }
             }
             _ => {}
@@ -312,14 +305,14 @@ impl Node {
                 all.push((parent.clone(), self.clone()));
                 let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
-                    entry.collect_flat(parent.join(KeyOrIndex::PropertyKey(key.clone())), all);
+                    entry.collect_flat(parent.join(key.into()), all);
                 }
             }
             Node::Array(arr) => {
                 all.push((parent.clone(), self.clone()));
                 let items = arr.inner.items.read();
                 for (idx, item) in items.iter().enumerate() {
-                    item.collect_flat(parent.join(KeyOrIndex::Index(idx)), all);
+                    item.collect_flat(parent.join(idx.into()), all);
                 }
             }
             _ => {
@@ -330,7 +323,7 @@ impl Node {
         if let Some(annotations) = self.annotations() {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                entry.collect_flat(parent.join(KeyOrIndex::AnnotationKey(key.clone())), all);
+                entry.collect_flat(parent.join(key.into()), all);
             }
         }
     }
@@ -339,10 +332,7 @@ impl Node {
         if let Some(annotations) = self.annotations() {
             let entries = annotations.inner.entries.read();
             for (key, entry) in &entries.all {
-                all.push((
-                    Keys::new(once(KeyOrIndex::AnnotationKey(key.clone()))),
-                    entry.clone(),
-                ))
+                all.push((Keys::new(once(key.into())), entry.clone()))
             }
         }
         match self {
@@ -350,15 +340,14 @@ impl Node {
                 all.push((parent.clone(), self.clone()));
                 let entries = t.inner.properties.read();
                 for (key, entry) in &entries.all {
-                    entry
-                        .collect_annotation(parent.join(KeyOrIndex::PropertyKey(key.clone())), all);
+                    entry.collect_annotation(parent.join(key.into()), all);
                 }
             }
             Node::Array(arr) => {
                 all.push((parent.clone(), self.clone()));
                 let items = arr.inner.items.read();
                 for (idx, item) in items.iter().enumerate() {
-                    item.collect_annotation(parent.join(KeyOrIndex::Index(idx)), all);
+                    item.collect_annotation(parent.join(idx.into()), all);
                 }
             }
             _ => {}
@@ -443,8 +432,8 @@ macro_rules! define_value_fns {
             }
         }
 
-        pub fn $try_get_as_fn(&self, idx: impl Index) -> Result<Option<$t>, QueryError> {
-            match idx.index_into(self) {
+        pub fn $try_get_as_fn(&self, key: &KeyOrIndex) -> Result<Option<$t>, QueryError> {
+            match self.get(key) {
                 None => Ok(None),
                 Some(v) => {
                     if let Node::$elm(v) = v {
@@ -692,6 +681,11 @@ wrap_node! {
 }
 
 impl Array {
+    pub fn get(&self, idx: usize) -> Option<Node> {
+        let items = self.inner.items.read();
+        items.get(idx).cloned()
+    }
+
     pub fn value(&self) -> &Shared<Vec<Node>> {
         &self.inner.items
     }
@@ -743,7 +737,13 @@ pub(crate) struct KeyInner {
     pub(crate) errors: Shared<Vec<Error>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) value: OnceCell<StdString>,
-    pub(crate) is_annotation: bool,
+    pub(crate) kind: KeyKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeyKind {
+    Property,
+    Annotation,
 }
 
 #[derive(Debug, Clone)]
@@ -759,29 +759,23 @@ impl From<KeyInner> for Key {
     }
 }
 
-impl<S> From<S> for Key
-where
-    S: Into<StdString>,
-{
-    fn from(s: S) -> Self {
-        Key::new(s)
-    }
-}
-
 impl Key {
-    /// Return a new key with the given value.
-    ///
-    /// # Remarks
-    ///
-    /// This **does not** check or modify the input string.
-    pub fn new(key: impl Into<StdString>) -> Self {
-        let key: StdString = key.into();
-        let is_annotation = is_annotation_string(&key);
+    pub fn property<T: Into<StdString>>(key: T) -> Self {
         KeyInner {
             errors: Default::default(),
             syntax: None,
-            value: OnceCell::from(key),
-            is_annotation,
+            value: OnceCell::from(key.into()),
+            kind: KeyKind::Property,
+        }
+        .into()
+    }
+
+    pub fn annotation<T: Into<StdString>>(key: T) -> Self {
+        KeyInner {
+            errors: Default::default(),
+            syntax: None,
+            value: OnceCell::from(key.into()),
+            kind: KeyKind::Annotation,
         }
         .into()
     }
@@ -794,7 +788,7 @@ impl Key {
                 .as_ref()
                 .and_then(NodeOrToken::as_token)
                 .map(|s| {
-                    if self.inner.is_annotation {
+                    if self.is_annotation() {
                         return s.to_string();
                     }
                     let quote_type = match s.text().chars().next() {
@@ -821,12 +815,16 @@ impl Key {
         })
     }
 
-    pub fn text_range(&self) -> Option<TextRange> {
-        self.syntax().map(|v| v.text_range())
+    pub fn is_property(&self) -> bool {
+        self.inner.kind == KeyKind::Property
     }
 
     pub fn is_annotation(&self) -> bool {
-        self.inner.is_annotation
+        self.inner.kind == KeyKind::Annotation
+    }
+
+    pub fn text_range(&self) -> Option<TextRange> {
+        self.syntax().map(|v| v.text_range())
     }
 }
 
@@ -948,9 +946,9 @@ pub struct Annotations {
 }
 
 impl Annotations {
-    pub fn get<T: AsRef<str>>(&self, key: T) -> Option<Node> {
+    pub fn get(&self, key: &Key) -> Option<Node> {
         let entries = self.inner.entries.read();
-        entries.lookup.get(&key.as_ref().into()).cloned()
+        entries.lookup.get(key).cloned()
     }
 
     pub fn value(&self) -> &Shared<Entries> {

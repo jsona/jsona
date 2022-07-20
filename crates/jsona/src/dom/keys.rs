@@ -13,11 +13,22 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyOrIndex {
     Index(usize),
-    PropertyKey(Key),
-    AnnotationKey(Key),
+    Key(Key),
     GlobIndex(String),
     GlobKey(String),
     AnyRecursive,
+}
+
+impl<'a> From<&'a usize> for KeyOrIndex {
+    fn from(v: &'a usize) -> Self {
+        Self::Index(*v)
+    }
+}
+
+impl<'a> From<&'a Key> for KeyOrIndex {
+    fn from(k: &'a Key) -> Self {
+        Self::Key(k.clone())
+    }
 }
 
 impl From<usize> for KeyOrIndex {
@@ -26,14 +37,9 @@ impl From<usize> for KeyOrIndex {
     }
 }
 
-impl From<&'static str> for KeyOrIndex {
-    fn from(v: &str) -> Self {
-        let key = Key::new(v.to_string());
-        if key.is_annotation() {
-            KeyOrIndex::AnnotationKey(key)
-        } else {
-            KeyOrIndex::PropertyKey(key)
-        }
+impl From<Key> for KeyOrIndex {
+    fn from(k: Key) -> Self {
+        Self::Key(k)
     }
 }
 
@@ -41,8 +47,13 @@ impl core::fmt::Display for KeyOrIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             KeyOrIndex::Index(v) => write!(f, "[{}]", v),
-            KeyOrIndex::PropertyKey(v) => write!(f, ".{}", v),
-            KeyOrIndex::AnnotationKey(v) => write!(f, "{}", v),
+            KeyOrIndex::Key(v) => {
+                if v.is_property() {
+                    write!(f, ".{}", v)
+                } else {
+                    write!(f, "{}", v)
+                }
+            }
             KeyOrIndex::GlobIndex(v) => write!(f, "[{}]", v),
             KeyOrIndex::GlobKey(v) => write!(f, ".{}", v),
             KeyOrIndex::AnyRecursive => write!(f, "**"),
@@ -51,17 +62,50 @@ impl core::fmt::Display for KeyOrIndex {
 }
 
 impl KeyOrIndex {
+    pub fn property<T: Into<String>>(key: T) -> Self {
+        Self::Key(Key::property(key))
+    }
+
+    pub fn annotation<T: Into<String>>(key: T) -> Self {
+        Self::Key(Key::annotation(key))
+    }
+
+    pub fn as_index(&self) -> Option<&usize> {
+        if let KeyOrIndex::Index(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_property_key(&self) -> Option<&Key> {
+        if let KeyOrIndex::Key(v) = self {
+            if v.is_property() {
+                return Some(v);
+            }
+        }
+        None
+    }
+
+    pub fn as_annotation_key(&self) -> Option<&Key> {
+        if let KeyOrIndex::Key(v) = self {
+            if v.is_annotation() {
+                return Some(v);
+            }
+        }
+        None
+    }
+
     pub fn is_match(&self, other: &Self) -> bool {
         match self {
-            KeyOrIndex::Index(_) | KeyOrIndex::PropertyKey(_) | KeyOrIndex::AnnotationKey(_) => {
-                self == other
-            }
+            KeyOrIndex::Index(_) | KeyOrIndex::Key(_) => self == other,
             KeyOrIndex::GlobIndex(k) => match other {
                 KeyOrIndex::Index(v) => glob_key(k, &v.to_string()),
                 _ => false,
             },
             KeyOrIndex::GlobKey(k) => match other {
-                KeyOrIndex::PropertyKey(v) => glob_key(k, v.value()),
+                // NOTE: glob key only works on property key
+                KeyOrIndex::Key(v) => v.is_property() && glob_key(k, v.value()),
                 _ => false,
             },
             KeyOrIndex::AnyRecursive => true,
@@ -89,9 +133,7 @@ impl Keys {
         let mut exist_any_recursive = false;
         for k in keys.iter() {
             match k {
-                KeyOrIndex::Index(_)
-                | KeyOrIndex::PropertyKey(_)
-                | KeyOrIndex::AnnotationKey(_) => {}
+                KeyOrIndex::Index(_) | KeyOrIndex::Key(_) => {}
                 KeyOrIndex::GlobIndex(_) | KeyOrIndex::GlobKey(_) => {
                     all_plain = false;
                 }
@@ -134,9 +176,7 @@ impl Keys {
 
     pub fn last_text_range(&self) -> Option<TextRange> {
         match self.last() {
-            Some(KeyOrIndex::AnnotationKey(k)) | Some(KeyOrIndex::PropertyKey(k)) => {
-                k.syntax().map(|v| v.text_range())
-            }
+            Some(KeyOrIndex::Key(k)) => k.syntax().map(|v| v.text_range()),
             _ => None,
         }
     }
@@ -208,8 +248,7 @@ impl Keys {
                 let key = keys[i];
                 match key {
                     KeyOrIndex::Index(_)
-                    | KeyOrIndex::PropertyKey(_)
-                    | KeyOrIndex::AnnotationKey(_)
+                    | KeyOrIndex::Key(_)
                     | KeyOrIndex::GlobIndex(_)
                     | KeyOrIndex::GlobKey(_) => match target_keys.get(j) {
                         Some(target_key) => {
@@ -305,15 +344,6 @@ impl Eq for Keys {}
 impl std::hash::Hash for Keys {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.dotted.hash(state);
-    }
-}
-
-impl<N> From<N> for Keys
-where
-    N: Into<usize>,
-{
-    fn from(v: N) -> Self {
-        Keys::new(once(v.into().into()))
     }
 }
 
