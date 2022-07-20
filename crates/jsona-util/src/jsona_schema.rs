@@ -1,9 +1,6 @@
 use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
-use jsona::{
-    dom::{KeyOrIndex, Keys, Node},
-    parser,
-};
+use jsona::dom::{KeyOrIndex, Keys, Node};
 use jsona_schema::{from_node, Schema};
 use jsonschema::{error::ValidationErrorKind, paths::JSONPointer, JSONSchema};
 use serde::{Deserialize, Serialize};
@@ -73,13 +70,9 @@ pub struct JSONASchemaValue {
 }
 
 impl JSONASchemaValue {
-    pub fn from_slice(data: &[u8]) -> Result<Self, anyhow::Error> {
+    pub fn from_jsona(data: &[u8]) -> Result<Self, anyhow::Error> {
         let data = std::str::from_utf8(data)?;
-        let parse = parser::parse(data);
-        if !parse.errors.is_empty() {
-            bail!("invalid jsona");
-        }
-        let node = parse.into_dom();
+        let node: Node = data.parse().map_err(|_| anyhow!("invalid jsona doc"))?;
         Self::from_node(node)
     }
     pub fn from_node(node: Node) -> Result<Self, anyhow::Error> {

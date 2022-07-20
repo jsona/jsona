@@ -125,7 +125,7 @@ fn collect_syntax_errors(doc: &DocumentState, diags: &mut Vec<Diagnostic>) {
             severity: Some(DiagnosticSeverity::ERROR),
             code: None,
             code_description: None,
-            source: Some("Even Better TOML".into()),
+            source: Some("JSONA".into()),
             message: e.message.clone(),
             related_information: None,
             tags: None,
@@ -175,7 +175,7 @@ fn collect_dom_errors(
                     diags.push(Diagnostic {
                         range: other_range,
                         severity: Some(DiagnosticSeverity::HINT),
-                        source: Some("Even Better TOML".into()),
+                        source: Some("JSONA".into()),
                         message: error.to_string(),
                         related_information: Some(Vec::from([DiagnosticRelatedInformation {
                             location: Location {
@@ -229,7 +229,7 @@ async fn collect_schema_errors<E: Environment>(
                     severity: Some(DiagnosticSeverity::ERROR),
                     code: None,
                     code_description: None,
-                    source: Some("Even Better TOML".into()),
+                    source: Some("JSONA".into()),
                     message: err.info,
                     related_information: None,
                     tags: None,

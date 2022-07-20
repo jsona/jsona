@@ -43,7 +43,7 @@ impl Node {
                 syntax: None,
                 node_syntax: None,
                 annotations,
-                repr: StrRepr::Double,
+                repr: StringRepr::Double,
                 value: v.clone().into(),
             }
             .wrap()
@@ -144,7 +144,7 @@ impl Node {
                 syntax: None,
                 node_syntax: None,
                 annotations: None,
-                repr: StrRepr::Double,
+                repr: StringRepr::Double,
                 value: v.clone().into(),
             }
             .wrap()

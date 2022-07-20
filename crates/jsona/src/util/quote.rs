@@ -193,23 +193,6 @@ pub enum QuoteType {
     Backtick,
 }
 
-impl QuoteType {
-    pub fn quote(self, no_backtick: bool) -> Self {
-        if self == QuoteType::None || (no_backtick && self == QuoteType::Backtick) {
-            QuoteType::Double
-        } else {
-            self
-        }
-    }
-    pub fn ident(self) -> Self {
-        if self == QuoteType::Backtick {
-            QuoteType::Double
-        } else {
-            self
-        }
-    }
-}
-
 pub fn quote(s: &str, force: bool) -> String {
     let quote_type = check_quote(s);
     let mut output = String::new();

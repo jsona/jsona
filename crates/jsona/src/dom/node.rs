@@ -1,5 +1,6 @@
-use super::error::{Error, QueryError};
+use super::error::{Error, ParseError, QueryError};
 use super::keys::{KeyOrIndex, Keys};
+use crate::parser;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
 use crate::util::quote::{quote, unquote, QuoteType};
@@ -10,6 +11,7 @@ use rowan::{NodeOrToken, TextRange};
 use serde_json::Number as JsonNumber;
 use std::collections::HashMap;
 use std::iter::{once, FromIterator};
+use std::str::FromStr;
 use std::string::String as StdString;
 use std::sync::Arc;
 
@@ -474,6 +476,26 @@ macro_rules! value_from {
 
 value_from!(Null, Number, String, Bool, Array, Object,);
 
+impl FromStr for Node {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parse = parser::parse(s);
+        if !parse.errors.is_empty() {
+            return Err(ParseError::InvalidSyntax {
+                errors: parse.errors,
+            });
+        }
+        let root = parse.into_dom();
+        if let Err(errors) = root.validate() {
+            return Err(ParseError::InvalidDom {
+                errors: errors.collect(),
+            });
+        }
+        Ok(root)
+    }
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct NullInner {
     pub(crate) errors: Shared<Vec<Error>>,
@@ -611,7 +633,7 @@ pub(crate) struct StringInner {
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
-    pub(crate) repr: StrRepr,
+    pub(crate) repr: StringRepr,
     pub(crate) value: OnceCell<StdString>,
 }
 
@@ -629,9 +651,9 @@ impl String {
                 .as_ref()
                 .map(|s| {
                     let quote_type = match self.inner.repr {
-                        StrRepr::Double => QuoteType::Double,
-                        StrRepr::Single => QuoteType::Single,
-                        StrRepr::Backtick => QuoteType::Backtick,
+                        StringRepr::Double => QuoteType::Double,
+                        StringRepr::Single => QuoteType::Single,
+                        StringRepr::Backtick => QuoteType::Backtick,
                     };
 
                     let string = s.as_token().unwrap().text();
@@ -660,7 +682,7 @@ impl String {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum StrRepr {
+pub enum StringRepr {
     Single,
     Double,
     Backtick,

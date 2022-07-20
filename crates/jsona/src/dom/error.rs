@@ -23,3 +23,11 @@ pub enum QueryError {
     #[error("the given key is invalid: {0}")]
     InvalidKey(crate::parser::Error),
 }
+
+#[derive(Debug, Clone, Error)]
+pub enum ParseError {
+    #[error("invalid syntax")]
+    InvalidSyntax { errors: Vec<crate::parser::Error> },
+    #[error("invalid dom")]
+    InvalidDom { errors: Vec<Error> },
+}

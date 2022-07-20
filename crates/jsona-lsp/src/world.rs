@@ -227,7 +227,9 @@ impl<E: Environment> WorkspaceState<E> {
             .ok_or_else(|| anyhow!("invalid root URL"))?;
         if let Some(config_path) = env.find_config_file(&root_path).await {
             tracing::info!(path = ?config_path, "found config file");
-            self.jsona_config = toml::from_slice(&env.read_file(&config_path).await?)?;
+            let source = env.read_file(&config_path).await?;
+            let source = std::str::from_utf8(&source)?;
+            self.jsona_config = Config::from_jsona(source)?;
 
             // This is different from the path we found the config in, in this case
             // we wish to keep the scheme of the path.

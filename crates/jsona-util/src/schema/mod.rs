@@ -176,7 +176,7 @@ impl<E: Environment> Schemas<E> {
             }
             scheme => bail!("the scheme `{scheme}` is not supported"),
         };
-        JSONASchemaValue::from_slice(&data).map_err(|error| {
+        JSONASchemaValue::from_jsona(&data).map_err(|error| {
             tracing::warn!(?error, "fail to parse schema `{}`", index_url);
             error
         })

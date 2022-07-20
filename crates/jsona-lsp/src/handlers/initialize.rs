@@ -8,8 +8,8 @@ use jsona_util::environment::Environment;
 use lsp_async_stub::{rpc::Error, Context, Params};
 use lsp_types::{
     CompletionOptions, FoldingRangeProviderCapability, HoverProviderCapability, InitializedParams,
-    OneOf, RenameOptions, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
-    TextDocumentSyncKind, WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
+    OneOf, ServerCapabilities, ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
+    WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
 };
 use lsp_types::{InitializeParams, InitializeResult};
 
@@ -58,10 +58,6 @@ pub async fn initialize<E: Environment>(
                 ..Default::default()
             }),
             text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
-            rename_provider: Some(OneOf::Right(RenameOptions {
-                prepare_provider: Some(true),
-                work_done_progress_options: Default::default(),
-            })),
             folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
             document_symbol_provider: Some(OneOf::Left(true)),
             document_formatting_provider: Some(OneOf::Left(true)),
@@ -69,12 +65,11 @@ pub async fn initialize<E: Environment>(
             completion_provider: Some(CompletionOptions {
                 resolve_provider: Some(false),
                 trigger_characters: Some(vec![
-                    ".".into(),
-                    "=".into(),
+                    ":".into(),
                     "[".into(),
                     "{".into(),
                     ",".into(),
-                    "\"".into(),
+                    "@".into(),
                 ]),
                 ..Default::default()
             }),

@@ -130,7 +130,7 @@ fn symbols_for_annotaions(node: &Node, mapper: &Mapper, symbols: &mut Vec<Docume
     if let Some(annotations) = node.annotations() {
         for (key, value) in annotations.value().read().iter() {
             symbols_for_value(
-                key.annotation_name(),
+                key.value().to_string(),
                 key.text_range(),
                 value,
                 mapper,
