@@ -2,7 +2,7 @@
 
 use crate::dom;
 use crate::syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode};
-use crate::util::quote::check_escape;
+use crate::util::check_escape;
 use logos::{Lexer, Logos};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 use std::convert::TryInto;
@@ -229,6 +229,10 @@ impl<'p> Parser<'p> {
             BACKTICK_QUOTE => {
                 self.validate_backtick();
                 with_node!(self.builder, SCALAR, self.consume_current_token())
+            }
+            COMMA => {
+                self.report_error("expected value");
+                return Err(());
             }
             _ => self.consume_error_token("expected value"),
         }

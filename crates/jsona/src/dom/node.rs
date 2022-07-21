@@ -3,8 +3,8 @@ use super::keys::{KeyOrIndex, Keys};
 use crate::parser;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
-use crate::util::quote::{quote, unquote, QuoteType};
 use crate::util::shared::Shared;
+use crate::util::{quote, unquote, QuoteType};
 
 use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};

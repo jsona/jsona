@@ -64,13 +64,7 @@ pub async fn initialize<E: Environment>(
             hover_provider: Some(HoverProviderCapability::Simple(true)),
             completion_provider: Some(CompletionOptions {
                 resolve_provider: Some(false),
-                trigger_characters: Some(vec![
-                    ":".into(),
-                    "[".into(),
-                    "{".into(),
-                    "(".into(),
-                    "@".into(),
-                ]),
+                trigger_characters: Some(vec![":".into(), "(".into(), "@".into()]),
                 ..Default::default()
             }),
             ..Default::default()

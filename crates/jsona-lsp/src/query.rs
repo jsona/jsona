@@ -22,8 +22,6 @@ pub struct Query {
     pub key: Option<SyntaxToken>,
     /// Whether add value in suggestion
     pub add_value: bool,
-    /// Whether add seperator after suggestion
-    pub add_seperator: bool,
 }
 
 impl Query {
@@ -37,7 +35,6 @@ impl Query {
         let mut node_at_offset = offset;
         let mut key = None;
         let mut add_value = false;
-        let mut add_seperator = false;
         if let Some(token) = before.as_ref().and_then(|v| {
             if v.syntax.kind().is_ws_or_comment() {
                 v.syntax.prev_token()
@@ -79,14 +76,6 @@ impl Query {
                                     .children_with_tokens()
                                     .find(|v| v.kind().is_key())
                                     .and_then(|v| v.as_token().cloned());
-                                add_seperator = key
-                                    .as_ref()
-                                    .and_then(|v| v.parent())
-                                    .map(|v| {
-                                        v.siblings_with_tokens(Direction::Next)
-                                            .any(|v| v.kind() == SyntaxKind::BRACE_END)
-                                    })
-                                    .unwrap_or_default();
                                 add_value = !token
                                     .siblings_with_tokens(Direction::Next)
                                     .any(|v| v.kind() == SyntaxKind::COLON);
@@ -113,7 +102,6 @@ impl Query {
             scope: kind,
             node_at_offset,
             add_value,
-            add_seperator,
             key,
         }
     }

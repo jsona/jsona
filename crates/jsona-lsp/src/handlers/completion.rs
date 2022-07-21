@@ -1,4 +1,7 @@
-use jsona::dom::{DomNode, Key, Keys};
+use jsona::{
+    dom::{DomNode, Key, Keys},
+    util::quote,
+};
 use jsona_schema::Schema;
 use jsona_util::environment::Environment;
 use lsp_async_stub::{
@@ -8,8 +11,9 @@ use lsp_async_stub::{
 };
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
-    Documentation, MarkupContent, TextEdit,
+    Documentation, InsertTextFormat, MarkupContent, TextEdit,
 };
+use serde_json::Value;
 
 use crate::World;
 use crate::{
@@ -105,6 +109,8 @@ fn complete_properties(
     query: &Query,
 ) -> Option<CompletionResponse> {
     let mut comp_items = vec![];
+    let current_key = query.key.as_ref().map(|v| v.text()).unwrap_or_default();
+    let is_annotation = query.scope == ScopeKind::AnnotationKey;
     for schema in schemas.iter() {
         tracing::info!(
             "complete properties schema={}",
@@ -117,21 +123,29 @@ fn complete_properties(
             None => continue,
             Some(properties) => {
                 for (prop_key, prop_value) in properties {
-                    if exist_props.contains(prop_key) {
+                    if current_key != prop_key && exist_props.contains(prop_key) {
                         continue;
                     }
+
+                    let insert_text =
+                        insert_text_for_property(query, prop_key, prop_value, is_annotation);
+
+                    let text_edit = query.key.as_ref().map(|r| {
+                        CompletionTextEdit::Edit(TextEdit {
+                            range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),
+                            new_text: insert_text.to_string(),
+                        })
+                    });
+
                     comp_items.push(CompletionItem {
                         label: prop_key.to_string(),
-                        kind: Some(CompletionItemKind::VARIABLE),
+                        kind: Some(CompletionItemKind::PROPERTY),
+                        insert_text: Some(insert_text),
+                        text_edit,
+                        insert_text_format: Some(InsertTextFormat::SNIPPET),
                         documentation: make_doc(prop_value),
-                        text_edit: query.key.as_ref().map(|r| {
-                            CompletionTextEdit::Edit(TextEdit {
-                                range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),
-                                new_text: prop_key.to_string(),
-                            })
-                        }),
                         ..Default::default()
-                    })
+                    });
                 }
             }
         }
@@ -143,6 +157,14 @@ fn complete_properties(
     }
 }
 
+fn complete_value(
+    doc: &DocumentState,
+    schemas: &[Schema],
+    query: &Query,
+) -> Option<CompletionResponse> {
+    todo!()
+}
+
 fn make_doc(schema: &Schema) -> Option<Documentation> {
     if let Some(docs) = schema.description.as_ref() {
         return Some(Documentation::MarkupContent(MarkupContent {
@@ -151,4 +173,93 @@ fn make_doc(schema: &Schema) -> Option<Documentation> {
         }));
     }
     None
+}
+
+fn insert_text_for_property(
+    query: &Query,
+    prop_key: &str,
+    schema: &Schema,
+    is_annotation: bool,
+) -> String {
+    let prop_key = if is_annotation {
+        prop_key.to_string()
+    } else {
+        quote(prop_key, false)
+    };
+    if !query.add_value {
+        return prop_key;
+    }
+    let mut value = String::new();
+    let mut num_proposals = 0;
+    if let Some(enum_value) = schema.enum_value.as_ref() {
+        if value.is_empty() && enum_value.len() == 1 {
+            value = insert_text_for_guess_value(&enum_value[0]);
+        }
+        num_proposals += enum_value.len();
+    }
+    if let Some(const_value) = schema.const_value.as_ref() {
+        if value.is_empty() {
+            value = insert_text_for_guess_value(const_value);
+        }
+        num_proposals += 1
+    }
+    if let Some(default) = schema.default.as_ref() {
+        if value.is_empty() {
+            value = insert_text_for_guess_value(default);
+        }
+        num_proposals += 1
+    }
+    if let Some(examples) = schema.examples.as_ref() {
+        if value.is_empty() && examples.len() == 1 {
+            value = insert_text_for_guess_value(&examples[0]);
+        }
+        num_proposals += examples.len();
+    }
+    if num_proposals == 0 {
+        match schema.schema_type.as_deref() {
+            Some("boolean") => value = "$1".into(),
+            Some("string") => value = r#""$1""#.into(),
+            Some("object") => value = "{$1}".into(),
+            Some("array") => value = "[$1]".into(),
+            Some("number") | Some("integer") => value = "{$1:0}".into(),
+            Some("null") => {
+                if is_annotation {
+                    return prop_key;
+                }
+                value = "{$1:null}".into();
+            }
+            _ => return prop_key,
+        }
+    }
+    if value.is_empty() || num_proposals > 1 {
+        value = "$1".to_string();
+    }
+    if is_annotation {
+        format!("{}({})", prop_key, value)
+    } else {
+        format!("{}: {},", prop_key, value)
+    }
+}
+
+fn insert_text_for_guess_value(value: &Value) -> String {
+    match value {
+        Value::Null | Value::Number(_) | Value::Bool(_) | Value::String(_) => {
+            format!("${{1:{}}}", value)
+        }
+        Value::Array(_) | Value::Object(_) => insert_text_for_value(value),
+    }
+}
+
+fn insert_text_for_value(value: &Value) -> String {
+    let text = serde_json::to_string_pretty(value).unwrap();
+    if text == "{}" {
+        return "{$1}".into();
+    } else if text == "[]" {
+        return "[$l]".into();
+    }
+    insert_text_for_plain_text(text)
+}
+
+fn insert_text_for_plain_text(text: String) -> String {
+    text
 }
