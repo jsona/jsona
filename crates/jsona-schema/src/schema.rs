@@ -1,5 +1,7 @@
 use either::Either;
 use indexmap::IndexMap;
+use jsona::dom::{KeyOrIndex, Keys};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -41,7 +43,7 @@ pub struct Schema {
     pub format: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub items: Option<Box<Schema>>,
+    pub items: Option<SchemaOrSchemaArray>,
     #[serde(rename = "maxItems", skip_serializing_if = "Option::is_none")]
     pub max_items: Option<u32>,
     #[serde(rename = "minItems", skip_serializing_if = "Option::is_none")]
@@ -115,13 +117,145 @@ pub struct Schema {
 #[serde(transparent)]
 pub struct BoolOrSchema {
     #[serde(with = "either::serde_untagged")]
-    pub inner: Either<bool, Box<Schema>>,
+    pub value: Either<bool, Box<Schema>>,
 }
 
 impl Default for BoolOrSchema {
     fn default() -> Self {
         Self {
-            inner: Either::Left(false),
+            value: Either::Left(false),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(transparent)]
+pub struct SchemaOrSchemaArray {
+    #[serde(with = "either::serde_untagged")]
+    pub value: Either<Box<Schema>, Vec<Schema>>,
+}
+
+impl Schema {
+    pub fn pointer(&self, keys: &Keys) -> Vec<&Schema> {
+        let mut result = vec![];
+        pointer_impl(&mut result, self, self, keys);
+        result
+    }
+    pub fn is_object(&self) -> bool {
+        self.schema_type
+            .as_ref()
+            .map(|v| v == "object")
+            .unwrap_or_default()
+    }
+    pub fn is_array(&self) -> bool {
+        self.schema_type
+            .as_ref()
+            .map(|v| v == "array")
+            .unwrap_or_default()
+    }
+    pub fn is_string(&self) -> bool {
+        self.schema_type
+            .as_ref()
+            .map(|v| v == "string")
+            .unwrap_or_default()
+    }
+    pub fn is_number(&self) -> bool {
+        self.schema_type
+            .as_ref()
+            .map(|v| v == "number")
+            .unwrap_or_default()
+    }
+    pub fn is_null(&self) -> bool {
+        self.schema_type
+            .as_ref()
+            .map(|v| v == "null")
+            .unwrap_or_default()
+    }
+    pub fn is_boolean(&self) -> bool {
+        self.schema_type
+            .as_ref()
+            .map(|v| v == "boolean")
+            .unwrap_or_default()
+    }
+}
+
+fn pointer_impl<'a>(
+    result: &mut Vec<&'a Schema>,
+    root_schema: &'a Schema,
+    local_schema: &'a Schema,
+    keys: &Keys,
+) {
+    let local_schema = match local_schema.ref_value.as_ref() {
+        Some(ref_value) => {
+            match root_schema.defs.as_ref().and_then(|defs| {
+                Regex::new(r#"^#/defs/(\w+)$"#)
+                    .ok()
+                    .and_then(|v| v.captures(ref_value).and_then(|v| v.get(1)))
+                    .and_then(|v| defs.get(v.as_str()))
+            }) {
+                Some(v) => v,
+                None => return,
+            }
+        }
+        None => local_schema,
+    };
+    if let Some(schemas) = local_schema
+        .one_of
+        .as_ref()
+        .or(local_schema.all_of.as_ref())
+        .or(local_schema.any_of.as_ref())
+    {
+        for local_schema in schemas.iter() {
+            pointer_impl(result, root_schema, local_schema, keys)
+        }
+    } else {
+        let (key, keys) = keys.shift();
+        match key {
+            None => {
+                result.push(local_schema);
+            }
+            Some(key) => match key {
+                KeyOrIndex::Index(index) => {
+                    if let Some(local_schema) = local_schema.items.as_ref() {
+                        match local_schema.value.as_ref() {
+                            Either::Left(local_schema) => {
+                                pointer_impl(result, root_schema, local_schema, &keys)
+                            }
+                            Either::Right(schemas) => {
+                                if let Some(local_schema) = schemas.get(index) {
+                                    pointer_impl(result, root_schema, local_schema, &keys)
+                                }
+                            }
+                        }
+                    }
+                }
+                KeyOrIndex::Key(key) => {
+                    if let Some(local_schema) = local_schema
+                        .properties
+                        .as_ref()
+                        .and_then(|v| v.get(key.value()))
+                    {
+                        pointer_impl(result, root_schema, local_schema, &keys)
+                    }
+                    if let Some(schemas) = local_schema.pattern_properties.as_ref() {
+                        for (pat, local_schema) in schemas.iter() {
+                            if let Ok(re) = Regex::new(pat) {
+                                if re.is_match(key.value()) {
+                                    pointer_impl(result, root_schema, local_schema, &keys)
+                                }
+                            }
+                        }
+                    }
+                    if let Some(local_schema) = local_schema
+                        .additional_properties
+                        .as_ref()
+                        .and_then(|v| v.value.as_ref().right())
+                    {
+                        pointer_impl(result, root_schema, local_schema, &keys)
+                    }
+                }
+                _ => {}
+            },
         }
     }
 }

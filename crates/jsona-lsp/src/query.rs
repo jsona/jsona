@@ -1,12 +1,12 @@
 //! Cursor queries of a JSONA document.
 
 use jsona::{
-    dom::{node::DomNode, Keys, Node},
-    rowan::{self, TextSize},
-    syntax::{SyntaxNode, SyntaxToken},
+    dom::{node::DomNode, Key, Keys, Node},
+    rowan::{Direction, TextRange, TextSize, TokenAtOffset},
+    syntax::{SyntaxKind, SyntaxNode, SyntaxToken},
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Query {
     /// The offset the query was made for.
     pub offset: TextSize,
@@ -14,44 +14,138 @@ pub struct Query {
     pub before: Option<PositionInfo>,
     /// After the cursor.
     pub after: Option<PositionInfo>,
+    /// Scope kind
+    pub scope: ScopeKind,
+    /// Query node contains offset
+    pub node_at_offset: TextSize,
+    /// Property or annotaion key
+    pub key: Option<SyntaxToken>,
+    /// Whether add value in suggestion
+    pub add_value: bool,
+    /// Whether add seperator after suggestion
+    pub add_seperator: bool,
 }
 
 impl Query {
-    /// Query information about a cursor position in a syntax tree.
-    #[must_use]
     pub fn at(root: &Node, offset: TextSize) -> Self {
-        let syntax = root.syntax().cloned().unwrap().into_node().unwrap();
+        let syntax = root.node_syntax().cloned().unwrap().into_node().unwrap();
+        let before = offset
+            .checked_sub(TextSize::from(1))
+            .and_then(|offset| Self::position_info_at(&syntax, offset));
+
+        let mut kind = ScopeKind::Unknown;
+        let mut node_at_offset = offset;
+        let mut key = None;
+        let mut add_value = false;
+        let mut add_seperator = false;
+        if let Some(token) = before.as_ref().and_then(|v| {
+            if v.syntax.kind().is_ws_or_comment() {
+                v.syntax.prev_token()
+            } else {
+                Some(v.syntax.clone())
+            }
+        }) {
+            match token.kind() {
+                SyntaxKind::ANNOATION_KEY => {
+                    add_value = !token
+                        .siblings_with_tokens(Direction::Next)
+                        .any(|v| v.kind() == SyntaxKind::ANNOTATION_VALUE);
+                    kind = ScopeKind::AnnotationKey;
+                    key = Some(token);
+                }
+                SyntaxKind::PARENTHESES_START | SyntaxKind::BRACE_START => {
+                    kind = ScopeKind::Object;
+                }
+                SyntaxKind::COLON => {
+                    kind = ScopeKind::PropertyValue;
+                }
+                SyntaxKind::BRACKET_START => {
+                    kind = ScopeKind::Array;
+                }
+                _ => {
+                    if let Some(node) = token.parent_ancestors().find(|v| {
+                        matches!(
+                            v.kind(),
+                            SyntaxKind::KEY
+                                | SyntaxKind::SCALAR
+                                | SyntaxKind::OBJECT
+                                | SyntaxKind::ARRAY
+                        )
+                    }) {
+                        node_at_offset = node.text_range().start();
+                        match node.kind() {
+                            SyntaxKind::KEY => {
+                                key = node
+                                    .children_with_tokens()
+                                    .find(|v| v.kind().is_key())
+                                    .and_then(|v| v.as_token().cloned());
+                                add_seperator = key
+                                    .as_ref()
+                                    .and_then(|v| v.parent())
+                                    .map(|v| {
+                                        v.siblings_with_tokens(Direction::Next)
+                                            .any(|v| v.kind() == SyntaxKind::BRACE_END)
+                                    })
+                                    .unwrap_or_default();
+                                add_value = !token
+                                    .siblings_with_tokens(Direction::Next)
+                                    .any(|v| v.kind() == SyntaxKind::COLON);
+                                kind = ScopeKind::PropertyKey
+                            }
+                            SyntaxKind::SCALAR => kind = ScopeKind::Value,
+                            SyntaxKind::OBJECT => kind = ScopeKind::Object,
+                            SyntaxKind::ARRAY => kind = ScopeKind::Array,
+                            _ => {}
+                        };
+                    }
+                }
+            };
+        }
 
         Query {
             offset,
-            before: offset
-                .checked_sub(TextSize::from(1))
-                .and_then(|offset| Self::position_info_at(&syntax, offset)),
+            before,
             after: if offset >= syntax.text_range().end() {
                 None
             } else {
                 Self::position_info_at(&syntax, offset)
             },
+            scope: kind,
+            node_at_offset,
+            add_value,
+            add_seperator,
+            key,
         }
     }
 
     #[must_use]
-    pub fn dom_at(root: &Node, offset: TextSize) -> Option<(Keys, Node)> {
-        if !node_contains_offset(root, offset) {
+    pub fn node_at(&self, root: &Node) -> Option<(Keys, Node)> {
+        if !is_value_contained(root, self.node_at_offset, None) {
             return None;
         }
-        dom_at_impl(root, offset, Keys::default())
+        node_at_impl(root, self.node_at_offset, Keys::default())
     }
 
     fn position_info_at(syntax: &SyntaxNode, offset: TextSize) -> Option<PositionInfo> {
         let syntax = match syntax.token_at_offset(offset) {
-            rowan::TokenAtOffset::None => return None,
-            rowan::TokenAtOffset::Single(s) => s,
-            rowan::TokenAtOffset::Between(_, right) => right,
+            TokenAtOffset::None => return None,
+            TokenAtOffset::Single(s) => s,
+            TokenAtOffset::Between(_, right) => right,
         };
 
         Some(PositionInfo { syntax })
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScopeKind {
+    Unknown,
+    Object,
+    Array,
+    AnnotationKey,
+    PropertyKey,
+    PropertyValue,
+    Value,
 }
 
 #[derive(Debug, Clone)]
@@ -60,29 +154,26 @@ pub struct PositionInfo {
     pub syntax: SyntaxToken,
 }
 
-fn dom_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node)> {
+fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node)> {
     if let Some(annotations) = node.annotations() {
         for (key, value) in annotations.value().read().iter() {
-            if node_contains_offset(key, offset) {
-                return None;
-            }
-            if node_contains_offset(value, offset) {
-                return dom_at_impl(value, offset, keys.join(key.into()));
+            if is_value_contained(value, offset, Some(key)) {
+                return node_at_impl(value, offset, keys.join(key.into()));
             }
         }
     }
     match node {
         Node::Array(arr) => {
             for (index, value) in arr.value().read().iter().enumerate() {
-                if node_contains_offset(value, offset) {
-                    return dom_at_impl(value, offset, keys.join(index.into()));
+                if is_value_contained(value, offset, None) {
+                    return node_at_impl(value, offset, keys.join(index.into()));
                 }
             }
         }
         Node::Object(obj) => {
             for (key, value) in obj.value().read().iter() {
-                if node_contains_offset(value, offset) {
-                    return dom_at_impl(value, offset, keys.join(key.into()));
+                if is_value_contained(value, offset, Some(key)) {
+                    return node_at_impl(value, offset, keys.join(key.into()));
                 }
             }
         }
@@ -91,8 +182,17 @@ fn dom_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node)
     Some((keys, node.clone()))
 }
 
-fn node_contains_offset<T: DomNode>(node: &T, offset: TextSize) -> bool {
-    node.node_syntax()
-        .map(|v| v.text_range().contains_inclusive(offset))
-        .unwrap_or_default()
+fn is_value_contained(value: &Node, offset: TextSize, key: Option<&Key>) -> bool {
+    match (
+        key.and_then(|k| k.node_syntax().map(|v| v.text_range())),
+        value.node_text_range(),
+    ) {
+        (None, Some(range)) => range.contains(offset),
+        (Some(range1), Some(range2)) => {
+            TextRange::empty(range1.end().checked_add(TextSize::from(1)).unwrap())
+                .cover(range2)
+                .contains(offset)
+        }
+        _ => false,
+    }
 }

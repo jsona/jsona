@@ -217,7 +217,7 @@ impl<E: Environment> WorkspaceState<E> {
         env: &impl Environment,
         default_config: &Config,
     ) -> Result<(), anyhow::Error> {
-        if !self.config.common.config_file.enabled {
+        if !self.config.config_file.enabled {
             self.jsona_config = default_config.clone();
             return Ok(());
         }

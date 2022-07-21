@@ -61,16 +61,16 @@ impl Node {
                 .into()
             }
             Value::Object(properties) => {
-                let mut entries = Entries::default();
+                let mut props = Map::default();
                 for (k, v) in properties {
-                    entries.add(Key::property(k), Node::from_plain_json(v));
+                    props.add(Key::property(k), Node::from_plain_json(v));
                 }
                 ObjectInner {
                     errors: Default::default(),
                     syntax: None,
                     node_syntax: None,
                     annotations,
-                    properties: entries.into(),
+                    properties: props.into(),
                 }
                 .wrap()
                 .into()
@@ -96,13 +96,13 @@ impl Node {
             .get("annotations")
             .and_then(|v| v.as_object())
             .map(|m| {
-                let mut entries = Entries::default();
+                let mut members = Map::default();
                 for (k, v) in m {
-                    entries.add(Key::annotation(k), Node::from_plain_json(v))
+                    members.add(Key::annotation(k), Node::from_plain_json(v))
                 }
                 AnnotationsInner {
                     errors: Default::default(),
-                    entries: entries.into(),
+                    members: members.into(),
                 }
                 .into()
             });
@@ -162,16 +162,16 @@ impl Node {
                 .into()
             }
             Value::Object(properties) => {
-                let mut entries = Entries::default();
+                let mut props = Map::default();
                 for (k, v) in properties {
-                    entries.add(Key::property(k), Node::from_json(v));
+                    props.add(Key::property(k), Node::from_json(v));
                 }
                 ObjectInner {
                     errors: Default::default(),
                     syntax: None,
                     node_syntax: None,
                     annotations: None,
-                    properties: entries.into(),
+                    properties: props.into(),
                 }
                 .wrap()
                 .into()

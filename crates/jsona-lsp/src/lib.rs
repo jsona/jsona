@@ -1,16 +1,3 @@
-#![warn(clippy::pedantic)]
-#![deny(clippy::print_stdout, clippy::print_stderr)]
-#![allow(
-    clippy::single_match,
-    clippy::default_trait_access,
-    clippy::single_match_else,
-    clippy::module_name_repetitions,
-    clippy::missing_errors_doc,
-    clippy::missing_panics_doc,
-    clippy::similar_names,
-    clippy::too_many_lines
-)]
-
 use jsona_util::environment::Environment;
 use lsp_async_stub::Server;
 use lsp_types::{notification, request};

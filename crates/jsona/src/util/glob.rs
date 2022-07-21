@@ -1,4 +1,4 @@
-pub fn glob_key(source: &str, target: &str) -> bool {
+pub fn glob(source: &str, target: &str) -> bool {
     let ss: Vec<char> = source.chars().collect();
     let mut iter = target.chars();
     let mut i = 0;
@@ -41,16 +41,16 @@ pub fn glob_key(source: &str, target: &str) -> bool {
 
 #[test]
 fn test_glob_key() {
-    assert!(glob_key("", ""));
-    assert!(glob_key("abc", "abc"));
-    assert!(glob_key("a*c", "abc"));
-    assert!(glob_key("a?c", "abc"));
-    assert!(glob_key("a*c", "abbc"));
-    assert!(glob_key("*c", "abc"));
-    assert!(glob_key("a*", "abc"));
-    assert!(glob_key("?c", "bc"));
-    assert!(glob_key("a?", "ab"));
-    assert!(!glob_key("abc", "adc"));
-    assert!(!glob_key("abc", "abcd"));
-    assert!(!glob_key("a?c", "abbc"));
+    assert!(glob("", ""));
+    assert!(glob("abc", "abc"));
+    assert!(glob("a*c", "abc"));
+    assert!(glob("a?c", "abc"));
+    assert!(glob("a*c", "abbc"));
+    assert!(glob("*c", "abc"));
+    assert!(glob("a*", "abc"));
+    assert!(glob("?c", "bc"));
+    assert!(glob("a?", "ab"));
+    assert!(!glob("abc", "adc"));
+    assert!(!glob("abc", "abcd"));
+    assert!(!glob("a?c", "abbc"));
 }

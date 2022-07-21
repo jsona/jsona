@@ -4,8 +4,8 @@ use super::{
     error::Error,
     keys::KeyOrIndex,
     node::{
-        Annotations, AnnotationsInner, ArrayInner, BoolInner, Entries, Key, KeyInner, KeyKind,
-        Node, NullInner, NumberInner, NumberRepr, ObjectInner, StringInner, StringRepr,
+        Annotations, AnnotationsInner, ArrayInner, BoolInner, Key, KeyInner, KeyKind, Map, Node,
+        NullInner, NumberInner, NumberRepr, ObjectInner, StringInner, StringRepr,
     },
 };
 use serde_json::Number as JsonNumber;
@@ -16,9 +16,7 @@ use crate::{
 };
 
 pub fn from_syntax(root: SyntaxElement) -> Node {
-    if root.kind() != VALUE {
-        return invalid_from_syntax(root, None);
-    }
+    assert!(root.kind() == VALUE);
     let annotations = annotations_from_syntax(root.clone());
     match first_value_child(&root) {
         None => invalid_from_syntax(root, annotations),
@@ -35,7 +33,6 @@ pub(crate) fn keys_from_syntax(
     syntax: &SyntaxElement,
 ) -> impl ExactSizeIterator<Item = KeyOrIndex> {
     assert!(syntax.kind() == KEYS);
-
     syntax
         .as_node()
         .map(|syntax| {
@@ -256,10 +253,7 @@ fn array_from_syntax(
     annotations: Option<Annotations>,
 ) -> Node {
     assert!(syntax.kind() == ARRAY);
-    let syntax = match syntax.into_node() {
-        Some(v) => v,
-        _ => return invalid_from_syntax(root, annotations),
-    };
+    let syntax = syntax.into_node().unwrap();
     let items: Vec<Node> = syntax
         .children()
         .filter(|v| v.kind() == VALUE)
@@ -283,32 +277,26 @@ fn object_from_syntax(
     annotations: Option<Annotations>,
 ) -> Node {
     assert!(syntax.kind() == OBJECT);
-    let syntax = match syntax.into_node() {
-        Some(v) => v,
-        _ => return invalid_from_syntax(root, annotations),
-    };
+    let syntax = syntax.into_node().unwrap();
     let mut errors = Vec::new();
-    let mut entries = Entries::default();
+    let mut properties = Map::default();
     for child in syntax.children().filter(|v| v.kind() == PROPERTY) {
-        object_entry_from_syntax(child.into(), &mut entries, &mut errors)
+        object_prop_from_syntax(child.into(), &mut properties, &mut errors)
     }
     ObjectInner {
         errors: errors.into(),
         node_syntax: Some(root),
         syntax: Some(syntax.into()),
         annotations,
-        properties: entries.into(),
+        properties: properties.into(),
     }
     .wrap()
     .into()
 }
 
-fn object_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: &mut Vec<Error>) {
+fn object_prop_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec<Error>) {
     assert!(syntax.kind() == PROPERTY);
-    let syntax = match syntax.into_node() {
-        Some(v) => v,
-        None => return,
-    };
+    let syntax = syntax.into_node().unwrap();
     let key = match syntax.children().find(|v| v.kind() == KEY) {
         Some(key) => key_from_syntax(key.into()),
         None => {
@@ -327,7 +315,7 @@ fn object_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors
             return;
         }
     };
-    add_entry(entries, errors, key, value);
+    add_prop(props, errors, key, value);
 }
 
 fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
@@ -335,7 +323,7 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
     let syntax = syntax.into_node()?;
 
     let mut errors: Vec<Error> = vec![];
-    let mut entries = Entries::default();
+    let mut members = Map::default();
     match (
         syntax.children().find(|v| v.kind() == ANNOTATIONS),
         syntax
@@ -346,33 +334,33 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
         (None, None) => return None,
         (None, Some(inner_annotations)) => {
             for child in inner_annotations.children() {
-                anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
+                anno_member_from_syntax(child.into(), &mut members, &mut errors);
             }
         }
         (Some(outer_annotations), None) => {
             for child in outer_annotations.children() {
-                anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
+                anno_member_from_syntax(child.into(), &mut members, &mut errors);
             }
         }
         (Some(outer_annotations), Some(inner_annotations)) => {
             for child in inner_annotations.children() {
-                anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
+                anno_member_from_syntax(child.into(), &mut members, &mut errors);
             }
             for child in outer_annotations.children() {
-                anno_entry_from_syntax(child.into(), &mut entries, &mut errors);
+                anno_member_from_syntax(child.into(), &mut members, &mut errors);
             }
         }
     };
     Some(
         AnnotationsInner {
             errors: errors.into(),
-            entries: entries.into(),
+            members: members.into(),
         }
         .into(),
     )
 }
 
-fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: &mut Vec<Error>) {
+fn anno_member_from_syntax(syntax: SyntaxElement, members: &mut Map, errors: &mut Vec<Error>) {
     assert!(syntax.kind() == ANNOTATION_PROPERTY);
     let syntax = match syntax.into_node() {
         Some(v) => v,
@@ -399,16 +387,16 @@ fn anno_entry_from_syntax(syntax: SyntaxElement, entries: &mut Entries, errors: 
     let value = match syntax.children().find(|v| v.kind() == ANNOTATION_VALUE) {
         Some(anno_value) => match anno_value.children().find(|v| v.kind() == VALUE) {
             Some(value) => from_syntax(value.into()),
-            None => {
-                errors.push(Error::UnexpectedSyntax {
-                    syntax: syntax.into(),
-                });
-                return;
+            None => NullInner {
+                node_syntax: Some(anno_value.into()),
+                ..Default::default()
             }
+            .wrap()
+            .into(),
         },
         None => NullInner::default().wrap().into(),
     };
-    add_entry(entries, errors, key, value);
+    add_prop(members, errors, key, value);
 }
 
 fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Node {
@@ -431,14 +419,14 @@ fn first_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
         .find(|v| !v.kind().is_ws_or_comment())
 }
 
-/// Add an entry and also collect errors on conflicts.
-fn add_entry(entries: &mut Entries, errors: &mut Vec<Error>, key: Key, node: Node) {
-    if let Some((existing_key, _)) = entries.lookup.get_key_value(&key) {
+/// Add an prop and also collect errors on conflicts.
+fn add_prop(props: &mut Map, errors: &mut Vec<Error>, key: Key, node: Node) {
+    if let Some((existing_key, _)) = props.lookup.get_key_value(&key) {
         errors.push(Error::ConflictingKeys {
             key: key.clone(),
             other: existing_key.clone(),
         })
     }
 
-    entries.add(key, node);
+    props.add(key, node);
 }

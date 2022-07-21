@@ -68,7 +68,7 @@ pub async fn initialize<E: Environment>(
                     ":".into(),
                     "[".into(),
                     "{".into(),
-                    ",".into(),
+                    "(".into(),
                     "@".into(),
                 ]),
                 ..Default::default()
@@ -76,7 +76,7 @@ pub async fn initialize<E: Environment>(
             ..Default::default()
         },
         server_info: Some(ServerInfo {
-            name: "Jsona".into(),
+            name: "JSONA".into(),
             version: Some(env!("CARGO_PKG_VERSION").into()),
         }),
         offset_encoding: None,

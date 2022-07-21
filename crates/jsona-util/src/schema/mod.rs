@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Context};
 use jsona::dom::{Keys, Node};
+use jsona_schema::Schema;
 use parking_lot::Mutex;
-use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use url::Url;
@@ -111,24 +111,14 @@ impl<E: Environment> Schemas<E> {
     }
 
     #[tracing::instrument(skip_all, fields(%schema_url, %path))]
-    pub async fn schemas_at_path(
+    pub async fn pointer_schemas(
         &self,
         schema_url: &Url,
-        _node: &Node,
         path: &Keys,
-    ) -> Result<Vec<(Keys, Arc<Value>)>, anyhow::Error> {
-        todo!()
-    }
-
-    #[tracing::instrument(skip_all, fields(%schema_url, %path))]
-    pub async fn possible_schemas_from(
-        &self,
-        schema_url: &Url,
-        _node: &Node,
-        path: &Keys,
-        _max_depth: usize,
-    ) -> Result<Vec<(Keys, Keys, Arc<Value>)>, anyhow::Error> {
-        todo!()
+    ) -> Result<Vec<Schema>, anyhow::Error> {
+        let schema = self.load_schema(schema_url).await?;
+        let schemas = schema.pointer(path).into_iter().cloned().collect();
+        Ok(schemas)
     }
 
     fn get_validator(&self, schema_url: &Url) -> Option<Arc<JSONASchema>> {

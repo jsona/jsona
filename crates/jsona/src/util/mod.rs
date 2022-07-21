@@ -1,4 +1,6 @@
 pub(crate) mod shared;
 
-pub mod glob_key;
 pub mod quote;
+
+mod glob;
+pub use glob::glob;

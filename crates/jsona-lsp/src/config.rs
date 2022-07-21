@@ -22,16 +22,14 @@ impl Default for InitConfig {
 }
 
 fn default_configuration_section() -> String {
-    String::from("evenBetterToml")
+    String::from("jsona")
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LspConfig {
-    pub common: CommonConfig,
+    pub config_file: ConfigFileConfig,
     pub schema: SchemaConfig,
-    pub completion: CompletionConfig,
-    pub syntax: SyntaxConfig,
     pub formatter: jsona::formatter::OptionsIncompleteCamel,
 }
 
@@ -42,32 +40,6 @@ impl LspConfig {
             .merge(Serialized::defaults(json))
             .extract()?;
         Ok(())
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompletionConfig {
-    pub max_keys: usize,
-}
-
-impl Default for CompletionConfig {
-    fn default() -> Self {
-        Self { max_keys: 5 }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SyntaxConfig {
-    pub semantic_tokens: bool,
-}
-
-impl Default for SyntaxConfig {
-    fn default() -> Self {
-        Self {
-            semantic_tokens: true,
-        }
     }
 }
 
@@ -105,12 +77,6 @@ impl Default for SchemaCacheConfig {
             disk_expiration: DEFAULT_LRU_CACHE_EXPIRATION_TIME.as_secs(),
         }
     }
-}
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CommonConfig {
-    pub config_file: ConfigFileConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

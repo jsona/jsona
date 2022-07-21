@@ -184,8 +184,8 @@ impl Node {
 
         match self {
             Node::Object(t) => {
-                let entries = t.inner.properties.read();
-                for (key, entry) in &entries.all {
+                let props = t.inner.properties.read();
+                for (key, entry) in &props.all {
                     entry.collect_flat(Keys::new(once(key.into())), &mut all);
                 }
             }
@@ -199,9 +199,9 @@ impl Node {
         }
 
         if let Some(annotations) = self.annotations() {
-            let entries = annotations.inner.entries.read();
-            for (key, entry) in &entries.all {
-                entry.collect_flat(Keys::new(once(key.into())), &mut all);
+            let members = annotations.inner.members.read();
+            for (key, node) in &members.all {
+                node.collect_flat(Keys::new(once(key.into())), &mut all);
             }
         }
 
@@ -212,16 +212,16 @@ impl Node {
         let mut all = Vec::new();
 
         if let Some(annotations) = self.annotations() {
-            let entries = annotations.inner.entries.read();
-            for (key, entry) in &entries.all {
+            let members = annotations.inner.members.read();
+            for (key, entry) in &members.all {
                 all.push((Keys::new(once(key.into())), entry.clone()))
             }
         }
 
         match self {
             Node::Object(t) => {
-                let entries = t.inner.properties.read();
-                for (key, entry) in &entries.all {
+                let props = t.inner.properties.read();
+                for (key, entry) in &props.all {
                     entry.collect_annotation(Keys::new(once(key.into())), &mut all);
                 }
             }
@@ -305,8 +305,8 @@ impl Node {
         match self {
             Node::Object(t) => {
                 all.push((parent.clone(), self.clone()));
-                let entries = t.inner.properties.read();
-                for (key, entry) in &entries.all {
+                let props = t.inner.properties.read();
+                for (key, entry) in &props.all {
                     entry.collect_flat(parent.join(key.into()), all);
                 }
             }
@@ -323,25 +323,25 @@ impl Node {
         }
 
         if let Some(annotations) = self.annotations() {
-            let entries = annotations.inner.entries.read();
-            for (key, entry) in &entries.all {
-                entry.collect_flat(parent.join(key.into()), all);
+            let members = annotations.inner.members.read();
+            for (key, member) in &members.all {
+                member.collect_flat(parent.join(key.into()), all);
             }
         }
     }
 
     fn collect_annotation(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {
         if let Some(annotations) = self.annotations() {
-            let entries = annotations.inner.entries.read();
-            for (key, entry) in &entries.all {
+            let members = annotations.inner.members.read();
+            for (key, entry) in &members.all {
                 all.push((Keys::new(once(key.into())), entry.clone()))
             }
         }
         match self {
             Node::Object(t) => {
                 all.push((parent.clone(), self.clone()));
-                let entries = t.inner.properties.read();
-                for (key, entry) in &entries.all {
+                let props = t.inner.properties.read();
+                for (key, entry) in &props.all {
                     entry.collect_annotation(parent.join(key.into()), all);
                 }
             }
@@ -409,12 +409,12 @@ impl Node {
                 errors.extend(errs.read().as_ref().iter().cloned())
             }
 
-            let items = v.inner.entries.read();
-            for (k, entry) in items.as_ref().all.iter() {
+            let items = v.inner.members.read();
+            for (k, node) in items.as_ref().all.iter() {
                 if let Err(errs) = k.validate_node() {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
-                entry.validate_all_impl(errors);
+                node.validate_all_impl(errors);
             }
         }
     }
@@ -727,7 +727,7 @@ pub(crate) struct ObjectInner {
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
-    pub(crate) properties: Shared<Entries>,
+    pub(crate) properties: Shared<Map>,
 }
 
 wrap_node! {
@@ -737,12 +737,20 @@ wrap_node! {
 
 impl Object {
     pub fn get(&self, key: &Key) -> Option<Node> {
-        let entries = self.inner.properties.read();
-        entries.lookup.get(key).cloned()
+        let props = self.inner.properties.read();
+        props.lookup.get(key).cloned()
     }
 
-    pub fn value(&self) -> &Shared<Entries> {
+    pub fn value(&self) -> &Shared<Map> {
         &self.inner.properties
+    }
+
+    pub fn properties_keys(&self) -> Vec<StdString> {
+        self.value()
+            .read()
+            .iter()
+            .map(|(k, _)| k.to_string())
+            .collect()
     }
 
     fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
@@ -915,12 +923,12 @@ impl std::hash::Hash for Key {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Entries {
+pub struct Map {
     pub(crate) lookup: HashMap<Key, Node>,
     pub(crate) all: Vec<(Key, Node)>,
 }
 
-impl Entries {
+impl Map {
     pub fn len(&self) -> usize {
         self.all.len()
     }
@@ -939,7 +947,7 @@ impl Entries {
     }
 }
 
-impl FromIterator<(Key, Node)> for Entries {
+impl FromIterator<(Key, Node)> for Map {
     fn from_iter<T: IntoIterator<Item = (Key, Node)>>(iter: T) -> Self {
         let iter = iter.into_iter();
         let size = iter.size_hint().0;
@@ -959,7 +967,7 @@ impl FromIterator<(Key, Node)> for Entries {
 #[derive(Debug)]
 pub(crate) struct AnnotationsInner {
     pub(crate) errors: Shared<Vec<Error>>,
-    pub(crate) entries: Shared<Entries>,
+    pub(crate) members: Shared<Map>,
 }
 
 #[derive(Debug, Clone)]
@@ -969,12 +977,20 @@ pub struct Annotations {
 
 impl Annotations {
     pub fn get(&self, key: &Key) -> Option<Node> {
-        let entries = self.inner.entries.read();
-        entries.lookup.get(key).cloned()
+        let members = self.inner.members.read();
+        members.lookup.get(key).cloned()
     }
 
-    pub fn value(&self) -> &Shared<Entries> {
-        &self.inner.entries
+    pub fn value(&self) -> &Shared<Map> {
+        &self.inner.members
+    }
+
+    pub fn members_keys(&self) -> Vec<StdString> {
+        self.value()
+            .read()
+            .iter()
+            .map(|(k, _)| k.to_string())
+            .collect()
     }
 }
 

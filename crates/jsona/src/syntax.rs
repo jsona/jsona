@@ -23,7 +23,7 @@ pub enum SyntaxKind {
     #[regex(r"[A-Za-z0-9_]+", priority = 2)]
     IDENT,
 
-    #[regex(r"@[A-Za-z0-9_]+")]
+    #[regex(r"@[A-Za-z0-9_]*")]
     ANNOATION_KEY,
 
     /// Not part of the regular JSONA syntax, only used to allow

@@ -3,7 +3,7 @@ use super::from_syntax::keys_from_syntax;
 use super::node::Key;
 use super::DomNode;
 use crate::parser::Parser;
-use crate::util::glob_key::glob_key;
+use crate::util::glob;
 
 use rowan::TextRange;
 use std::iter::{empty, once};
@@ -100,12 +100,12 @@ impl KeyOrIndex {
         match self {
             KeyOrIndex::Index(_) | KeyOrIndex::Key(_) => self == other,
             KeyOrIndex::GlobIndex(k) => match other {
-                KeyOrIndex::Index(v) => glob_key(k, &v.to_string()),
+                KeyOrIndex::Index(v) => glob(k, &v.to_string()),
                 _ => false,
             },
             KeyOrIndex::GlobKey(k) => match other {
                 // NOTE: glob key only works on property key
-                KeyOrIndex::Key(v) => v.is_property() && glob_key(k, v.value()),
+                KeyOrIndex::Key(v) => v.is_property() && glob(k, v.value()),
                 _ => false,
             },
             KeyOrIndex::AnyRecursive => true,
@@ -207,27 +207,28 @@ impl Keys {
         self.all_plain
     }
 
-    pub fn common_prefix_count(&self, other: &Self) -> usize {
-        self.iter()
-            .zip(other.iter())
-            .take_while(|(a, b)| a == b)
-            .count()
+    pub fn shift(&self) -> (Option<KeyOrIndex>, Self) {
+        if self.is_empty() {
+            return (None, self.clone());
+        }
+        let (left, right) = self.keys.split_at(1);
+        (left.get(0).cloned(), Self::new(right.iter().cloned()))
     }
 
-    pub fn contains(&self, other: &Self) -> bool {
-        self.len() >= other.len() && self.common_prefix_count(other) == other.len()
-    }
-
-    pub fn part_of(&self, other: &Self) -> bool {
-        other.contains(self)
-    }
-
-    pub fn skip_left(&self, n: usize) -> Self {
-        Self::new(self.keys.iter().skip(n).cloned())
-    }
-
-    pub fn skip_right(&self, n: usize) -> Self {
-        Self::new(self.keys.iter().rev().skip(n).cloned().rev())
+    pub fn annotation_shift(&self) -> (Option<Key>, Self) {
+        match self.keys.iter().enumerate().find(|(_, k)| {
+            if let KeyOrIndex::Key(k) = k {
+                k.is_annotation()
+            } else {
+                false
+            }
+        }) {
+            Some((i, k)) => (
+                Some(k.as_annotation_key().cloned().unwrap()),
+                Self::new(self.keys.iter().skip(i + 1).cloned()),
+            ),
+            None => (None, self.clone()),
+        }
     }
 
     pub fn is_match(&self, other: &Keys, match_children: bool) -> bool {

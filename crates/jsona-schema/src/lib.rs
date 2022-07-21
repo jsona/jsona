@@ -1,7 +1,9 @@
 mod error;
 mod schema;
 
+use either::Either;
 use indexmap::IndexMap;
+use schema::SchemaOrSchemaArray;
 use std::{cell::RefCell, rc::Rc};
 
 use jsona::{
@@ -147,8 +149,21 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                         }
                     }
                     None => {
-                        let child_scope = scope.spwan(0_usize.into(), arr[0].clone());
-                        schema.items = Some(parse_node(child_scope)?.into())
+                        if arr.len() == 1 {
+                            let child_scope = scope.spwan(0_usize.into(), arr[0].clone());
+                            schema.items = Some(SchemaOrSchemaArray {
+                                value: Either::Left(parse_node(child_scope)?.into()),
+                            })
+                        } else {
+                            let mut schemas = vec![];
+                            for (i, child) in arr.iter().enumerate() {
+                                let child_scope = scope.spwan(i.into(), child.clone());
+                                schemas.push(parse_node(child_scope)?);
+                            }
+                            schema.items = Some(SchemaOrSchemaArray {
+                                value: Either::Right(schemas),
+                            })
+                        }
                     }
                 }
             }

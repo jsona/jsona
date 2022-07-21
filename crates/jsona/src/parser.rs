@@ -107,6 +107,9 @@ impl<'p> Parser<'p> {
         if let Ok(ANNOATION_KEY) = self.peek_token() {
             self.builder.start_node(ANNOTATIONS.into());
             while let Ok(ANNOATION_KEY) = self.peek_token() {
+                if self.lexer.slice().len() == 1 {
+                    self.report_error("invalid annotation key");
+                }
                 let _ = with_node!(self.builder, ANNOTATION_PROPERTY, self.parse_anno_entry());
             }
             self.builder.finish_node();
