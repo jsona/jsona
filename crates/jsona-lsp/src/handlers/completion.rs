@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use jsona::{
     dom::{DomNode, Key, Keys},
     util::quote,
@@ -96,8 +98,8 @@ pub async fn completion<E: Environment>(
                 .unwrap_or_default();
             complete_properties(doc, &query, &schemas, &props)
         }
-        ScopeKind::Array => complete_array(&schemas),
-        ScopeKind::Value => complete_value(&schemas),
+        ScopeKind::Array => complete_array(&query, &schemas),
+        ScopeKind::Value => complete_value(&query, &schemas),
         _ => return Ok(None),
     };
     if comp_items.is_empty() {
@@ -129,7 +131,7 @@ fn complete_properties(
             None => continue,
             Some(properties) => {
                 for (prop_key, prop_value) in properties {
-                    if current_key != prop_key && exist_props.contains(prop_key) {
+                    if exist_props.contains(prop_key) {
                         continue;
                     }
 
@@ -159,68 +161,126 @@ fn complete_properties(
     comp_items
 }
 
-fn complete_value(schemas: &[Schema]) -> Vec<CompletionItem> {
+fn complete_array(query: &Query, schemas: &[Schema]) -> Vec<CompletionItem> {
     let mut comp_items = vec![];
-    let mut comp_boolean = false;
-    let mut comp_null = false;
+    let index = query.index_at().unwrap_or_default();
+    let mut types: HashSet<String> = HashSet::default();
+    let mut new_schemas = vec![];
+    let seperator = if query.add_seperator { "," } else { "" };
+    for schema in schemas.iter() {
+        if let Some(items) = schema.items.as_ref() {
+            let items = items.to_vec();
+            match items.len() {
+                1 => {
+                    new_schemas.push(items[0].clone());
+                }
+                len if len > index => {
+                    new_schemas.push(items[index].clone());
+                }
+                _ => continue,
+            }
+        }
+    }
+    complete_value_impl(&mut comp_items, &mut types, seperator, &new_schemas);
+    if comp_items.is_empty() && query.value.is_none() {
+        complete_value_type(&mut comp_items, &types, seperator);
+    }
+    comp_items
+}
+
+fn complete_value(query: &Query, schemas: &[Schema]) -> Vec<CompletionItem> {
+    let mut comp_items = vec![];
+    let mut types: HashSet<String> = HashSet::default();
+    let seperator = if query.add_seperator { "," } else { "" };
+    complete_value_impl(&mut comp_items, &mut types, seperator, schemas);
+    if comp_items.is_empty() && query.value.is_none() {
+        complete_value_type(&mut comp_items, &types, seperator);
+    }
+    comp_items
+}
+
+fn complete_value_impl(
+    comp_items: &mut Vec<CompletionItem>,
+    types: &mut HashSet<String>,
+    seperator: &str,
+    schemas: &[Schema],
+) {
     for schema in schemas.iter() {
         tracing::debug!(
             "complete value schema={}",
             serde_json::to_string(schema).unwrap()
         );
         if let Some(value) = schema.const_value.as_ref() {
-            comp_items.push(complete_item_from_value(schema, value));
+            comp_items.push(completion_item_from_value(schema, value, seperator));
         }
         if let Some(enum_value) = schema.enum_value.as_ref() {
             for value in enum_value {
-                comp_items.push(complete_item_from_value(schema, value));
+                comp_items.push(completion_item_from_value(schema, value, seperator));
             }
         }
         if let Some(value) = schema.default.as_ref() {
-            comp_items.push(complete_item_from_value(schema, value));
+            comp_items.push(completion_item_from_value(schema, value, seperator));
         }
         if let Some(examples) = schema.examples.as_ref() {
             for value in examples {
-                comp_items.push(complete_item_from_value(schema, value));
+                comp_items.push(completion_item_from_value(schema, value, seperator));
             }
         }
-        match schema.schema_type.as_deref() {
-            Some("boolean") => comp_boolean = true,
-            Some("null") => comp_null = true,
+        if let Some(schema_type) = schema.schema_type.as_deref() {
+            types.insert(schema_type.to_string());
+        }
+    }
+}
+
+fn complete_value_type(
+    comp_items: &mut Vec<CompletionItem>,
+    types: &HashSet<String>,
+    seperator: &str,
+) {
+    let mut items = vec![];
+    for schema_type in types {
+        match schema_type.as_str() {
+            "boolean" => {
+                items.push(("true", "true"));
+                items.push(("false", "false"));
+            }
+            "null" => {
+                items.push(("null", "null"));
+            }
+            "string" => {
+                items.push((r#""""#, r#""$1""#));
+            }
+            "object" => {
+                items.push(("{}", "{$1}"));
+            }
+            "array" => {
+                items.push(("[]", "[$1]"));
+            }
             _ => {}
         }
     }
-    if comp_boolean {
-        comp_items.push(complete_item_from_text("true"));
-        comp_items.push(complete_item_from_text("false"));
+    for (label, text) in items {
+        comp_items.push(completion_item_from_literal(label, text, seperator));
     }
-    if comp_null {
-        comp_items.push(complete_item_from_text("null"));
-    }
-    comp_items
 }
 
-fn complete_array(_schemas: &[Schema]) -> Vec<CompletionItem> {
-    vec![]
-}
-
-fn complete_item_from_value(schema: &Schema, value: &Value) -> CompletionItem {
+fn completion_item_from_value(schema: &Schema, value: &Value, seperator: &str) -> CompletionItem {
     CompletionItem {
         label: stringify_value(value),
         kind: Some(suggestion_kind(schema)),
-        insert_text: Some(insert_text_for_value(value)),
+        insert_text: Some(format!("{}{}", insert_text_for_value(value), seperator)),
         insert_text_format: Some(InsertTextFormat::SNIPPET),
         documentation: make_doc(schema),
         ..Default::default()
     }
 }
 
-fn complete_item_from_text(value: &str) -> CompletionItem {
+fn completion_item_from_literal(label: &str, text: &str, seperator: &str) -> CompletionItem {
     CompletionItem {
-        label: value.to_string(),
+        label: label.into(),
         kind: Some(CompletionItemKind::VALUE),
-        insert_text: Some(value.to_string()),
-        insert_text_format: Some(InsertTextFormat::PLAIN_TEXT),
+        insert_text: Some(format!("{}{}", text, seperator)),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
         ..Default::default()
     }
 }
@@ -249,6 +309,21 @@ fn insert_text_for_property(
     if !query.add_value {
         return prop_key;
     }
+    let value = match insert_text_for_schema(schema) {
+        Some(value) => value,
+        None => return prop_key,
+    };
+    if is_annotation {
+        if value == "${1:null}" {
+            return prop_key;
+        }
+        format!("{}({})", prop_key, value)
+    } else {
+        format!("{}: {},", prop_key, value)
+    }
+}
+
+fn insert_text_for_schema(schema: &Schema) -> Option<String> {
     let mut value = String::new();
     let mut num_proposals = 0;
     if let Some(enum_value) = schema.enum_value.as_ref() {
@@ -276,29 +351,21 @@ fn insert_text_for_property(
         num_proposals += examples.len();
     }
     if num_proposals == 0 {
-        match schema.schema_type.as_deref() {
-            Some("boolean") => value = "$1".into(),
-            Some("string") => value = r#""$1""#.into(),
-            Some("object") => value = "{$1}".into(),
-            Some("array") => value = "[$1]".into(),
-            Some("number") | Some("integer") => value = "${1:0}".into(),
-            Some("null") => {
-                if is_annotation {
-                    return prop_key;
-                }
-                value = "${1:null}".into();
-            }
-            _ => return prop_key,
+        value = match schema.schema_type.as_deref() {
+            Some("boolean") => "$1",
+            Some("string") => r#""$1""#,
+            Some("object") => "{$1}",
+            Some("array") => "[$1]",
+            Some("number") | Some("integer") => "${1:0}",
+            Some("null") => "${1:null}",
+            _ => "",
         }
+        .to_string()
     }
     if value.is_empty() || num_proposals > 1 {
         value = "$1".to_string();
     }
-    if is_annotation {
-        format!("{}({})", prop_key, value)
-    } else {
-        format!("{}: {},", prop_key, value)
-    }
+    Some(value)
 }
 
 fn insert_text_for_guess_value(value: &Value) -> String {

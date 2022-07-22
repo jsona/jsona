@@ -82,6 +82,9 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     if let Some(describe) = parse_str_annotation(&scope, "@describe")? {
         schema.description = Some(describe);
     }
+    if exist_annotation(&scope, "@example") {
+        schema.examples = Some(vec![scope.node.to_plain_json()])
+    }
     if schema.schema_type.is_none() {
         let schema_type = match &scope.node {
             Node::Null(_) => "null",

@@ -24,6 +24,8 @@ pub struct Query {
     pub value: Option<SyntaxNode>,
     /// Whether add value for property/annotationKey completion
     pub add_value: bool,
+    /// Whether insert seperator
+    pub add_seperator: bool,
 }
 
 impl Query {
@@ -37,14 +39,12 @@ impl Query {
         let mut node_at_offset = offset;
         let mut key = None;
         let mut value = None;
+        let mut add_seperator = false;
         let mut add_value = false;
-        if let Some(token) = before.as_ref().and_then(|v| {
-            if v.syntax.kind().is_ws_or_comment() {
-                v.syntax.prev_token()
-            } else {
-                Some(v.syntax.clone())
-            }
-        }) {
+        if let Some(token) = before
+            .as_ref()
+            .and_then(|t| Query::prev_none_ws_comment(t.syntax.clone()))
+        {
             match token.kind() {
                 SyntaxKind::ANNOATION_KEY => {
                     add_value = !token
@@ -66,6 +66,16 @@ impl Query {
                             None
                         }
                     });
+                    add_seperator = match value.as_ref() {
+                        Some(v) => !v
+                            .siblings_with_tokens(Direction::Next)
+                            .any(|v| v.kind() == SyntaxKind::COMMA),
+                        None => !token
+                            .next_token()
+                            .and_then(Query::next_none_ws_comment)
+                            .map(|v| v.kind() == SyntaxKind::COMMA)
+                            .unwrap_or_default(),
+                    };
                 }
                 SyntaxKind::PARENTHESES_START => {
                     kind = ScopeKind::Value;
@@ -111,6 +121,9 @@ impl Query {
                             }
                             SyntaxKind::SCALAR => {
                                 kind = ScopeKind::Value;
+                                add_seperator = !node
+                                    .siblings_with_tokens(Direction::Next)
+                                    .any(|v| v.kind() == SyntaxKind::COMMA);
                                 value = Some(node);
                             }
                             SyntaxKind::OBJECT => kind = ScopeKind::Object,
@@ -133,6 +146,7 @@ impl Query {
             scope: kind,
             node_at_offset,
             add_value,
+            add_seperator,
             key,
             value,
         }
@@ -145,6 +159,28 @@ impl Query {
         node_at_impl(root, self.node_at_offset, Keys::default())
     }
 
+    pub fn index_at(&self) -> Option<usize> {
+        self.before
+            .as_ref()
+            .and_then(|v| {
+                v.syntax
+                    .parent_ancestors()
+                    .find(|v| v.kind() == SyntaxKind::ARRAY)
+            })
+            .map(|v| {
+                let mut index = 0;
+                for child in v.children() {
+                    if child.kind() == SyntaxKind::VALUE {
+                        index += 1;
+                        if child.text_range().contains(self.offset) {
+                            break;
+                        }
+                    }
+                }
+                index
+            })
+    }
+
     fn position_info_at(syntax: &SyntaxNode, offset: TextSize) -> Option<PositionInfo> {
         let syntax = match syntax.token_at_offset(offset) {
             TokenAtOffset::None => return None,
@@ -153,6 +189,22 @@ impl Query {
         };
 
         Some(PositionInfo { syntax })
+    }
+
+    fn prev_none_ws_comment(token: SyntaxToken) -> Option<SyntaxToken> {
+        if token.kind().is_ws_or_comment() {
+            token.prev_token().and_then(Query::prev_none_ws_comment)
+        } else {
+            Some(token)
+        }
+    }
+
+    fn next_none_ws_comment(token: SyntaxToken) -> Option<SyntaxToken> {
+        if token.kind().is_ws_or_comment() {
+            token.next_token().and_then(Query::next_none_ws_comment)
+        } else {
+            Some(token)
+        }
     }
 }
 

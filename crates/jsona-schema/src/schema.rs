@@ -135,6 +135,15 @@ pub struct SchemaOrSchemaArray {
     pub value: Either<Box<Schema>, Vec<Schema>>,
 }
 
+impl SchemaOrSchemaArray {
+    pub fn to_vec(&self) -> Vec<&Schema> {
+        match self.value.as_ref() {
+            Either::Left(schema) => vec![schema],
+            Either::Right(schemas) => schemas.iter().collect(),
+        }
+    }
+}
+
 impl Schema {
     pub fn pointer(&self, keys: &Keys) -> Vec<&Schema> {
         let mut result = vec![];
