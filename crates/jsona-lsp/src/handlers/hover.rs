@@ -32,11 +32,6 @@ pub(crate) async fn hover<E: Environment>(
 
     let doc = ws.document(&document_uri)?;
 
-    let schema_association = match ws.schemas.associations().association_for(&document_uri) {
-        Some(ass) => ass,
-        None => return Ok(None),
-    };
-
     let position = p.text_document_position_params.position;
     let offset = match doc.mapper.offset(Position::from_lsp(position)) {
         Some(ofs) => ofs,
@@ -56,31 +51,20 @@ pub(crate) async fn hover<E: Environment>(
         None => return Ok(None),
     };
 
-    let schemas = match ws
-        .schemas
-        .pointer_schemas(&schema_association.url, &keys)
-        .await
-    {
-        Ok(v) => v,
-        Err(error) => {
-            tracing::error!(?error, "failed to query schemas");
-            return Ok(None);
-        }
+    let schemas = match ws.schemas_at_path(&document_uri, &keys).await {
+        Some(v) => v,
+        None => return Ok(None),
     };
-    tracing::debug!(
-        "hover for schemas={}",
-        serde_json::to_string(&schemas).unwrap()
-    );
 
     if let Some(key) = query.key.as_ref() {
-        tracing::debug!(?query, "hover on keys={}", keys);
+        tracing::info!(?query, "hover on keys={}", keys);
         let content = schemas
             .iter()
             .flat_map(|schema| schema.description.clone())
             .join("\n\n");
         return Ok(Some(create_hover(doc, content, key.text_range())));
     } else if let Some(node) = query.value.as_ref() {
-        tracing::debug!(?query, "hover on keys={} value={}", keys, node.to_string());
+        tracing::info!(?query, "hover on keys={} value={}", keys, node.to_string());
         let content = schemas
             .iter()
             .flat_map(|schema| schema.description.clone())

@@ -111,7 +111,7 @@ impl<E: Environment> Schemas<E> {
     }
 
     #[tracing::instrument(skip_all, fields(%schema_url, %path))]
-    pub async fn pointer_schemas(
+    pub async fn schemas_at_path(
         &self,
         schema_url: &Url,
         path: &Keys,

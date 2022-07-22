@@ -4,7 +4,11 @@ use crate::{
 };
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
-use jsona::{dom::Node, parser::Parse};
+use jsona::{
+    dom::{Keys, Node},
+    parser::Parse,
+};
+use jsona_schema::Schema;
 use jsona_util::{
     config::Config,
     environment::Environment,
@@ -267,6 +271,22 @@ impl<E: Environment> WorkspaceState<E> {
                 .await
             {
                 tracing::error!(%error, "failed to write notification");
+            }
+        }
+    }
+
+    #[tracing::instrument(skip_all, fields(%file, %path))]
+    pub(crate) async fn schemas_at_path(&self, file: &Url, path: &Keys) -> Option<Vec<Schema>> {
+        let schema_association = self.schemas.associations().association_for(file)?;
+        match self
+            .schemas
+            .schemas_at_path(&schema_association.url, path)
+            .await
+        {
+            Ok(v) => Some(v),
+            Err(error) => {
+                tracing::error!(?error, "failed to query schemas");
+                None
             }
         }
     }

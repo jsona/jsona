@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
-use jsona::dom::{KeyOrIndex, Keys, Node};
+use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node};
 use jsona_schema::{from_node, Schema};
 use jsonschema::{error::ValidationErrorKind, paths::JSONPointer, JSONSchema};
 use serde::{Deserialize, Serialize};
@@ -27,10 +27,9 @@ impl JSONASchema {
     pub fn validate(&self, node: &Node) -> Result<Vec<NodeValidationError>, anyhow::Error> {
         let mut errors = vec![];
         jsona_schema_validate(&self.value, &mut errors, node, Keys::default())?;
-        for (keys, annotation_node) in node.annotation_iter() {
+        for (keys, annotation_node) in visit_annotations(node).into_iter() {
             if let Some(schema) = keys
-                .last()
-                .and_then(|v| v.as_annotation_key())
+                .last_annotation_key()
                 .and_then(|v| self.annotations.get(&v.to_string()))
             {
                 jsona_schema_validate(schema, &mut errors, &annotation_node, keys)?;
