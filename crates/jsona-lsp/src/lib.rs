@@ -17,6 +17,7 @@ pub fn create_server<E: Environment>() -> Server<World<E>> {
     Server::new()
         .on_request::<request::Initialize, _>(handlers::initialize)
         .on_request::<request::FoldingRangeRequest, _>(handlers::folding_ranges)
+        .on_request::<request::SelectionRangeRequest, _>(handlers::selection_ranges)
         .on_request::<request::DocumentSymbolRequest, _>(handlers::document_symbols)
         .on_request::<request::Completion, _>(handlers::completion)
         .on_request::<request::HoverRequest, _>(handlers::hover)

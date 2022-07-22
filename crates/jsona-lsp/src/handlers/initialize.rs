@@ -8,8 +8,9 @@ use jsona_util::environment::Environment;
 use lsp_async_stub::{rpc::Error, Context, Params};
 use lsp_types::{
     CompletionOptions, FoldingRangeProviderCapability, HoverProviderCapability, InitializedParams,
-    OneOf, ServerCapabilities, ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
-    WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
+    OneOf, SelectionRangeProviderCapability, ServerCapabilities, ServerInfo,
+    TextDocumentSyncCapability, TextDocumentSyncKind, WorkspaceFoldersServerCapabilities,
+    WorkspaceServerCapabilities,
 };
 use lsp_types::{InitializeParams, InitializeResult};
 
@@ -59,6 +60,7 @@ pub async fn initialize<E: Environment>(
             }),
             text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
             folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
+            selection_range_provider: Some(SelectionRangeProviderCapability::Simple(true)),
             document_symbol_provider: Some(OneOf::Left(true)),
             document_formatting_provider: Some(OneOf::Left(true)),
             hover_provider: Some(HoverProviderCapability::Simple(true)),

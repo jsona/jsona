@@ -7,6 +7,9 @@ pub(crate) use documents::*;
 mod folding_ranges;
 pub(crate) use folding_ranges::*;
 
+mod selection_ranges;
+pub(crate) use selection_ranges::*;
+
 mod document_symbols;
 pub(crate) use document_symbols::*;
 

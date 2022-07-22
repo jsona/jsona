@@ -60,7 +60,7 @@ pub async fn completion<E: Environment>(
         return Ok(None);
     }
 
-    let (mut keys, node) = match query.node_at(&doc.dom, query.node_at_offset, false) {
+    let (mut keys, node) = match Query::node_at(&doc.dom, query.node_at_offset, false) {
         Some(v) => v,
         None => return Ok(None),
     };
@@ -245,6 +245,9 @@ fn complete_value_type(
             }
             "string" => {
                 items.push((r#""""#, r#""$1""#));
+            }
+            "number" => {
+                items.push(("0", "${1:0}"));
             }
             "object" => {
                 items.push(("{}", "{$1}"));

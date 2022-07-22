@@ -152,12 +152,7 @@ impl Query {
         }
     }
 
-    pub fn node_at(
-        &self,
-        root: &Node,
-        offset: TextSize,
-        include_key: bool,
-    ) -> Option<(Keys, Node)> {
+    pub fn node_at(root: &Node, offset: TextSize, include_key: bool) -> Option<(Keys, Node)> {
         if !is_value_contained(root, offset, None, include_key) {
             return None;
         }

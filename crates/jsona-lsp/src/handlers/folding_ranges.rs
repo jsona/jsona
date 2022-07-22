@@ -1,5 +1,3 @@
-#![allow(clippy::cast_possible_truncation)]
-
 use jsona::syntax::{
     SyntaxElement,
     SyntaxKind::{ANNOTATION_VALUE, ARRAY, BLOCK_COMMENT, LINE_COMMENT, OBJECT},

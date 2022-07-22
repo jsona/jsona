@@ -51,7 +51,7 @@ pub(crate) async fn hover<E: Environment>(
         return Ok(None);
     }
 
-    let (keys, _) = match query.node_at(&doc.dom, offset, true) {
+    let (keys, _) = match Query::node_at(&doc.dom, offset, true) {
         Some(v) => v,
         None => return Ok(None),
     };
