@@ -232,7 +232,7 @@ impl<'p> Parser<'p> {
             }
             COMMA => {
                 self.report_error("expected value");
-                return Err(());
+                Err(())
             }
             _ => self.consume_error_token("expected value"),
         }

@@ -81,44 +81,50 @@ pub async fn completion<E: Environment>(
 
     tracing::info!(?query, "debug completion keys={}", keys);
 
-    match &query.scope {
+    let comp_items = match &query.scope {
         ScopeKind::AnnotationKey => {
             let props = node
                 .annotations()
                 .map(|v| v.members_keys())
                 .unwrap_or_default();
-            return Ok(complete_properties(doc, &schemas, &props, &query));
+            complete_properties(doc, &query, &schemas, &props)
         }
         ScopeKind::PropertyKey | ScopeKind::Object => {
             let props = node
                 .as_object()
                 .map(|v| v.properties_keys())
                 .unwrap_or_default();
-            return Ok(complete_properties(doc, &schemas, &props, &query));
+            complete_properties(doc, &query, &schemas, &props)
         }
-        _ => {}
+        ScopeKind::Array => complete_array(&schemas),
+        ScopeKind::Value => complete_value(&schemas),
+        _ => return Ok(None),
+    };
+    if comp_items.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(CompletionResponse::Array(comp_items)))
     }
-
-    Ok(None)
 }
 
 fn complete_properties(
     doc: &DocumentState,
+    query: &Query,
     schemas: &[Schema],
     exist_props: &[String],
-    query: &Query,
-) -> Option<CompletionResponse> {
+) -> Vec<CompletionItem> {
     let mut comp_items = vec![];
     let current_key = query.key.as_ref().map(|v| v.text()).unwrap_or_default();
     let is_annotation = query.scope == ScopeKind::AnnotationKey;
     for schema in schemas.iter() {
-        tracing::info!(
-            "complete properties schema={}",
-            serde_json::to_string(schema).unwrap()
-        );
         if !schema.is_object() {
             continue;
         }
+        tracing::debug!(
+            "complete property key={} schema={}",
+            current_key,
+            serde_json::to_string(schema).unwrap()
+        );
         match schema.properties.as_ref() {
             None => continue,
             Some(properties) => {
@@ -150,19 +156,73 @@ fn complete_properties(
             }
         }
     }
-    if comp_items.is_empty() {
-        None
-    } else {
-        Some(CompletionResponse::Array(comp_items))
+    comp_items
+}
+
+fn complete_value(schemas: &[Schema]) -> Vec<CompletionItem> {
+    let mut comp_items = vec![];
+    let mut comp_boolean = false;
+    let mut comp_null = false;
+    for schema in schemas.iter() {
+        tracing::debug!(
+            "complete value schema={}",
+            serde_json::to_string(schema).unwrap()
+        );
+        if let Some(value) = schema.const_value.as_ref() {
+            comp_items.push(complete_item_from_value(schema, value));
+        }
+        if let Some(enum_value) = schema.enum_value.as_ref() {
+            for value in enum_value {
+                comp_items.push(complete_item_from_value(schema, value));
+            }
+        }
+        if let Some(value) = schema.default.as_ref() {
+            comp_items.push(complete_item_from_value(schema, value));
+        }
+        if let Some(examples) = schema.examples.as_ref() {
+            for value in examples {
+                comp_items.push(complete_item_from_value(schema, value));
+            }
+        }
+        match schema.schema_type.as_deref() {
+            Some("boolean") => comp_boolean = true,
+            Some("null") => comp_null = true,
+            _ => {}
+        }
+    }
+    if comp_boolean {
+        comp_items.push(complete_item_from_text("true"));
+        comp_items.push(complete_item_from_text("false"));
+    }
+    if comp_null {
+        comp_items.push(complete_item_from_text("null"));
+    }
+    comp_items
+}
+
+fn complete_array(_schemas: &[Schema]) -> Vec<CompletionItem> {
+    vec![]
+}
+
+fn complete_item_from_value(schema: &Schema, value: &Value) -> CompletionItem {
+    CompletionItem {
+        label: stringify_value(value),
+        kind: Some(suggestion_kind(schema)),
+        insert_text: Some(insert_text_for_value(value)),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
+        documentation: make_doc(schema),
+        ..Default::default()
     }
 }
 
-fn complete_value(
-    doc: &DocumentState,
-    schemas: &[Schema],
-    query: &Query,
-) -> Option<CompletionResponse> {
-    todo!()
+fn complete_item_from_text(value: &str) -> CompletionItem {
+    CompletionItem {
+        label: value.to_string(),
+        kind: Some(CompletionItemKind::VALUE),
+        insert_text: Some(value.to_string()),
+        insert_text_format: Some(InsertTextFormat::PLAIN_TEXT),
+        ..Default::default()
+    }
 }
 
 fn make_doc(schema: &Schema) -> Option<Documentation> {
@@ -221,12 +281,12 @@ fn insert_text_for_property(
             Some("string") => value = r#""$1""#.into(),
             Some("object") => value = "{$1}".into(),
             Some("array") => value = "[$1]".into(),
-            Some("number") | Some("integer") => value = "{$1:0}".into(),
+            Some("number") | Some("integer") => value = "${1:0}".into(),
             Some("null") => {
                 if is_annotation {
                     return prop_key;
                 }
-                value = "{$1:null}".into();
+                value = "${1:null}".into();
             }
             _ => return prop_key,
         }
@@ -251,7 +311,7 @@ fn insert_text_for_guess_value(value: &Value) -> String {
 }
 
 fn insert_text_for_value(value: &Value) -> String {
-    let text = serde_json::to_string_pretty(value).unwrap();
+    let text = stringify_value(value);
     if text == "{}" {
         return "{$1}".into();
     } else if text == "[]" {
@@ -262,4 +322,15 @@ fn insert_text_for_value(value: &Value) -> String {
 
 fn insert_text_for_plain_text(text: String) -> String {
     text
+}
+
+fn suggestion_kind(schema: &Schema) -> CompletionItemKind {
+    match schema.schema_type.as_deref() {
+        Some("object") => CompletionItemKind::MODULE,
+        _ => CompletionItemKind::VALUE,
+    }
+}
+
+fn stringify_value(value: &Value) -> String {
+    serde_json::to_string(value).unwrap()
 }

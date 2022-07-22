@@ -18,9 +18,11 @@ pub struct Query {
     pub scope: ScopeKind,
     /// Query node contains offset
     pub node_at_offset: TextSize,
-    /// Property or annotaion key
+    /// Current property/annotaionKey key
     pub key: Option<SyntaxToken>,
-    /// Whether add value in suggestion
+    /// Current value
+    pub value: Option<SyntaxNode>,
+    /// Whether add value for property/annotationKey completion
     pub add_value: bool,
 }
 
@@ -34,6 +36,7 @@ impl Query {
         let mut kind = ScopeKind::Unknown;
         let mut node_at_offset = offset;
         let mut key = None;
+        let mut value = None;
         let mut add_value = false;
         if let Some(token) = before.as_ref().and_then(|v| {
             if v.syntax.kind().is_ws_or_comment() {
@@ -50,11 +53,36 @@ impl Query {
                     kind = ScopeKind::AnnotationKey;
                     key = Some(token);
                 }
-                SyntaxKind::PARENTHESES_START | SyntaxKind::BRACE_START => {
-                    kind = ScopeKind::Object;
-                }
                 SyntaxKind::COLON => {
-                    kind = ScopeKind::PropertyValue;
+                    node_at_offset = token.text_range().end();
+                    kind = ScopeKind::Value;
+                    value = token.next_sibling_or_token().and_then(|v| {
+                        if v.kind() == SyntaxKind::VALUE {
+                            v.as_node()
+                                .unwrap()
+                                .children()
+                                .find(|v| v.kind() == SyntaxKind::SCALAR)
+                        } else {
+                            None
+                        }
+                    });
+                }
+                SyntaxKind::PARENTHESES_START => {
+                    kind = ScopeKind::Value;
+                    value = token.next_sibling_or_token().and_then(|v| {
+                        if v.kind() == SyntaxKind::ANNOTATION_VALUE {
+                            v.as_node()
+                                .unwrap()
+                                .children()
+                                .find(|v| v.kind() == SyntaxKind::VALUE)
+                                .and_then(|v| v.children().find(|v| v.kind() == SyntaxKind::SCALAR))
+                        } else {
+                            None
+                        }
+                    });
+                }
+                SyntaxKind::BRACE_START => {
+                    kind = ScopeKind::Object;
                 }
                 SyntaxKind::BRACKET_START => {
                     kind = ScopeKind::Array;
@@ -70,7 +98,7 @@ impl Query {
                         )
                     }) {
                         node_at_offset = node.text_range().start();
-                        match node.kind() {
+                        match &node.kind() {
                             SyntaxKind::KEY => {
                                 key = node
                                     .children_with_tokens()
@@ -81,7 +109,10 @@ impl Query {
                                     .any(|v| v.kind() == SyntaxKind::COLON);
                                 kind = ScopeKind::PropertyKey
                             }
-                            SyntaxKind::SCALAR => kind = ScopeKind::Value,
+                            SyntaxKind::SCALAR => {
+                                kind = ScopeKind::Value;
+                                value = Some(node);
+                            }
                             SyntaxKind::OBJECT => kind = ScopeKind::Object,
                             SyntaxKind::ARRAY => kind = ScopeKind::Array,
                             _ => {}
@@ -103,10 +134,10 @@ impl Query {
             node_at_offset,
             add_value,
             key,
+            value,
         }
     }
 
-    #[must_use]
     pub fn node_at(&self, root: &Node) -> Option<(Keys, Node)> {
         if !is_value_contained(root, self.node_at_offset, None) {
             return None;
@@ -132,7 +163,6 @@ pub enum ScopeKind {
     Array,
     AnnotationKey,
     PropertyKey,
-    PropertyValue,
     Value,
 }
 
