@@ -152,11 +152,16 @@ impl Query {
         }
     }
 
-    pub fn node_at(&self, root: &Node) -> Option<(Keys, Node)> {
-        if !is_value_contained(root, self.node_at_offset, None) {
+    pub fn node_at(
+        &self,
+        root: &Node,
+        offset: TextSize,
+        include_key: bool,
+    ) -> Option<(Keys, Node)> {
+        if !is_value_contained(root, offset, None, include_key) {
             return None;
         }
-        node_at_impl(root, self.node_at_offset, Keys::default())
+        node_at_impl(root, offset, Keys::default(), include_key)
     }
 
     pub fn index_at(&self) -> Option<usize> {
@@ -224,26 +229,31 @@ pub struct PositionInfo {
     pub syntax: SyntaxToken,
 }
 
-fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node)> {
+fn node_at_impl(
+    node: &Node,
+    offset: TextSize,
+    keys: Keys,
+    include_key: bool,
+) -> Option<(Keys, Node)> {
     if let Some(annotations) = node.annotations() {
         for (key, value) in annotations.value().read().iter() {
-            if is_value_contained(value, offset, Some(key)) {
-                return node_at_impl(value, offset, keys.join(key.into()));
+            if is_value_contained(value, offset, Some(key), include_key) {
+                return node_at_impl(value, offset, keys.join(key.into()), include_key);
             }
         }
     }
     match node {
         Node::Array(arr) => {
             for (index, value) in arr.value().read().iter().enumerate() {
-                if is_value_contained(value, offset, None) {
-                    return node_at_impl(value, offset, keys.join(index.into()));
+                if is_value_contained(value, offset, None, include_key) {
+                    return node_at_impl(value, offset, keys.join(index.into()), include_key);
                 }
             }
         }
         Node::Object(obj) => {
             for (key, value) in obj.value().read().iter() {
-                if is_value_contained(value, offset, Some(key)) {
-                    return node_at_impl(value, offset, keys.join(key.into()));
+                if is_value_contained(value, offset, Some(key), include_key) {
+                    return node_at_impl(value, offset, keys.join(key.into()), include_key);
                 }
             }
         }
@@ -252,17 +262,27 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
     Some((keys, node.clone()))
 }
 
-fn is_value_contained(value: &Node, offset: TextSize, key: Option<&Key>) -> bool {
+fn is_value_contained(
+    value: &Node,
+    offset: TextSize,
+    key: Option<&Key>,
+    include_key: bool,
+) -> bool {
     match (
         key.and_then(|k| k.node_syntax().map(|v| v.text_range())),
         value.node_text_range(),
     ) {
         (None, Some(range)) => range.contains(offset),
         (Some(range1), Some(range2)) => {
-            TextRange::empty(range1.end().checked_add(TextSize::from(1)).unwrap())
-                .cover(range2)
-                .contains(offset)
+            if include_key {
+                range1.cover(range2).contains(offset)
+            } else {
+                TextRange::empty(range1.end().checked_add(TextSize::from(1)).unwrap())
+                    .cover(range2)
+                    .contains(offset)
+            }
         }
+        (Some(range1), None) if include_key => range1.contains(offset),
         _ => false,
     }
 }

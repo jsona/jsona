@@ -60,7 +60,7 @@ pub async fn completion<E: Environment>(
         return Ok(None);
     }
 
-    let (mut keys, node) = match query.node_at(&doc.dom) {
+    let (mut keys, node) = match query.node_at(&doc.dom, query.node_at_offset, false) {
         Some(v) => v,
         None => return Ok(None),
     };
@@ -81,7 +81,7 @@ pub async fn completion<E: Environment>(
         }
     };
 
-    tracing::info!(?query, "debug completion keys={}", keys);
+    tracing::debug!(?query, "debug completion keys={}", keys);
 
     let comp_items = match &query.scope {
         ScopeKind::AnnotationKey => {
@@ -102,11 +102,7 @@ pub async fn completion<E: Environment>(
         ScopeKind::Value => complete_value(&query, &schemas),
         _ => return Ok(None),
     };
-    if comp_items.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(CompletionResponse::Array(comp_items)))
-    }
+    Ok(Some(CompletionResponse::Array(comp_items)))
 }
 
 fn complete_properties(
