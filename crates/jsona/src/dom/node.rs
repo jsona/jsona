@@ -1,5 +1,6 @@
 use super::error::{Error, ParseError, QueryError};
 use super::keys::{KeyOrIndex, Keys};
+use super::visitor::Visitor;
 use crate::parser;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
@@ -10,7 +11,7 @@ use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};
 use serde_json::Number as JsonNumber;
 use std::collections::HashMap;
-use std::iter::{once, FromIterator};
+use std::iter::FromIterator;
 use std::str::FromStr;
 use std::string::String as StdString;
 use std::sync::Arc;
@@ -179,64 +180,6 @@ impl Node {
         }
     }
 
-    pub fn flat_iter(&self) -> impl DoubleEndedIterator<Item = (Keys, Node)> {
-        let mut all = Vec::new();
-
-        match self {
-            Node::Object(t) => {
-                let props = t.inner.properties.read();
-                for (key, entry) in &props.all {
-                    entry.collect_flat(Keys::new(once(key.into())), &mut all);
-                }
-            }
-            Node::Array(arr) => {
-                let items = arr.inner.items.read();
-                for (idx, item) in items.iter().enumerate() {
-                    item.collect_flat(Keys::new(once(idx.into())), &mut all);
-                }
-            }
-            _ => {}
-        }
-
-        if let Some(annotations) = self.annotations() {
-            let members = annotations.inner.members.read();
-            for (key, node) in &members.all {
-                node.collect_flat(Keys::new(once(key.into())), &mut all);
-            }
-        }
-
-        all.into_iter()
-    }
-
-    pub fn annotation_iter(&self) -> impl DoubleEndedIterator<Item = (Keys, Node)> {
-        let mut all = Vec::new();
-
-        if let Some(annotations) = self.annotations() {
-            let members = annotations.inner.members.read();
-            for (key, entry) in &members.all {
-                all.push((Keys::new(once(key.into())), entry.clone()))
-            }
-        }
-
-        match self {
-            Node::Object(t) => {
-                let props = t.inner.properties.read();
-                for (key, entry) in &props.all {
-                    entry.collect_annotation(Keys::new(once(key.into())), &mut all);
-                }
-            }
-            Node::Array(arr) => {
-                let items = arr.inner.items.read();
-                for (idx, item) in items.iter().enumerate() {
-                    item.collect_annotation(Keys::new(once(idx.into())), &mut all);
-                }
-            }
-            _ => {}
-        }
-
-        all.into_iter()
-    }
-
     pub fn text_range(&self) -> Option<TextRange> {
         self.syntax().map(|v| v.text_range())
     }
@@ -257,7 +200,9 @@ impl Node {
         keys: Keys,
         match_children: bool,
     ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, Error> {
-        let all: Vec<(Keys, Node)> = self.flat_iter().collect();
+        let all: Vec<(Keys, Node)> = Visitor::new(self, |_, _| (true, true))
+            .into_iter()
+            .collect();
         let mut output = vec![];
         for (k, v) in all {
             if keys.is_match(&k, match_children) {
@@ -298,61 +243,6 @@ impl Node {
                 Some(text)
             }
             Node::Array(_) | Node::Object(_) => None,
-        }
-    }
-
-    fn collect_flat(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {
-        match self {
-            Node::Object(t) => {
-                all.push((parent.clone(), self.clone()));
-                let props = t.inner.properties.read();
-                for (key, entry) in &props.all {
-                    entry.collect_flat(parent.join(key.into()), all);
-                }
-            }
-            Node::Array(arr) => {
-                all.push((parent.clone(), self.clone()));
-                let items = arr.inner.items.read();
-                for (idx, item) in items.iter().enumerate() {
-                    item.collect_flat(parent.join(idx.into()), all);
-                }
-            }
-            _ => {
-                all.push((parent.clone(), self.clone()));
-            }
-        }
-
-        if let Some(annotations) = self.annotations() {
-            let members = annotations.inner.members.read();
-            for (key, member) in &members.all {
-                member.collect_flat(parent.join(key.into()), all);
-            }
-        }
-    }
-
-    fn collect_annotation(&self, parent: Keys, all: &mut Vec<(Keys, Node)>) {
-        if let Some(annotations) = self.annotations() {
-            let members = annotations.inner.members.read();
-            for (key, entry) in &members.all {
-                all.push((Keys::new(once(key.into())), entry.clone()))
-            }
-        }
-        match self {
-            Node::Object(t) => {
-                all.push((parent.clone(), self.clone()));
-                let props = t.inner.properties.read();
-                for (key, entry) in &props.all {
-                    entry.collect_annotation(parent.join(key.into()), all);
-                }
-            }
-            Node::Array(arr) => {
-                all.push((parent.clone(), self.clone()));
-                let items = arr.inner.items.read();
-                for (idx, item) in items.iter().enumerate() {
-                    item.collect_annotation(parent.join(idx.into()), all);
-                }
-            }
-            _ => {}
         }
     }
 

@@ -70,6 +70,28 @@ impl KeyOrIndex {
         Self::Key(Key::annotation(key))
     }
 
+    pub fn is_index(&self) -> bool {
+        matches!(self, KeyOrIndex::Index(_))
+    }
+
+    pub fn is_property_key(&self) -> bool {
+        if let KeyOrIndex::Key(v) = self {
+            if v.is_property() {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn is_annotation_key(&self) -> bool {
+        if let KeyOrIndex::Key(v) = self {
+            if v.is_annotation() {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn as_index(&self) -> Option<&usize> {
         if let KeyOrIndex::Index(v) = self {
             Some(v)
@@ -172,6 +194,14 @@ impl Keys {
 
     pub fn last(&self) -> Option<&KeyOrIndex> {
         self.keys.last()
+    }
+
+    pub fn last_property_key(&self) -> Option<&Key> {
+        self.last().and_then(|v| v.as_property_key())
+    }
+
+    pub fn last_annotation_key(&self) -> Option<&Key> {
+        self.last().and_then(|v| v.as_annotation_key())
     }
 
     pub fn last_text_range(&self) -> Option<TextRange> {

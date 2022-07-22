@@ -187,7 +187,7 @@ impl Scope {
     pub(crate) fn enter(&self, kind: ScopeKind) -> Self {
         Self {
             options: self.options.clone(),
-            level: self.level + 1,
+            level: self.level.saturating_add(1),
             formatted: self.formatted.clone(),
             kind,
             compact: self.compact,
@@ -196,7 +196,7 @@ impl Scope {
     pub(crate) fn exit(&self) -> Self {
         Self {
             options: self.options.clone(),
-            level: self.level - 1,
+            level: self.level.saturating_sub(1),
             formatted: self.formatted.clone(),
             kind: self.kind,
             compact: self.compact,
