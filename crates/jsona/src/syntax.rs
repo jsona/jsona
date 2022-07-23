@@ -228,18 +228,18 @@ fn lex_comment_block(lex: &mut Lexer<SyntaxKind>) -> bool {
 }
 
 fn lex_backtick_quote(lex: &mut Lexer<SyntaxKind>) -> bool {
-    lex_string(lex, '`')
+    lex_string(lex, '`', true)
 }
 
 fn lex_single_quote(lex: &mut Lexer<SyntaxKind>) -> bool {
-    lex_string(lex, '\'')
+    lex_string(lex, '\'', false)
 }
 
 fn lex_double_quote(lex: &mut Lexer<SyntaxKind>) -> bool {
-    lex_string(lex, '"')
+    lex_string(lex, '"', false)
 }
 
-fn lex_string(lex: &mut Lexer<SyntaxKind>, quote: char) -> bool {
+fn lex_string(lex: &mut Lexer<SyntaxKind>, quote: char, multiline: bool) -> bool {
     let remainder: &str = lex.remainder();
     let mut escaped = false;
 
@@ -253,7 +253,7 @@ fn lex_string(lex: &mut Lexer<SyntaxKind>, quote: char) -> bool {
             continue;
         }
 
-        if c == quote && !escaped {
+        if (c == quote && !escaped) || (c == '\n' && !multiline) {
             lex.bump(remainder[0..total_len].as_bytes().len());
             return true;
         }

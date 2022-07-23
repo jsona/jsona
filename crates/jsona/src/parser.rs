@@ -269,7 +269,7 @@ impl<'p> Parser<'p> {
                 }
                 _ => {
                     if needs_comma {
-                        self.report_error(r#"expected ",""#);
+                        self.point_error(r#"expected ",""#);
                     }
                     let ret = with_node!(self.builder, PROPERTY, self.parse_property());
                     if let Ok(has_comma) = ret {
@@ -301,7 +301,7 @@ impl<'p> Parser<'p> {
                 }
                 _ => {
                     if needs_comma {
-                        self.report_error(r#"expected ",""#);
+                        self.point_error(r#"expected ",""#);
                     }
                     let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
                     needs_comma = !ret.ok().unwrap_or_default();
@@ -552,6 +552,19 @@ impl<'p> Parser<'p> {
             range: TextRange::new(
                 TextSize::from(span.start as u32),
                 TextSize::from(span.end as u32),
+            ),
+            message: message.into(),
+        };
+        self.add_error(&err);
+    }
+
+    fn point_error(&mut self, message: &str) {
+        let span = self.lexer.span();
+        let point  = span.start.saturating_sub(1);
+        let err = Error {
+            range: TextRange::new(
+                TextSize::from(point as u32),
+                TextSize::from(point as u32),
             ),
             message: message.into(),
         };

@@ -1,4 +1,4 @@
-use super::error::{Error, QueryError};
+use super::error::QueryError;
 use super::from_syntax::keys_from_syntax;
 use super::node::Key;
 use super::DomNode;
@@ -350,7 +350,7 @@ impl core::fmt::Display for Keys {
 }
 
 impl FromStr for Keys {
-    type Err = Error;
+    type Err = QueryError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
@@ -358,7 +358,7 @@ impl FromStr for Keys {
         }
         let mut p = Parser::new(s).parse_keys_only();
         if let Some(err) = p.errors.pop() {
-            return Err(QueryError::InvalidKey(err).into());
+            return Err(QueryError::InvalidKey(err));
         }
         Ok(Keys::new(keys_from_syntax(&p.into_syntax().into())))
     }

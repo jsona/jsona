@@ -209,36 +209,73 @@ impl Node {
             )
         });
         match self {
-            Node::Null(_) => {
-                json!({
-                    "value": null,
-                    "annotations": annotations
-                })
-            }
-            Node::Bool(v) => {
-                json!({
-                    "value": v.value(),
-                    "annotations": annotations
-                })
-            }
-            Node::Number(v) => {
-                json!({
-                    "value": v.value(),
-                    "annotations": annotations
-                })
-            }
-            Node::String(v) => {
-                json!({
-                    "value": v.value(),
-                    "annotations": annotations
-                })
-            }
+            Node::Null(_) => match annotations {
+                Some(annotations) => {
+                    json!({
+                        "value": null,
+                        "annotations": annotations
+                    })
+                }
+                None => {
+                    json!({
+                        "value": null,
+                    })
+                }
+            },
+            Node::Bool(v) => match annotations {
+                Some(annotations) => {
+                    json!({
+                        "value": v.value(),
+                        "annotations": annotations
+                    })
+                }
+                None => {
+                    json!({
+                        "value": v.value(),
+                    })
+                }
+            },
+            Node::Number(v) => match annotations {
+                Some(annotations) => {
+                    json!({
+                        "value": v.value(),
+                        "annotations": annotations
+                    })
+                }
+                None => {
+                    json!({
+                        "value": v.value(),
+                    })
+                }
+            },
+            Node::String(v) => match annotations {
+                Some(annotations) => {
+                    json!({
+                        "value": v.value(),
+                        "annotations": annotations
+                    })
+                }
+                None => {
+                    json!({
+                        "value": v.value(),
+                    })
+                }
+            },
             Node::Array(v) => {
                 let value = Value::Array(v.value().read().iter().map(|v| v.to_json()).collect());
-                json!({
-                    "value": value,
-                    "annotations": annotations
-                })
+                match annotations {
+                    Some(annotations) => {
+                        json!({
+                            "value": value,
+                            "annotations": annotations
+                        })
+                    }
+                    None => {
+                        json!({
+                            "value": value,
+                        })
+                    }
+                }
             }
             Node::Object(v) => {
                 let value = Value::Object(
@@ -248,10 +285,19 @@ impl Node {
                         .map(|(k, v)| (k.to_string(), v.to_json()))
                         .collect(),
                 );
-                json!({
-                    "value": value,
-                    "annotations": annotations
-                })
+                match annotations {
+                    Some(annotations) => {
+                        json!({
+                            "value": value,
+                            "annotations": annotations
+                        })
+                    }
+                    None => {
+                        json!({
+                            "value": value,
+                        })
+                    }
+                }
             }
         }
     }

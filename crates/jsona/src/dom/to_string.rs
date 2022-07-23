@@ -1,22 +1,15 @@
 use super::{Annotations, DomNode, Key, Node};
 use crate::formatter::{Scope, ScopeKind};
 use std::fmt::{Display, Formatter, Result};
-use std::string::String as StdString;
 
-impl Node {
-    pub fn to_jsona(&self) -> StdString {
+impl Display for Node {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let scope = Scope::default();
         write_value(scope.clone(), self);
         if scope.is_last_char(',') {
             scope.remove_last_char();
         }
-        scope.output()
-    }
-}
-
-impl Display for Node {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str(&self.to_jsona())
+        scope.output().fmt(f)
     }
 }
 

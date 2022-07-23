@@ -68,7 +68,7 @@ impl<E: Environment> App<E> {
                         Label::secondary((), std_range(other.text_range().unwrap()))
                             .with_message("duplicate found here"),
                     ])),
-                dom::Error::InvalidEscapeSequence { string } => Diagnostic::error()
+                dom::Error::InvalidEscapeSequence { syntax: string } => Diagnostic::error()
                     .with_message(error.to_string())
                     .with_labels(Vec::from([Label::primary(
                         (),

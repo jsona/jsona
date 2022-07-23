@@ -19,8 +19,8 @@ fn main() {
         }
     }
     let output = match output_format.as_str() {
-        "plain" => serde_json::to_string_pretty(&node.to_plain_json()).unwrap(),
-        "jsona" => node.to_jsona(),
+        "plain" => serde_json::to_string_pretty(&node).unwrap(),
+        "jsona" => node.to_string(),
         _ => serde_json::to_string_pretty(&node.to_json()).unwrap(),
     };
     println!("{}", output);

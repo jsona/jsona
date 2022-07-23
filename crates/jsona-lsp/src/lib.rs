@@ -12,6 +12,8 @@ pub mod lsp_ext;
 pub mod query;
 pub mod world;
 
+pub const NAME: &str = "JSONA Language Server";
+
 #[must_use]
 pub fn create_server<E: Environment>() -> Server<World<E>> {
     Server::new()

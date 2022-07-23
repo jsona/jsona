@@ -1,4 +1,7 @@
-use crate::world::{DocumentState, WorkspaceState, World};
+use crate::{
+    world::{DocumentState, WorkspaceState, World},
+    NAME,
+};
 use jsona::dom::Node;
 use jsona_util::environment::Environment;
 use lsp_async_stub::{util::LspExt, Context, RequestWriter};
@@ -125,7 +128,7 @@ fn collect_syntax_errors(doc: &DocumentState, diags: &mut Vec<Diagnostic>) {
             severity: Some(DiagnosticSeverity::ERROR),
             code: None,
             code_description: None,
-            source: Some("JSONA".into()),
+            source: Some(NAME.into()),
             message: e.message.clone(),
             related_information: None,
             tags: None,
@@ -160,7 +163,7 @@ fn collect_dom_errors(
                     diags.push(Diagnostic {
                         range,
                         severity: Some(DiagnosticSeverity::ERROR),
-                        source: Some("Even Better TOML".into()),
+                        source: Some(NAME.into()),
                         message: error.to_string(),
                         related_information: Some(Vec::from([DiagnosticRelatedInformation {
                             location: Location {
@@ -175,7 +178,7 @@ fn collect_dom_errors(
                     diags.push(Diagnostic {
                         range: other_range,
                         severity: Some(DiagnosticSeverity::HINT),
-                        source: Some("JSONA".into()),
+                        source: Some(NAME.into()),
                         message: error.to_string(),
                         related_information: Some(Vec::from([DiagnosticRelatedInformation {
                             location: Location {
@@ -187,11 +190,8 @@ fn collect_dom_errors(
                         ..Default::default()
                     });
                 }
-                jsona::dom::Error::InvalidEscapeSequence { string: _ }
-                | jsona::dom::Error::Query(_) => {}
-                jsona::dom::Error::UnexpectedSyntax { syntax } => {
-                    tracing::error!("unexpected syntax in dom: {syntax:#?}");
-                }
+                jsona::dom::Error::InvalidEscapeSequence { syntax: _ }
+                | jsona::dom::Error::UnexpectedSyntax { syntax: _ } => {}
             }
         }
     }
@@ -229,7 +229,7 @@ async fn collect_schema_errors<E: Environment>(
                     severity: Some(DiagnosticSeverity::ERROR),
                     code: None,
                     code_description: None,
-                    source: Some("JSONA".into()),
+                    source: Some(NAME.into()),
                     message: err.info,
                     related_information: None,
                     tags: None,
