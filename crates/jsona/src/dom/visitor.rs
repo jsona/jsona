@@ -1,45 +1,69 @@
 use super::{DomNode, Keys, Node};
 
-pub struct Visitor<'a> {
+pub struct Visitor<'a, T> {
     node: &'a Node,
-    f: VisitFn,
+    state: &'a T,
+    f: Box<dyn Fn(&Keys, &Node, &T) -> VisitControl + 'a>,
 }
 
-type VisitFn = Box<dyn Fn(&Keys, &Node) -> (bool, bool)>;
-
-impl<'a> Visitor<'a> {
-    pub fn new(node: &'a Node, f: impl Fn(&Keys, &Node) -> (bool, bool) + 'static) -> Self {
+impl<'a, T> Visitor<'a, T> {
+    pub fn new(
+        node: &'a Node,
+        state: &'a T,
+        f: impl Fn(&Keys, &Node, &T) -> VisitControl + 'a,
+    ) -> Self {
         Self {
             node,
+            state,
             f: Box::new(f),
         }
     }
 }
 
-impl<'a> IntoIterator for Visitor<'a> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VisitControl {
+    AddIter,
+    NotAddIter,
+    AddNotIter,
+    NotAddNotIter,
+}
+
+impl<'a, T> IntoIterator for Visitor<'a, T> {
     type Item = (Keys, Node);
     type IntoIter = std::vec::IntoIter<(Keys, Node)>;
 
     fn into_iter(self) -> Self::IntoIter {
-        fn collect(keys: Keys, node: &Node, all: &mut Vec<(Keys, Node)>, f: &VisitFn) {
-            let (add, iter) = f(&keys, node);
-            if add {
-                all.push((keys.clone(), node.clone()));
-            }
-            if !iter {
-                return;
+        fn collect<T>(
+            keys: Keys,
+            node: &Node,
+            state: &T,
+            all: &mut Vec<(Keys, Node)>,
+            f: &dyn Fn(&Keys, &Node, &T) -> VisitControl,
+        ) {
+            match f(&keys, node, state) {
+                VisitControl::AddIter => {
+                    all.push((keys.clone(), node.clone()));
+                }
+                VisitControl::NotAddIter => {}
+                VisitControl::AddNotIter => {
+                    all.push((keys.clone(), node.clone()));
+                    return;
+                }
+                VisitControl::NotAddNotIter => {
+                    return;
+                }
             }
             match node {
                 Node::Object(obj) => {
                     let props = obj.inner.properties.read();
                     for (key, node) in &props.all {
-                        collect(keys.join(key.into()), node, all, f);
+                        collect(keys.join(key.into()), node, state, all, &f);
                     }
                 }
                 Node::Array(arr) => {
                     let items = arr.inner.items.read();
                     for (idx, node) in items.iter().enumerate() {
-                        collect(keys.join(idx.into()), node, all, f);
+                        collect(keys.join(idx.into()), node, state, all, &f);
                     }
                 }
                 _ => {}
@@ -48,28 +72,28 @@ impl<'a> IntoIterator for Visitor<'a> {
             if let Some(annotations) = node.annotations() {
                 let members = annotations.value().read();
                 for (key, node) in &members.all {
-                    collect(keys.join(key.into()), node, all, f);
+                    collect(keys.join(key.into()), node, state, all, &f);
                 }
             }
         }
 
         let mut all = vec![];
-        collect(Keys::default(), self.node, &mut all, &self.f);
+        collect(Keys::default(), self.node, self.state, &mut all, &self.f);
 
         all.into_iter()
     }
 }
 
-pub fn visit_annotations(node: &Node) -> Visitor {
-    Visitor::new(node, |keys, _| {
+pub fn visit_annotations(node: &Node) -> Visitor<()> {
+    Visitor::new(node, &(), |keys, _, _| {
         if keys
             .last()
             .map(|v| v.is_annotation_key())
             .unwrap_or_default()
         {
-            (true, false)
+            VisitControl::AddNotIter
         } else {
-            (false, true)
+            VisitControl::NotAddIter
         }
     })
 }

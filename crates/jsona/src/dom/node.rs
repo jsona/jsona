@@ -1,6 +1,6 @@
 use super::error::{Error, ParseError, QueryError};
 use super::keys::{KeyOrIndex, Keys};
-use super::visitor::Visitor;
+use super::visitor::{VisitControl, Visitor};
 use crate::parser;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
@@ -200,7 +200,7 @@ impl Node {
         keys: Keys,
         match_children: bool,
     ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, Error> {
-        let all: Vec<(Keys, Node)> = Visitor::new(self, |_, _| (true, true))
+        let all: Vec<(Keys, Node)> = Visitor::new(self, &(), |_, _, _| VisitControl::AddIter)
             .into_iter()
             .collect();
         let mut output = vec![];
