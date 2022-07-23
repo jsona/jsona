@@ -166,6 +166,6 @@
     "which": "^2.0.2"
   },
   "devDependencies": {
-    "@types/vscode": "^1.69.0"
+    "@types/vscode": "^1.44.0"
   }
 }
