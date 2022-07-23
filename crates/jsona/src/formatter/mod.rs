@@ -15,7 +15,6 @@ use crate::{
 
 use rowan::{NodeOrToken, WalkEvent};
 
-
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Scope {
     pub(crate) options: Rc<Options>,

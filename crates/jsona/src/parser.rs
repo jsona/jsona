@@ -560,12 +560,9 @@ impl<'p> Parser<'p> {
 
     fn point_error(&mut self, message: &str) {
         let span = self.lexer.span();
-        let point  = span.start.saturating_sub(1);
+        let point = TextSize::from(span.start.saturating_sub(1) as u32);
         let err = Error {
-            range: TextRange::new(
-                TextSize::from(point as u32),
-                TextSize::from(point as u32),
-            ),
+            range: TextRange::new(point, point),
             message: message.into(),
         };
         self.add_error(&err);

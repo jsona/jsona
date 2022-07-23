@@ -4,7 +4,7 @@ use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
 pub enum Error {
-    #[error("the syntax was not expected here: {syntax:#?}")]
+    #[error("the syntax was not expected")]
     UnexpectedSyntax { syntax: SyntaxElement },
     #[error("the string contains invalid escape sequence(s)")]
     InvalidEscapeSequence { syntax: SyntaxElement },
