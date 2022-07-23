@@ -33,54 +33,53 @@ impl<'a, T> IntoIterator for Visitor<'a, T> {
     type IntoIter = std::vec::IntoIter<(Keys, Node)>;
 
     fn into_iter(self) -> Self::IntoIter {
-        fn collect<T>(
-            keys: Keys,
-            node: &Node,
-            state: &T,
-            all: &mut Vec<(Keys, Node)>,
-            f: &dyn Fn(&Keys, &Node, &T) -> VisitControl,
-        ) {
-            match f(&keys, node, state) {
-                VisitControl::AddIter => {
-                    all.push((keys.clone(), node.clone()));
-                }
-                VisitControl::NotAddIter => {}
-                VisitControl::AddNotIter => {
-                    all.push((keys.clone(), node.clone()));
-                    return;
-                }
-                VisitControl::NotAddNotIter => {
-                    return;
-                }
-            }
-            match node {
-                Node::Object(obj) => {
-                    let props = obj.inner.properties.read();
-                    for (key, node) in &props.all {
-                        collect(keys.join(key.into()), node, state, all, &f);
-                    }
-                }
-                Node::Array(arr) => {
-                    let items = arr.inner.items.read();
-                    for (idx, node) in items.iter().enumerate() {
-                        collect(keys.join(idx.into()), node, state, all, &f);
-                    }
-                }
-                _ => {}
-            }
-
-            if let Some(annotations) = node.annotations() {
-                let members = annotations.value().read();
-                for (key, node) in &members.all {
-                    collect(keys.join(key.into()), node, state, all, &f);
-                }
-            }
-        }
-
         let mut all = vec![];
         collect(Keys::default(), self.node, self.state, &mut all, &self.f);
-
         all.into_iter()
+    }
+}
+
+fn collect<T>(
+    keys: Keys,
+    node: &Node,
+    state: &T,
+    all: &mut Vec<(Keys, Node)>,
+    f: &dyn Fn(&Keys, &Node, &T) -> VisitControl,
+) {
+    match f(&keys, node, state) {
+        VisitControl::AddIter => {
+            all.push((keys.clone(), node.clone()));
+        }
+        VisitControl::NotAddIter => {}
+        VisitControl::AddNotIter => {
+            all.push((keys.clone(), node.clone()));
+            return;
+        }
+        VisitControl::NotAddNotIter => {
+            return;
+        }
+    }
+    match node {
+        Node::Object(obj) => {
+            let props = obj.inner.properties.read();
+            for (key, node) in &props.all {
+                collect(keys.join(key.into()), node, state, all, &f);
+            }
+        }
+        Node::Array(arr) => {
+            let items = arr.inner.items.read();
+            for (idx, node) in items.iter().enumerate() {
+                collect(keys.join(idx.into()), node, state, all, &f);
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(annotations) = node.annotations() {
+        let members = annotations.value().read();
+        for (key, node) in &members.all {
+            collect(keys.join(key.into()), node, state, all, &f);
+        }
     }
 }
 

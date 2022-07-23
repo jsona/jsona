@@ -245,7 +245,7 @@ impl Keys {
         (left.get(0).cloned(), Self::new(right.iter().cloned()))
     }
 
-    pub fn annotation_shift(&self) -> (Option<Key>, Self) {
+    pub fn shift_annotation(&self) -> (Option<Key>, Self) {
         match self.keys.iter().enumerate().find(|(_, k)| {
             if let KeyOrIndex::Key(k) = k {
                 k.is_annotation()
@@ -440,11 +440,11 @@ mod tests {
         assert_parse_keys!(".foo*");
         assert_parse_keys!(".foo.*");
         assert_parse_keys!(".foo.*.bar");
-        assert_parse_keys!(r#".foo."ba-z""#);
-        assert_parse_keys!(r#".foo."ba z""#);
+        assert_parse_keys!(r#".foo."ba-z""#, ".foo.'ba-z'");
+        assert_parse_keys!(r#".foo."ba z""#, ".foo.'ba z'");
         assert_parse_keys!(".foo.1");
         assert_parse_keys!(".foo.1.baz");
-        assert_parse_keys!(r#".foo."1".baz"#);
+        assert_parse_keys!(r#".foo."1".baz"#, ".foo.1.baz");
         assert_parse_keys!("*foo", ".*foo");
         assert_parse_keys!("**@foo");
         assert_parse_keys!("**.*");

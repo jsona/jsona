@@ -746,6 +746,13 @@ impl Key {
     pub fn text_range(&self) -> Option<TextRange> {
         self.syntax().map(|v| v.text_range())
     }
+
+    pub fn to_raw_string(&self) -> StdString {
+        match self.syntax() {
+            Some(v) => v.to_string(),
+            None => self.value().to_string(),
+        }
+    }
 }
 
 impl Sealed for Key {}
@@ -784,9 +791,10 @@ impl AsRef<str> for Key {
 
 impl core::fmt::Display for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.syntax() {
-            Some(v) => v.to_string().fmt(f),
-            None => self.value().fmt(f),
+        if self.is_annotation() {
+            self.value().fmt(f)
+        } else {
+            quote(self.value(), false).fmt(f)
         }
     }
 }

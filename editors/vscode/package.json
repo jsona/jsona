@@ -1,21 +1,22 @@
 {
-  "name": "vscode-jsona",
-  "displayName": "JSONA syntax",
-  "description": "Adds syntax highlighting of JSONA files",
-  "version": "0.2.0",
+  "name": "jsona",
+  "displayName": "JSONA",
+  "description": "Fully-featured JSONA support",
+  "version": "0.1.0",
   "publisher": "sigoden",
   "license": "MIT",
   "engines": {
     "vscode": "^1.44.0"
   },
   "icon": "icon.png",
-  "homepage": "https://github.com/sigoden/vscode-jsona/blob/master/README.md",
+  "homepage": "https://github.com/sigoden/jsona/blob/main/editors/vscode/README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sigoden/vscode-jsona"
+    "url": "https://github.com/sigoden/jsona"
   },
   "keywords": [
     "jsona",
+    "completion",
     "syntax",
     "highlight"
   ],

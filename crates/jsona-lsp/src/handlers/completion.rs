@@ -12,8 +12,8 @@ use lsp_async_stub::{
     Context, Params,
 };
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
-    Documentation, InsertTextFormat, MarkupContent, TextEdit,
+    Command, CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse,
+    CompletionTextEdit, Documentation, InsertTextFormat, MarkupContent, TextEdit,
 };
 use serde_json::{json, Value};
 
@@ -90,11 +90,11 @@ pub async fn completion<E: Environment>(
             }
         }
         ScopeKind::Array => match schemas.as_ref() {
-            Some(schemas) => complete_array(&query, schemas),
+            Some(schemas) => complete_array(doc, &query, schemas),
             None => complete_array_schemaless(doc, &query, &keys),
         },
         ScopeKind::Value => match schemas.as_ref() {
-            Some(schemas) => complete_value(&query, schemas),
+            Some(schemas) => complete_value(doc, &query, schemas),
             None => complete_value_schemaless(doc, &query, &keys),
         },
         _ => return Ok(None),
@@ -142,7 +142,11 @@ fn complete_properties(
     Some(CompletionResponse::Array(comp_items))
 }
 
-fn complete_array(query: &Query, schemas: &[Schema]) -> Option<CompletionResponse> {
+fn complete_array(
+    doc: &DocumentState,
+    query: &Query,
+    schemas: &[Schema],
+) -> Option<CompletionResponse> {
     let mut comp_items = vec![];
     let index = query.index_at().unwrap_or_default();
     let mut types: HashSet<String> = HashSet::default();
@@ -166,10 +170,15 @@ fn complete_array(query: &Query, schemas: &[Schema]) -> Option<CompletionRespons
     if comp_items.is_empty() && query.value.is_none() {
         complete_value_type(&mut comp_items, &types, seperator);
     }
+    completion_item_set_text_edit(doc, query, &mut comp_items);
     Some(CompletionResponse::Array(comp_items))
 }
 
-fn complete_value(query: &Query, schemas: &[Schema]) -> Option<CompletionResponse> {
+fn complete_value(
+    doc: &DocumentState,
+    query: &Query,
+    schemas: &[Schema],
+) -> Option<CompletionResponse> {
     let mut comp_items = vec![];
     let mut types: HashSet<String> = HashSet::default();
     let seperator = if query.add_seperator { "," } else { "" };
@@ -177,6 +186,7 @@ fn complete_value(query: &Query, schemas: &[Schema]) -> Option<CompletionRespons
     if comp_items.is_empty() && query.value.is_none() {
         complete_value_type(&mut comp_items, &types, seperator);
     }
+    completion_item_set_text_edit(doc, query, &mut comp_items);
     Some(CompletionResponse::Array(comp_items))
 }
 
@@ -318,6 +328,7 @@ fn complete_array_schemaless(
             }
         }
     }
+    completion_item_set_text_edit(doc, query, &mut comp_items);
     Some(CompletionResponse::Array(comp_items))
 }
 
@@ -357,6 +368,7 @@ fn complete_value_schemaless(
             comp_items.push(comp_item);
         }
     }
+    completion_item_set_text_edit(doc, query, &mut comp_items);
     Some(CompletionResponse::Array(comp_items))
 }
 
@@ -463,7 +475,8 @@ fn completeion_item_from_prop(
     prop_value: &Schema,
     is_annotation: bool,
 ) -> CompletionItem {
-    let insert_text = insert_text_for_property(query, prop_key, prop_value, is_annotation);
+    let (insert_text, suggest) =
+        insert_text_for_property(query, prop_key, prop_value, is_annotation);
 
     let text_edit = query.key.as_ref().map(|r| {
         CompletionTextEdit::Edit(TextEdit {
@@ -471,12 +484,23 @@ fn completeion_item_from_prop(
             new_text: insert_text.to_string(),
         })
     });
+
+    let command = if suggest {
+        Some(Command::new(
+            "Suggest".into(),
+            "editor.action.triggerSuggest".into(),
+            None,
+        ))
+    } else {
+        None
+    };
     CompletionItem {
-        label: prop_key.to_string(),
+        label: sanitize_label(prop_key.to_string()),
         kind: Some(CompletionItemKind::PROPERTY),
         insert_text: Some(insert_text),
         text_edit,
         insert_text_format: Some(InsertTextFormat::SNIPPET),
+        command,
         documentation: make_doc(prop_value),
         ..Default::default()
     }
@@ -484,7 +508,7 @@ fn completeion_item_from_prop(
 
 fn completion_item_from_value(schema: &Schema, value: &Value, seperator: &str) -> CompletionItem {
     CompletionItem {
-        label: stringify_value(value),
+        label: sanitize_label(stringify_value(value)),
         kind: Some(suggestion_kind(&schema.schema_type)),
         insert_text: Some(format!("{}{}", insert_text_for_value(value), seperator)),
         insert_text_format: Some(InsertTextFormat::SNIPPET),
@@ -503,6 +527,23 @@ fn completion_item_from_literal(label: &str, text: &str, seperator: &str) -> Com
     }
 }
 
+fn completion_item_set_text_edit(
+    doc: &DocumentState,
+    query: &Query,
+    items: &mut Vec<CompletionItem>,
+) {
+    for item in items {
+        if let Some(insert_text) = item.insert_text.as_ref() {
+            item.text_edit = query.value.as_ref().map(|r| {
+                CompletionTextEdit::Edit(TextEdit {
+                    range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),
+                    new_text: insert_text.to_string(),
+                })
+            });
+        }
+    }
+}
+
 fn make_doc(schema: &Schema) -> Option<Documentation> {
     if let Some(docs) = schema.description.as_ref() {
         return Some(Documentation::MarkupContent(MarkupContent {
@@ -518,26 +559,27 @@ fn insert_text_for_property(
     prop_key: &str,
     schema: &Schema,
     is_annotation: bool,
-) -> String {
+) -> (String, bool) {
     let prop_key = if is_annotation {
         prop_key.to_string()
     } else {
         quote(prop_key, false)
     };
     if !query.add_value {
-        return prop_key;
+        return (prop_key, false);
     }
     let value = match insert_text_for_schema(schema) {
         Some(value) => value,
-        None => return prop_key,
+        None => return (prop_key, false),
     };
+    let suggest = value == "$1";
     if is_annotation {
         if value == "${1:null}" {
-            return prop_key;
+            return (prop_key, false);
         }
-        format!("{}({})", prop_key, value)
+        (format!("{}({})", prop_key, value), suggest)
     } else {
-        format!("{}: {},", prop_key, value)
+        (format!("{}: {},", prop_key, value), suggest)
     }
 }
 
@@ -602,10 +644,6 @@ fn insert_text_for_value(value: &Value) -> String {
     } else if text == "[]" {
         return "[$l]".into();
     }
-    insert_text_for_plain_text(text)
-}
-
-fn insert_text_for_plain_text(text: String) -> String {
     text
 }
 
@@ -634,6 +672,16 @@ fn suggestion_kind(schema_type: &Option<String>) -> CompletionItemKind {
         Some("object") => CompletionItemKind::MODULE,
         _ => CompletionItemKind::VALUE,
     }
+}
+
+fn sanitize_label(mut value: String) -> String {
+    if value.contains('\n') {
+        value = value.replace('\n', "↵");
+    }
+    if value.len() > 60 {
+        value = format!("{}...", &value[0..57])
+    }
+    value
 }
 
 fn stringify_value(value: &Value) -> String {

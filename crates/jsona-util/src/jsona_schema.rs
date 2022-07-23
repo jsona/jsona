@@ -108,7 +108,7 @@ impl JSONASchemaValue {
     }
 
     pub fn pointer(&self, keys: &Keys) -> Vec<&Schema> {
-        let (annotation_key, keys) = keys.annotation_shift();
+        let (annotation_key, keys) = keys.shift_annotation();
         let schema = match annotation_key {
             Some(key) => match self
                 .annotations
