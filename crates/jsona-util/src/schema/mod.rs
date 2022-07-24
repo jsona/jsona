@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context};
+use anyhow::{anyhow, bail};
 use jsona::dom::{Keys, Node};
 use jsona_schema::Schema;
 use parking_lot::Mutex;
@@ -68,10 +68,10 @@ impl<E: Environment> Schemas<E> {
                 let schema = self
                     .load_schema(schema_url)
                     .await
-                    .with_context(|| format!("failed to load schema {schema_url}"))?;
+                    .map_err(|err| anyhow!("failed to load schema {schema_url} {}", err))?;
                 self.add_schema(schema_url, schema.clone()).await;
                 self.add_validator(schema_url.clone(), &schema)
-                    .with_context(|| format!("invalid schema {schema_url}"))?
+                    .map_err(|err| anyhow!("load schema {schema_url} throw {}", err))?
             }
         };
         validator.validate(value)
@@ -134,13 +134,9 @@ impl<E: Environment> Schemas<E> {
         schema_url: Url,
         schema: &JSONASchemaValue,
     ) -> Result<Arc<JSONASchema>, anyhow::Error> {
-        let v = Arc::new(self.create_validator(schema)?);
+        let v = Arc::new(JSONASchema::new(schema)?);
         self.validators.lock().put(schema_url, v.clone());
         Ok(v)
-    }
-
-    fn create_validator(&self, schema: &JSONASchemaValue) -> Result<JSONASchema, anyhow::Error> {
-        JSONASchema::new(schema).map_err(|err| anyhow!("invalid schema: {err}"))
     }
 
     async fn fetch_external(&self, index_url: &Url) -> Result<JSONASchemaValue, anyhow::Error> {

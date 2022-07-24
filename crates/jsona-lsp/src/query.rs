@@ -67,13 +67,8 @@ impl Query {
                         }
                     });
                     add_seperator = match value.as_ref() {
-                        Some(v) => !v
-                            .siblings_with_tokens(Direction::Next)
-                            .any(|v| v.kind() == SyntaxKind::COMMA),
-                        None => match token.next_token().map(|v| v.kind() == SyntaxKind::COMMA) {
-                            Some(v) => !v,
-                            None => false,
-                        },
+                        Some(v) => value_add_seperator(v),
+                        None => colon_add_seperator(token),
                     };
                 }
                 SyntaxKind::PARENTHESES_START => {
@@ -120,9 +115,7 @@ impl Query {
                             }
                             SyntaxKind::SCALAR => {
                                 kind = ScopeKind::Value;
-                                add_seperator = !node
-                                    .siblings_with_tokens(Direction::Next)
-                                    .any(|v| v.kind() == SyntaxKind::COMMA);
+                                add_seperator = value_add_seperator(&node);
                                 value = Some(node);
                             }
                             SyntaxKind::OBJECT => kind = ScopeKind::Object,
@@ -260,4 +253,33 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
         _ => {}
     }
     Some((keys, node.clone()))
+}
+
+fn value_add_seperator(node: &SyntaxNode) -> bool {
+    for syntax in node.siblings_with_tokens(Direction::Next) {
+        match syntax.kind() {
+            SyntaxKind::NEWLINE => return true,
+            SyntaxKind::COMMA => return false,
+            SyntaxKind::WHITESPACE | SyntaxKind::LINE_COMMENT => {}
+            _ => return false,
+        }
+    }
+    false
+}
+
+fn colon_add_seperator(mut token: SyntaxToken) -> bool {
+    loop {
+        match token.next_token() {
+            Some(tok) => match tok.kind() {
+                SyntaxKind::NEWLINE => return true,
+                SyntaxKind::COMMA => return false,
+                SyntaxKind::WHITESPACE | SyntaxKind::LINE_COMMENT => {
+                    token = tok;
+                    continue;
+                }
+                _ => return false,
+            },
+            None => return false,
+        }
+    }
 }

@@ -13,12 +13,12 @@ pub struct JSONASchema {
 impl JSONASchema {
     pub fn new(schema: &JSONASchemaValue) -> Result<Self, anyhow::Error> {
         let value = compile_json_schema(&schema.value)
-            .map_err(|err| anyhow!("invalid value schema, {}", err))?;
+            .map_err(|err| anyhow!("invalid .value schema, {}", err))?;
         let mut annotations = IndexMap::default();
         if let Some(annotations_schemas) = schema.annotations.properties.as_ref() {
             for (key, value) in annotations_schemas.iter() {
                 let annotation = compile_json_schema(value)
-                    .map_err(|err| anyhow!("invalid schema @{}, {}", key, err))?;
+                    .map_err(|err| anyhow!("invalid @{} schema, {}", key, err))?;
                 annotations.insert(key.to_string(), annotation);
             }
         }
@@ -91,9 +91,9 @@ impl JSONASchemaValue {
             .map_err(|_| anyhow!("failed to parse annotations"))?;
         if let Some(annotations_value) = annotations_value {
             for (key, value) in annotations_value.value().read().kv_iter() {
-                let schmea = from_node(value)
+                let schema = from_node(value)
                     .map_err(|_| anyhow!("failed to parse schema at .annotations.{}", key))?;
-                annotations_schemas.insert(format!("@{}", key.value()), schmea);
+                annotations_schemas.insert(format!("@{}", key.value()), schema);
             }
         }
         Ok(JSONASchemaValue {

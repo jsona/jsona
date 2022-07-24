@@ -128,13 +128,7 @@ impl Context {
                     self.write(scope, ",")
                 }
             }
-            Some(CommaMode::ForceYes) => {
-                if self.compact() {
-                    self.write(scope, ", ")
-                } else {
-                    self.write(scope, ",")
-                }
-            }
+            Some(CommaMode::ForceYes) => self.write(scope, ","),
             _ => {}
         };
     }
@@ -299,7 +293,13 @@ fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                 _ => {}
             },
             NodeOrToken::Token(t) => match t.kind() {
-                COLON => ctx.write(&scope, ": "),
+                COLON => {
+                    if ctx.compact() {
+                        ctx.write(&scope, ":")
+                    } else {
+                        ctx.write(&scope, ": ")
+                    }
+                }
                 ERROR => format_error(scope.clone(), t, ctx),
                 NEWLINE => format_newline(scope.clone(), t, ctx),
                 k if k.is_comment() => format_comment(scope.clone(), t, ctx),

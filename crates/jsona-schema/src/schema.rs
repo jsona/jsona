@@ -26,7 +26,7 @@ pub struct Schema {
     pub nullable: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none", rename = "default")]
-    pub default: Option<serde_json::Value>,
+    pub default: Option<Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum: Option<f64>,
@@ -82,13 +82,13 @@ pub struct Schema {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "enum")]
-    pub enum_value: Option<Vec<serde_json::Value>>,
+    pub enum_value: Option<Vec<Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "const")]
-    pub const_value: Option<serde_json::Value>,
+    pub const_value: Option<Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub examples: Option<Vec<serde_json::Value>>,
+    pub examples: Option<Vec<Value>>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "readOnly")]
     pub read_only: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "writeOnly")]
@@ -196,14 +196,18 @@ fn pointer_impl<'a>(
 ) {
     let local_schema = match local_schema.ref_value.as_ref() {
         Some(ref_value) => {
-            match root_schema.defs.as_ref().and_then(|defs| {
-                Regex::new(r#"^#/defs/(\w+)$"#)
-                    .ok()
-                    .and_then(|v| v.captures(ref_value).and_then(|v| v.get(1)))
-                    .and_then(|v| defs.get(v.as_str()))
-            }) {
-                Some(v) => v,
-                None => return,
+            if ref_value == "#" {
+                root_schema
+            } else {
+                match root_schema.defs.as_ref().and_then(|defs| {
+                    Regex::new(r#"^#/$defs/(\w+)$"#)
+                        .ok()
+                        .and_then(|v| v.captures(ref_value).and_then(|v| v.get(1)))
+                        .and_then(|v| defs.get(v.as_str()))
+                }) {
+                    Some(v) => v,
+                    None => return,
+                }
             }
         }
         None => local_schema,

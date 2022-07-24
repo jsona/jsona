@@ -79,22 +79,12 @@ fn parse_node(scope: Scope) -> Result<Schema> {
         });
     }
     let mut schema: Schema = parse_object_annotation(&scope, "@schema")?.unwrap_or_default();
+    set_node_type(&scope, &mut schema);
     if let Some(describe) = parse_str_annotation(&scope, "@describe")? {
         schema.description = Some(describe);
     }
     if exist_annotation(&scope, "@example") {
         schema.examples = Some(vec![scope.node.to_plain_json()])
-    }
-    if schema.schema_type.is_none() {
-        let schema_type = match &scope.node {
-            Node::Null(_) => "null",
-            Node::Bool(_) => "boolean",
-            Node::Number(_) => "number",
-            Node::String(_) => "string",
-            Node::Array(_) => "array",
-            Node::Object(_) => "object",
-        };
-        schema.schema_type = Some(schema_type.to_string());
     }
     let schema_type = schema.schema_type.as_ref().unwrap();
     if schema_type == "object" {
@@ -174,6 +164,8 @@ fn parse_node(scope: Scope) -> Result<Schema> {
         } else {
             return Err(Error::mismatch_type(scope.keys.clone()));
         }
+    } else if schema_type == "any" {
+        schema.schema_type = None;
     }
     if !def_value.is_empty() {
         scope.defs.borrow_mut().insert(def_value.clone(), schema);
@@ -214,4 +206,18 @@ fn parse_str_annotation(scope: &Scope, name: &str) -> Result<Option<String>> {
         .try_get_as_string(&key)
         .map_err(|_| Error::mismatch_type(scope.keys.clone().join(key)))?;
     Ok(value.map(|v| v.value().to_string()))
+}
+
+fn set_node_type(scope: &Scope, schema: &mut Schema) {
+    if schema.schema_type.is_none() {
+        let value = match &scope.node {
+            Node::Null(_) => "null",
+            Node::Bool(_) => "boolean",
+            Node::Number(_) => "number",
+            Node::String(_) => "string",
+            Node::Array(_) => "array",
+            Node::Object(_) => "object",
+        };
+        schema.schema_type = Some(value.to_string());
+    }
 }

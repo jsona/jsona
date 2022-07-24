@@ -194,6 +194,7 @@ fn complete_annotations_schemaless(
 ) -> Option<CompletionResponse> {
     let mut comp_items = vec![];
     let mut exist_anno_keys: HashSet<String> = HashSet::default();
+    exist_anno_keys.insert("@".to_string());
     for (anno_keys, anno_value) in visit_annotations(&doc.dom) {
         if let Some(anno_key) = anno_keys.last_annotation_key() {
             let anno_key = anno_key.value().to_string();

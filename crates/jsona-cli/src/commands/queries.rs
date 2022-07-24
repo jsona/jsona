@@ -3,9 +3,12 @@ use crate::App;
 use anyhow::{anyhow, bail};
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
-use jsona::{dom::{Keys, Node, DomNode}, parser};
+use jsona::{
+    dom::{DomNode, Keys, Node},
+    parser,
+};
 use jsona_util::environment::Environment;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{borrow::Cow, path::PathBuf};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -71,13 +74,9 @@ impl<E: Environment> App<E> {
             let value = match items.len() {
                 0 => {
                     bail!("no found");
-                },
-                1 => {
-                    items[0].clone()
-                },
-                _ => {
-                    Value::Array(items)
                 }
+                1 => items[0].clone(),
+                _ => Value::Array(items),
             };
             if let Some(value) = value.as_str() {
                 value.as_bytes().to_vec()
@@ -120,7 +119,7 @@ pub struct GetCommand {
     pub pattern: Option<String>,
 }
 
- pub fn to_json(node: &Node) -> Value {
+pub fn to_json(node: &Node) -> Value {
     let annotations = node.annotations().map(|a| {
         Value::Object(
             a.value()
