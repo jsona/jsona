@@ -63,11 +63,7 @@ impl<E: Environment> App<E> {
             None => vec![node],
         };
         let buf = {
-            let items: Vec<Value> = if cmd.annotation {
-                nodes.iter().map(|v| v.to_json()).collect()
-            } else {
-                nodes.iter().map(|v| v.to_plain_json()).collect()
-            };
+            let items: Vec<Value> = nodes.iter().map(|v| v.to_plain_json()).collect();
             let value = if items.len() == 1 {
                 items[0].clone()
             } else {
@@ -87,10 +83,6 @@ impl<E: Environment> App<E> {
 
 #[derive(Clone, Args)]
 pub struct GetCommand {
-    /// Output json with annotation
-    #[clap(short = 'A', long)]
-    pub annotation: bool,
-
     /// Path to the JSONA document, if omitted the standard input will be used.
     #[clap(short, long)]
     pub file_path: Option<PathBuf>,

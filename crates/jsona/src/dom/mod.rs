@@ -1,3 +1,8 @@
+//! DOM(document object module) for JSONA
+//!
+//! DOM be constructed for data-oriented analysis where each node wraps a part of the
+//! syntax tree with additional information and functionality.
+
 #[macro_use]
 mod macros;
 
@@ -7,7 +12,6 @@ pub mod node;
 pub mod visitor;
 
 mod from_syntax;
-mod json;
 mod serde;
 mod to_string;
 

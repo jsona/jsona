@@ -12,7 +12,7 @@ use crate::dom::error::{Error as DomError, ParseError};
 use crate::dom::{self, DomNode, Node};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Ast {
     Null(Null),
     Bool(Bool),

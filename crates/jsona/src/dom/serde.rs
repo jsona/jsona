@@ -1,3 +1,5 @@
+//! Serde for dom node, ignore annotations
+
 use super::node::{ArrayInner, BoolInner, Node, NumberInner, ObjectInner, StringInner};
 use crate::dom::node::Key;
 use serde::{
@@ -5,7 +7,7 @@ use serde::{
     ser::{SerializeMap, SerializeSeq},
     Deserialize, Serialize, Serializer,
 };
-use serde_json::Number as JsonNumber;
+use serde_json::{Number as JsonNumber, Value};
 
 impl Serialize for Node {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
@@ -194,5 +196,14 @@ impl<'de> Deserialize<'de> for Node {
         D: serde::Deserializer<'de>,
     {
         de.deserialize_any(JsonaVisitor::default())
+    }
+}
+
+impl Node {
+    pub fn to_plain_json(&self) -> Value {
+        serde_json::to_value(self).unwrap()
+    }
+    pub fn from_plain_json(value: Value) -> Self {
+        serde_json::from_value(value).unwrap()
     }
 }
