@@ -21,7 +21,6 @@ pub(crate) struct Scope {
     pub(crate) level: usize,
     pub(crate) formatted: Rc<RefCell<String>>,
     pub(crate) kind: ScopeKind,
-    pub(crate) compact: bool,
 }
 
 impl Scope {
@@ -31,7 +30,6 @@ impl Scope {
             level: self.level.saturating_add(1),
             formatted: self.formatted.clone(),
             kind,
-            compact: self.compact,
         }
     }
     pub(crate) fn exit(&self) -> Self {
@@ -40,7 +38,6 @@ impl Scope {
             level: self.level.saturating_sub(1),
             formatted: self.formatted.clone(),
             kind: self.kind,
-            compact: self.compact,
         }
     }
     pub(crate) fn write<T: AsRef<str>>(&self, text: T) -> usize {
@@ -102,17 +99,22 @@ impl Default for ScopeKind {
 #[derive(Debug, Clone)]
 struct Context {
     col_offset: usize,
-    value_commas: Vec<ValueComma>,
+    comma_modes: Vec<CommaMode>,
+    compacts: Vec<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ValueComma {
+enum CommaMode {
     ForceYes,
     ForceNo,
     Auto,
 }
 
 impl Context {
+    fn compact(&self) -> bool {
+        self.compacts.last().copied().unwrap_or_default()
+    }
+
     fn space(&mut self, scope: &Scope) {
         if self.col_offset > 0 && !scope.is_last_char(' ') {
             self.write(scope, " ")
@@ -120,14 +122,14 @@ impl Context {
     }
 
     fn comma(&mut self, scope: &Scope) {
-        match self.value_commas.last() {
-            Some(ValueComma::Auto) => {
-                if !scope.compact && scope.options.trailing_comma {
+        match self.comma_modes.last() {
+            Some(CommaMode::Auto) => {
+                if !self.compact() && scope.options.trailing_comma {
                     self.write(scope, ",")
                 }
             }
-            Some(ValueComma::ForceYes) => {
-                if scope.compact {
+            Some(CommaMode::ForceYes) => {
+                if self.compact() {
                     self.write(scope, ", ")
                 } else {
                     self.write(scope, ",")
@@ -138,7 +140,7 @@ impl Context {
     }
 
     fn newline(&mut self, scope: &Scope) {
-        if !scope.compact && self.col_offset > 0 {
+        if !self.compact() && self.col_offset > 0 {
             scope.write("\n");
             self.col_offset = 0;
         }
@@ -162,7 +164,8 @@ pub fn format(src: &str, options: Options) -> String {
     };
     let mut ctx = Context {
         col_offset: 0,
-        value_commas: vec![],
+        comma_modes: vec![],
+        compacts: vec![],
     };
     format_value(scope.clone(), p.into_syntax(), &mut ctx);
     scope.output()
@@ -176,19 +179,18 @@ pub fn format_syntax(node: SyntaxNode, options: Options) -> String {
     };
     let mut ctx = Context {
         col_offset: 0,
-        value_commas: vec![],
+        comma_modes: vec![],
+        compacts: vec![],
     };
     format_value(scope.clone(), node, &mut ctx);
     scope.output()
 }
 
-fn format_value(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != VALUE {
         scope.write(&syntax.to_string());
         return;
     }
-
-    scope.compact = can_compact(syntax.clone());
 
     for c in syntax.children_with_tokens() {
         match c {
@@ -240,9 +242,9 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                 is_empty = false;
                 match n.kind() {
                     PROPERTY => {
-                        if let Some(c) = ctx.value_commas.last_mut() {
+                        if let Some(c) = ctx.comma_modes.last_mut() {
                             if n.next_sibling().is_none() {
-                                *c = ValueComma::Auto;
+                                *c = CommaMode::Auto;
                             }
                         }
                         format_entry(scope.clone(), n, ctx);
@@ -253,19 +255,21 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             }
             NodeOrToken::Token(t) => match t.kind() {
                 BRACE_START => {
+                    ctx.compacts.push(can_compact(syntax.clone()));
                     ctx.ident(&scope);
                     ctx.write(&scope, "{");
                     scope = scope.enter(ScopeKind::Object);
-                    ctx.value_commas.push(ValueComma::ForceYes);
+                    ctx.comma_modes.push(CommaMode::ForceYes);
                 }
                 BRACE_END => {
                     scope = scope.exit();
-                    ctx.value_commas.pop();
+                    ctx.comma_modes.pop();
                     if !is_empty {
                         ctx.newline(&scope);
                     }
                     ctx.ident(&scope);
                     ctx.write(&scope, "}");
+                    ctx.compacts.pop();
                 }
                 ERROR => format_error(scope.clone(), t, ctx),
                 NEWLINE => format_newline(scope.clone(), t, ctx),
@@ -319,9 +323,9 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                 is_empty = false;
                 match n.kind() {
                     VALUE => {
-                        if let Some(c) = ctx.value_commas.last_mut() {
+                        if let Some(c) = ctx.comma_modes.last_mut() {
                             if n.next_sibling().is_none() {
-                                *c = ValueComma::Auto;
+                                *c = CommaMode::Auto;
                             }
                         }
                         format_value(scope.clone(), n, ctx);
@@ -332,19 +336,21 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             }
             NodeOrToken::Token(t) => match t.kind() {
                 BRACKET_START => {
+                    ctx.compacts.push(can_compact(syntax.clone()));
                     ctx.ident(&scope);
                     ctx.write(&scope, "[");
                     scope = scope.enter(ScopeKind::Array);
-                    ctx.value_commas.push(ValueComma::ForceYes);
+                    ctx.comma_modes.push(CommaMode::ForceYes);
                 }
                 BRACKET_END => {
                     scope = scope.exit();
-                    ctx.value_commas.pop();
+                    ctx.comma_modes.pop();
                     if !is_empty {
                         ctx.newline(&scope);
                     }
                     ctx.ident(&scope);
                     ctx.write(&scope, "]");
+                    ctx.compacts.pop();
                 }
                 ERROR => format_error(scope.clone(), t, ctx),
                 NEWLINE => format_newline(scope.clone(), t, ctx),
@@ -363,6 +369,7 @@ fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
         return;
     }
 
+    ctx.compacts.push(can_compact(syntax.clone()));
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => {
@@ -378,6 +385,7 @@ fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
             },
         }
     }
+    ctx.compacts.pop();
 }
 
 fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
@@ -425,10 +433,10 @@ fn format_annotation_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
                 PARENTHESES_START => {
                     ctx.ident(&scope);
                     ctx.write(&scope, "(");
-                    ctx.value_commas.push(ValueComma::ForceNo);
+                    ctx.comma_modes.push(CommaMode::ForceNo);
                 }
                 PARENTHESES_END => {
-                    ctx.value_commas.pop();
+                    ctx.comma_modes.pop();
                     ctx.ident(&scope);
                     ctx.write(&scope, ")");
                 }
@@ -457,6 +465,7 @@ fn format_comment(scope: Scope, syntax: SyntaxToken, ctx: &mut Context) {
             ctx.write(&scope, text)
         }
     } else if kind == LINE_COMMENT {
+        ctx.ident(&scope);
         ctx.space(&scope);
         let text = syntax.text();
         scope.write(text.trim());
