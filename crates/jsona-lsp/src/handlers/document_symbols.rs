@@ -128,7 +128,7 @@ fn symbols_for_value(
 
 fn symbols_for_annotaions(node: &Node, mapper: &Mapper, symbols: &mut Vec<DocumentSymbol>) {
     if let Some(annotations) = node.annotations() {
-        for (key, value) in annotations.value().read().iter() {
+        for (key, value) in annotations.value().read().kv_iter() {
             symbols_for_value(
                 key.value().to_string(),
                 key.text_range(),
@@ -155,7 +155,7 @@ fn symbols_for_array(arr: &dom::Array, mapper: &Mapper) -> Vec<DocumentSymbol> {
 fn symbols_for_object(obj: &dom::Object, mapper: &Mapper) -> Vec<DocumentSymbol> {
     let properties = obj.value().read();
     let mut symbols = vec![];
-    for (key, value) in properties.iter() {
+    for (key, value) in properties.kv_iter() {
         symbols_for_annotaions(value, mapper, &mut symbols);
         symbols_for_value(
             key.to_string(),

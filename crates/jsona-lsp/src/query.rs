@@ -1,8 +1,8 @@
 //! Cursor queries of a JSONA document.
 
 use jsona::{
-    dom::{node::DomNode, Key, Keys, Node},
-    rowan::{Direction, TextRange, TextSize, TokenAtOffset},
+    dom::{node::DomNode, Keys, Node},
+    rowan::{Direction, TextSize, TokenAtOffset},
     syntax::{SyntaxKind, SyntaxNode, SyntaxToken},
 };
 
@@ -54,7 +54,7 @@ impl Query {
                     key = Some(token);
                 }
                 SyntaxKind::COLON => {
-                    node_at_offset = token.text_range().end();
+                    node_at_offset = token.text_range().start();
                     kind = ScopeKind::Value;
                     value = token.next_sibling_or_token().and_then(|v| {
                         if v.kind() == SyntaxKind::VALUE {
@@ -70,11 +70,10 @@ impl Query {
                         Some(v) => !v
                             .siblings_with_tokens(Direction::Next)
                             .any(|v| v.kind() == SyntaxKind::COMMA),
-                        None => !token
-                            .next_token()
-                            .and_then(Query::next_none_ws_comment)
-                            .map(|v| v.kind() == SyntaxKind::COMMA)
-                            .unwrap_or_default(),
+                        None => match token.next_token().map(|v| v.kind() == SyntaxKind::COMMA) {
+                            Some(v) => !v,
+                            None => false,
+                        },
                     };
                 }
                 SyntaxKind::PARENTHESES_START => {
@@ -152,11 +151,15 @@ impl Query {
         }
     }
 
-    pub fn node_at(root: &Node, offset: TextSize, include_key: bool) -> Option<(Keys, Node)> {
-        if !is_value_contained(root, offset, None, include_key) {
+    pub fn node_at(root: &Node, offset: TextSize) -> Option<(Keys, Node)> {
+        if !root
+            .node_text_range()
+            .map(|v| v.contains(offset))
+            .unwrap_or_default()
+        {
             return None;
         }
-        node_at_impl(root, offset, Keys::default(), include_key)
+        node_at_impl(root, offset, Keys::default())
     }
 
     pub fn index_at(&self) -> Option<usize> {
@@ -198,14 +201,6 @@ impl Query {
             Some(token)
         }
     }
-
-    fn next_none_ws_comment(token: SyntaxToken) -> Option<SyntaxToken> {
-        if token.kind().is_ws_or_comment() {
-            token.next_token().and_then(Query::next_none_ws_comment)
-        } else {
-            Some(token)
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -224,60 +219,45 @@ pub struct PositionInfo {
     pub syntax: SyntaxToken,
 }
 
-fn node_at_impl(
-    node: &Node,
-    offset: TextSize,
-    keys: Keys,
-    include_key: bool,
-) -> Option<(Keys, Node)> {
+fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node)> {
+    tracing::info!("check node at {}", keys.to_string());
     if let Some(annotations) = node.annotations() {
-        for (key, value) in annotations.value().read().iter() {
-            if is_value_contained(value, offset, Some(key), include_key) {
-                return node_at_impl(value, offset, keys.join(key.into()), include_key);
+        let map = annotations.value().read();
+        for (key, value) in map.kv_iter() {
+            if map
+                .syntax(key)
+                .map(|v| v.text_range().contains(offset))
+                .unwrap_or_default()
+            {
+                return node_at_impl(value, offset, keys.join(key.into()));
             }
         }
     }
     match node {
         Node::Array(arr) => {
             for (index, value) in arr.value().read().iter().enumerate() {
-                if is_value_contained(value, offset, None, include_key) {
-                    return node_at_impl(value, offset, keys.join(index.into()), include_key);
+                if value
+                    .node_syntax()
+                    .map(|v| v.text_range().contains(offset))
+                    .unwrap_or_default()
+                {
+                    return node_at_impl(value, offset, keys.join(index.into()));
                 }
             }
         }
         Node::Object(obj) => {
-            for (key, value) in obj.value().read().iter() {
-                if is_value_contained(value, offset, Some(key), include_key) {
-                    return node_at_impl(value, offset, keys.join(key.into()), include_key);
+            let map = obj.value().read();
+            for (key, value) in map.kv_iter() {
+                if map
+                    .syntax(key)
+                    .map(|v| v.text_range().contains(offset))
+                    .unwrap_or_default()
+                {
+                    return node_at_impl(value, offset, keys.join(key.into()));
                 }
             }
         }
         _ => {}
     }
     Some((keys, node.clone()))
-}
-
-fn is_value_contained(
-    value: &Node,
-    offset: TextSize,
-    key: Option<&Key>,
-    include_key: bool,
-) -> bool {
-    match (
-        key.and_then(|k| k.node_syntax().map(|v| v.text_range())),
-        value.node_text_range(),
-    ) {
-        (None, Some(range)) => range.contains(offset),
-        (Some(range1), Some(range2)) => {
-            if include_key {
-                range1.cover(range2).contains(offset)
-            } else {
-                TextRange::empty(range1.end().checked_add(TextSize::from(1)).unwrap())
-                    .cover(range2)
-                    .contains(offset)
-            }
-        }
-        (Some(range1), None) if include_key => range1.contains(offset),
-        _ => false,
-    }
 }

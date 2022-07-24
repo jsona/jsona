@@ -28,7 +28,7 @@ pub(crate) async fn selection_ranges<E: Environment>(
                         return None;
                     }
                 };
-                let (_, node) = Query::node_at(&doc.dom, offset, true)?;
+                let (_, node) = Query::node_at(&doc.dom, offset)?;
                 let range = node.text_range().and_then(|v| doc.mapper.range(v))?;
                 Some(SelectionRange {
                     range: range.into_lsp(),

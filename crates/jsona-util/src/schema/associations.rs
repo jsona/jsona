@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::{config::Config, util::GlobRule};
 
-pub const SCHEMA_KEY: &str = "__schema__";
+pub const SCHEMA_KEY: &str = "jsonaschema";
 
 pub mod priority {
     pub const CONFIG: usize = 50;

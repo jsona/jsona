@@ -55,7 +55,7 @@ pub async fn completion<E: Environment>(
         return Ok(None);
     }
 
-    let (mut keys, node) = match Query::node_at(&doc.dom, query.node_at_offset, false) {
+    let (mut keys, node) = match Query::node_at(&doc.dom, query.node_at_offset) {
         Some(v) => v,
         None => return Ok(None),
     };
@@ -70,10 +70,7 @@ pub async fn completion<E: Environment>(
 
     let result = match &query.scope {
         ScopeKind::AnnotationKey => {
-            let props = node
-                .annotations()
-                .map(|v| v.members_keys())
-                .unwrap_or_default();
+            let props = node.annotations().map(|v| v.map_keys()).unwrap_or_default();
             match schemas.as_ref() {
                 Some(schemas) => complete_properties(doc, &query, &props, schemas),
                 None => complete_annotations_schemaless(doc, &query, &props),
@@ -255,7 +252,7 @@ fn complete_properties_schemaless(
             Some(obj) => obj,
             None => continue,
         };
-        for (key, value) in obj.value().read().iter() {
+        for (key, value) in obj.value().read().kv_iter() {
             let key = key.value().to_string();
             if exist_keys.contains(&key) {
                 continue;

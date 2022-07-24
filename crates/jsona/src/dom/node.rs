@@ -11,7 +11,6 @@ use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};
 use serde_json::Number as JsonNumber;
 use std::collections::HashMap;
-use std::iter::FromIterator;
 use std::str::FromStr;
 use std::string::String as StdString;
 use std::sync::Arc;
@@ -152,7 +151,7 @@ impl Node {
                 }
 
                 let items = v.inner.properties.read();
-                for (k, entry) in items.as_ref().all.iter() {
+                for (k, entry) in items.as_ref().kv_iter() {
                     if let Err(errs) = k.validate_node() {
                         errors.extend(errs.read().as_ref().iter().cloned())
                     }
@@ -197,8 +196,8 @@ impl Node {
                 errors.extend(errs.read().as_ref().iter().cloned())
             }
 
-            let items = v.inner.members.read();
-            for (k, node) in items.as_ref().all.iter() {
+            let items = v.inner.map.read();
+            for (k, node) in items.as_ref().kv_iter() {
                 if let Err(errs) = k.validate_node() {
                     errors.extend(errs.read().as_ref().iter().cloned())
                 }
@@ -570,7 +569,12 @@ wrap_node! {
 impl Object {
     pub fn get(&self, key: &Key) -> Option<Node> {
         let props = self.inner.properties.read();
-        props.lookup.get(key).cloned()
+        props.value.get(key).map(|(node, _)| node.clone())
+    }
+
+    pub fn property_syntax(&self, key: &Key) -> Option<SyntaxElement> {
+        let props = self.inner.properties.read();
+        props.value.get(key).and_then(|(_, syntax)| syntax.clone())
     }
 
     pub fn value(&self) -> &Shared<Map> {
@@ -580,7 +584,7 @@ impl Object {
     pub fn properties_keys(&self) -> Vec<StdString> {
         self.value()
             .read()
-            .iter()
+            .kv_iter()
             .map(|(k, _)| k.to_string())
             .collect()
     }
@@ -764,50 +768,35 @@ impl std::hash::Hash for Key {
 
 #[derive(Debug, Clone, Default)]
 pub struct Map {
-    pub(crate) lookup: HashMap<Key, Node>,
-    pub(crate) all: Vec<(Key, Node)>,
+    pub(crate) value: HashMap<Key, (Node, Option<SyntaxElement>)>,
 }
 
 impl Map {
     pub fn len(&self) -> usize {
-        self.all.len()
+        self.value.len()
+    }
+
+    pub fn syntax(&self, key: &Key) -> Option<SyntaxElement> {
+        self.value.get(key).and_then(|(_, syntax)| syntax.clone())
     }
 
     pub fn is_empty(&self) -> bool {
-        self.all.is_empty()
+        self.value.is_empty()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &(Key, Node)> {
-        self.all.iter()
+    pub fn kv_iter(&self) -> impl Iterator<Item = (&Key, &Node)> {
+        self.value.iter().map(|(key, (node, _))| (key, node))
     }
 
-    pub(crate) fn add(&mut self, key: Key, node: Node) {
-        self.lookup.insert(key.clone(), node.clone());
-        self.all.push((key, node));
-    }
-}
-
-impl FromIterator<(Key, Node)> for Map {
-    fn from_iter<T: IntoIterator<Item = (Key, Node)>>(iter: T) -> Self {
-        let iter = iter.into_iter();
-        let size = iter.size_hint().0;
-
-        let mut lookup = HashMap::with_capacity(size);
-        let mut all = Vec::with_capacity(size);
-
-        for (k, n) in iter {
-            lookup.insert(k.clone(), n.clone());
-            all.push((k, n));
-        }
-
-        Self { lookup, all }
+    pub(crate) fn add(&mut self, key: Key, node: Node, syntax: Option<SyntaxElement>) {
+        self.value.insert(key, (node, syntax));
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct AnnotationsInner {
     pub(crate) errors: Shared<Vec<Error>>,
-    pub(crate) members: Shared<Map>,
+    pub(crate) map: Shared<Map>,
 }
 
 #[derive(Debug, Clone)]
@@ -817,18 +806,23 @@ pub struct Annotations {
 
 impl Annotations {
     pub fn get(&self, key: &Key) -> Option<Node> {
-        let members = self.inner.members.read();
-        members.lookup.get(key).cloned()
+        let map = self.inner.map.read();
+        map.value.get(key).map(|(node, _)| node.clone())
+    }
+
+    pub fn annotation_syntax(&self, key: &Key) -> Option<SyntaxElement> {
+        let map = self.inner.map.read();
+        map.value.get(key).and_then(|(_, syntax)| syntax.clone())
     }
 
     pub fn value(&self) -> &Shared<Map> {
-        &self.inner.members
+        &self.inner.map
     }
 
-    pub fn members_keys(&self) -> Vec<StdString> {
+    pub fn map_keys(&self) -> Vec<StdString> {
         self.value()
             .read()
-            .iter()
+            .kv_iter()
             .map(|(k, _)| k.to_string())
             .collect()
     }

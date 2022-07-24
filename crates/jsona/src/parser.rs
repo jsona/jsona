@@ -145,6 +145,20 @@ impl<'p> Parser<'p> {
     fn parse_property(&mut self) -> ParserResult<bool> {
         with_node!(self.builder, KEY, self.parse_key())?;
         let _ = self.must_token_or(COLON, r#"expected ":""#);
+        if let Ok(t) = self.peek_token() {
+            match t {
+                COMMA => {
+                    self.report_error("expected value");
+                    self.consume_current_token()?;
+                    return Ok(true);
+                }
+                BRACE_END => {
+                    self.report_error("expected value");
+                    return Ok(false);
+                }
+                _ => {}
+            }
+        }
         let ret = with_node!(self.builder, VALUE, self.parse_value_with_annotations());
         Ok(ret.ok().unwrap_or_default())
     }

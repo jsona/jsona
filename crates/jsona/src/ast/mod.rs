@@ -201,7 +201,11 @@ impl From<Ast> for Node {
             }) => {
                 let mut props = dom::Map::default();
                 for prop in properties {
-                    props.add(dom::Key::property(prop.key.name), Node::from(prop.value));
+                    props.add(
+                        dom::Key::property(prop.key.name),
+                        Node::from(prop.value),
+                        None,
+                    );
                 }
                 dom::ObjectInner::new(props, from_annotations(annotations))
                     .wrap()
@@ -214,7 +218,7 @@ impl From<Ast> for Node {
 fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
     let mut annotations: Vec<Annotation> = vec![];
     if let Some(annos) = value.annotations() {
-        for (key, value) in annos.value().read().iter() {
+        for (key, value) in annos.value().read().kv_iter() {
             let key_range = dom_range(key, mapper);
             let value_range = dom_range(value, mapper);
             annotations.push({
@@ -264,7 +268,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
         }
         Node::Object(v) => {
             let mut properties: Vec<Property> = vec![];
-            for (key, value) in v.value().read().iter() {
+            for (key, value) in v.value().read().kv_iter() {
                 let range = dom_range(key, mapper);
                 properties.push({
                     Property {
@@ -291,20 +295,21 @@ fn dom_range<T: DomNode>(node: &T, mapper: &Mapper) -> Option<Range> {
 }
 
 fn from_annotations(annotations: Vec<Annotation>) -> Option<dom::Annotations> {
-    let mut members = dom::Map::default();
-    if members.is_empty() {
+    let mut map = dom::Map::default();
+    if map.is_empty() {
         return None;
     }
     for anno in annotations {
-        members.add(
+        map.add(
             dom::Key::annotation(anno.key.name),
             serde_json::from_value(anno.value.value).unwrap(),
+            None,
         )
     }
     Some(
         dom::AnnotationsInner {
             errors: Default::default(),
-            members: members.into(),
+            map: map.into(),
         }
         .into(),
     )

@@ -190,9 +190,26 @@ fn collect_dom_errors(
                         ..Default::default()
                     });
                 }
+                jsona::dom::Error::UnexpectedSyntax { syntax } => {
+                    let range = doc
+                        .mapper
+                        .range(syntax.text_range())
+                        .unwrap_or_default()
+                        .into_lsp();
+                    diags.push(Diagnostic {
+                        range,
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        code: None,
+                        code_description: None,
+                        source: Some(NAME.into()),
+                        message: error.to_string(),
+                        related_information: None,
+                        tags: None,
+                        data: None,
+                    });
+                }
                 jsona::dom::Error::InvalidEscapeSequence { syntax: _ }
-                | jsona::dom::Error::InvalidNumber { syntax: _ }
-                | jsona::dom::Error::UnexpectedSyntax { syntax: _ } => {}
+                | jsona::dom::Error::InvalidNumber { syntax: _ } => {}
             }
         }
     }

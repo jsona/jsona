@@ -281,7 +281,7 @@ fn object_from_syntax(
     let mut errors = Vec::new();
     let mut properties = Map::default();
     for child in syntax.children().filter(|v| v.kind() == PROPERTY) {
-        object_prop_from_syntax(child.into(), &mut properties, &mut errors)
+        property_from_syntax(child.into(), &mut properties, &mut errors)
     }
     ObjectInner {
         errors: errors.into(),
@@ -294,7 +294,7 @@ fn object_from_syntax(
     .into()
 }
 
-fn object_prop_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec<Error>) {
+fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec<Error>) {
     assert!(syntax.kind() == PROPERTY);
     let syntax = syntax.into_node().unwrap();
     let key = match syntax.children().find(|v| v.kind() == KEY) {
@@ -310,12 +310,12 @@ fn object_prop_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut 
         Some(value) => from_syntax(value.into()),
         None => {
             errors.push(Error::UnexpectedSyntax {
-                syntax: syntax.into(),
+                syntax: syntax.clone().into(),
             });
-            return;
+            NullInner::default().wrap().into()
         }
     };
-    add_prop(props, errors, key, value);
+    add_to_map(props, errors, key, value, Some(syntax.into()));
 }
 
 fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
@@ -323,7 +323,7 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
     let syntax = syntax.into_node()?;
 
     let mut errors: Vec<Error> = vec![];
-    let mut members = Map::default();
+    let mut map = Map::default();
     match (
         syntax.children().find(|v| v.kind() == ANNOTATIONS),
         syntax
@@ -334,33 +334,33 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
         (None, None) => return None,
         (None, Some(inner_annotations)) => {
             for child in inner_annotations.children() {
-                anno_member_from_syntax(child.into(), &mut members, &mut errors);
+                annotation_from_syntax(child.into(), &mut map, &mut errors);
             }
         }
         (Some(outer_annotations), None) => {
             for child in outer_annotations.children() {
-                anno_member_from_syntax(child.into(), &mut members, &mut errors);
+                annotation_from_syntax(child.into(), &mut map, &mut errors);
             }
         }
         (Some(outer_annotations), Some(inner_annotations)) => {
             for child in inner_annotations.children() {
-                anno_member_from_syntax(child.into(), &mut members, &mut errors);
+                annotation_from_syntax(child.into(), &mut map, &mut errors);
             }
             for child in outer_annotations.children() {
-                anno_member_from_syntax(child.into(), &mut members, &mut errors);
+                annotation_from_syntax(child.into(), &mut map, &mut errors);
             }
         }
     };
     Some(
         AnnotationsInner {
             errors: errors.into(),
-            members: members.into(),
+            map: map.into(),
         }
         .into(),
     )
 }
 
-fn anno_member_from_syntax(syntax: SyntaxElement, members: &mut Map, errors: &mut Vec<Error>) {
+fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec<Error>) {
     assert!(syntax.kind() == ANNOTATION_PROPERTY);
     let syntax = match syntax.into_node() {
         Some(v) => v,
@@ -396,7 +396,7 @@ fn anno_member_from_syntax(syntax: SyntaxElement, members: &mut Map, errors: &mu
         },
         None => NullInner::default().wrap().into(),
     };
-    add_prop(members, errors, key, value);
+    add_to_map(map, errors, key, value, Some(syntax.into()));
 }
 
 fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Node {
@@ -420,13 +420,19 @@ fn first_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
 }
 
 /// Add an prop and also collect errors on conflicts.
-fn add_prop(props: &mut Map, errors: &mut Vec<Error>, key: Key, node: Node) {
-    if let Some((existing_key, _)) = props.lookup.get_key_value(&key) {
+fn add_to_map(
+    map: &mut Map,
+    errors: &mut Vec<Error>,
+    key: Key,
+    node: Node,
+    syntax: Option<SyntaxElement>,
+) {
+    if let Some((existing_key, _)) = map.value.get_key_value(&key) {
         errors.push(Error::ConflictingKeys {
             key: key.clone(),
             other: existing_key.clone(),
         })
     }
 
-    props.add(key, node);
+    map.add(key, node, syntax);
 }

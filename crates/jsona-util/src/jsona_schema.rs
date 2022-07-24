@@ -90,7 +90,7 @@ impl JSONASchemaValue {
             .try_get_as_object(&KeyOrIndex::property("annotations"))
             .map_err(|_| anyhow!("failed to parse annotations"))?;
         if let Some(annotations_value) = annotations_value {
-            for (key, value) in annotations_value.value().read().iter() {
+            for (key, value) in annotations_value.value().read().kv_iter() {
                 let schmea = from_node(value)
                     .map_err(|_| anyhow!("failed to parse schema at .annotations.{}", key))?;
                 annotations_schemas.insert(format!("@{}", key.value()), schmea);
@@ -156,7 +156,7 @@ impl NodeValidationError {
                 jsonschema::paths::PathChunk::Property(p) => match node {
                     Node::Object(t) => {
                         let entries = t.value().read();
-                        for (k, entry) in entries.iter() {
+                        for (k, entry) in entries.kv_iter() {
                             if k.value() == &**p {
                                 keys = keys.join(k.into());
                                 node = entry.clone();

@@ -99,7 +99,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     let schema_type = schema.schema_type.as_ref().unwrap();
     if schema_type == "object" {
         if let Node::Object(obj) = &scope.node {
-            for (key, child) in obj.value().read().iter() {
+            for (key, child) in obj.value().read().kv_iter() {
                 let child_scope = scope.spwan(key.into(), child.clone());
                 let key = key.value();
                 let pattern = parse_str_annotation(&child_scope, "@pattern")?;
@@ -135,6 +135,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                 let compound = parse_str_annotation(&scope, "@compound")?;
                 match compound {
                     Some(compound) => {
+                        schema.schema_type = None;
                         let mut schemas = vec![];
                         for (i, child) in arr.iter().enumerate() {
                             let child_scope = scope.spwan(i.into(), child.clone());

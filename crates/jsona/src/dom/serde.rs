@@ -17,9 +17,9 @@ impl Serialize for Node {
         match self {
             Node::Object(v) => {
                 let properties = v.value().read();
-                let mut map = ser.serialize_map(Some(properties.all.len()))?;
+                let mut map = ser.serialize_map(Some(properties.len()))?;
 
-                for (key, property) in properties.all.iter() {
+                for (key, property) in properties.kv_iter() {
                     map.serialize_entry(key.value(), property)?;
                 }
 
@@ -168,7 +168,7 @@ impl<'de> Visitor<'de> for JsonaVisitor {
         object.properties.update(|entries| loop {
             match map.next_entry::<String, Node>() {
                 Ok(Some((key, node))) => {
-                    entries.add(Key::property(key), node);
+                    entries.add(Key::property(key), node, None);
                 }
                 Ok(None) => break,
                 Err(_) => {}

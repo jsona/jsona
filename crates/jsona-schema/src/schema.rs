@@ -7,8 +7,6 @@ use serde_json::{Map, Value};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct Schema {
-    /// [JSON reference](https://tools.ietf.org/html/draft-pbryan-zyp-json-ref-03)
-    /// path to another definition
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "$ref")]
     pub ref_value: Option<String>,
@@ -17,10 +15,18 @@ pub struct Schema {
     pub defs: Option<IndexMap<String, Schema>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "type")]
     pub schema_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nullable: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "default")]
+    pub default: Option<serde_json::Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum: Option<f64>,
@@ -81,6 +87,13 @@ pub struct Schema {
     #[serde(rename = "const")]
     pub const_value: Option<serde_json::Value>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub examples: Option<Vec<serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "readOnly")]
+    pub read_only: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "writeOnly")]
+    pub write_only: Option<bool>,
+
     #[serde(rename = "not", skip_serializing_if = "Option::is_none")]
     pub not: Option<Vec<Schema>>,
     #[serde(rename = "allOf", skip_serializing_if = "Option::is_none")]
@@ -95,19 +108,6 @@ pub struct Schema {
     pub then_value: Option<BoolOrSchema>,
     #[serde(rename = "else", skip_serializing_if = "Option::is_none")]
     pub else_value: Option<BoolOrSchema>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "default")]
-    pub default: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub examples: Option<Vec<serde_json::Value>>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "readOnly")]
-    pub read_only: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "writeOnly")]
-    pub write_only: Option<bool>,
 
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub unknown: Option<Map<String, Value>>,

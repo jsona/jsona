@@ -53,7 +53,7 @@ fn write_value(scope: Scope, value: &Node) {
             write_annotations(scope.clone(), v.annotations());
             scope.newline();
             let value = v.value().read();
-            for (k, v) in value.iter() {
+            for (k, v) in value.kv_iter() {
                 scope.write_ident();
                 scope.write(format!("{}: ", k));
                 write_value(scope.clone(), v);
@@ -82,7 +82,7 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
     match annotations {
         Some(annotations) => {
             let annotations = annotations.value().read();
-            for (key, value) in annotations.iter() {
+            for (key, value) in annotations.kv_iter() {
                 if !value.is_valid_node() {
                     continue;
                 }
