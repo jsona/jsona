@@ -1,11 +1,11 @@
 use crate::App;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
-use jsona::{dom::Keys, parser};
+use jsona::{dom::{Keys, Node, DomNode}, parser};
 use jsona_util::environment::Environment;
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::{borrow::Cow, path::PathBuf};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -63,11 +63,21 @@ impl<E: Environment> App<E> {
             None => vec![node],
         };
         let buf = {
-            let items: Vec<Value> = nodes.iter().map(|v| v.to_plain_json()).collect();
-            let value = if items.len() == 1 {
-                items[0].clone()
+            let items: Vec<Value> = if cmd.annotation {
+                nodes.iter().map(to_json).collect()
             } else {
-                Value::Array(items)
+                nodes.iter().map(|v| v.to_plain_json()).collect()
+            };
+            let value = match items.len() {
+                0 => {
+                    bail!("no found");
+                },
+                1 => {
+                    items[0].clone()
+                },
+                _ => {
+                    Value::Array(items)
+                }
             };
             if let Some(value) = value.as_str() {
                 value.as_bytes().to_vec()
@@ -83,6 +93,10 @@ impl<E: Environment> App<E> {
 
 #[derive(Clone, Args)]
 pub struct GetCommand {
+    /// Whether output includes annotation
+    #[clap(short = 'A', long)]
+    pub annotation: bool,
+
     /// Path to the JSONA document, if omitted the standard input will be used.
     #[clap(short, long)]
     pub file_path: Option<PathBuf>,
@@ -104,4 +118,108 @@ pub struct GetCommand {
     /// - dependencies.tokio-*.version
     ///
     pub pattern: Option<String>,
+}
+
+ pub fn to_json(node: &Node) -> Value {
+    let annotations = node.annotations().map(|a| {
+        Value::Object(
+            a.value()
+                .read()
+                .kv_iter()
+                .map(|(k, v)| (k.to_string(), v.to_plain_json()))
+                .collect(),
+        )
+    });
+    match node {
+        Node::Null(_) => match annotations {
+            Some(annotations) => {
+                json!({
+                    "value": null,
+                    "annotations": annotations
+                })
+            }
+            None => {
+                json!({
+                    "value": null,
+                })
+            }
+        },
+        Node::Bool(v) => match annotations {
+            Some(annotations) => {
+                json!({
+                    "value": v.value(),
+                    "annotations": annotations
+                })
+            }
+            None => {
+                json!({
+                    "value": v.value(),
+                })
+            }
+        },
+        Node::Number(v) => match annotations {
+            Some(annotations) => {
+                json!({
+                    "value": v.value(),
+                    "annotations": annotations
+                })
+            }
+            None => {
+                json!({
+                    "value": v.value(),
+                })
+            }
+        },
+        Node::String(v) => match annotations {
+            Some(annotations) => {
+                json!({
+                    "value": v.value(),
+                    "annotations": annotations
+                })
+            }
+            None => {
+                json!({
+                    "value": v.value(),
+                })
+            }
+        },
+        Node::Array(v) => {
+            let value = Value::Array(v.value().read().iter().map(to_json).collect());
+            match annotations {
+                Some(annotations) => {
+                    json!({
+                        "value": value,
+                        "annotations": annotations
+                    })
+                }
+                None => {
+                    json!({
+                        "value": value,
+                    })
+                }
+            }
+        }
+        Node::Object(v) => {
+            let value = Value::Object(
+                v.value()
+                    .read()
+                    .kv_iter()
+                    .map(|(k, v)| (k.to_string(), to_json(v)))
+                    .collect(),
+            );
+            match annotations {
+                Some(annotations) => {
+                    json!({
+                        "value": value,
+                        "annotations": annotations
+                    })
+                }
+                None => {
+                    json!({
+                        "value": value,
+                    })
+                }
+            }
+        }
+    }
 }
