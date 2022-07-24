@@ -55,6 +55,7 @@
 //! let root_node = parse_result.into_dom();
 //! ```
 
+pub mod ast;
 pub mod dom;
 pub mod formatter;
 pub mod parser;

@@ -1,6 +1,4 @@
-use super::node::{
-    ArrayInner, BoolInner, Node, NumberInner, NumberRepr, ObjectInner, StringInner, StringRepr,
-};
+use super::node::{ArrayInner, BoolInner, Node, NumberInner, ObjectInner, StringInner};
 use crate::dom::node::Key;
 use serde::{
     de::Visitor,
@@ -55,47 +53,21 @@ impl<'de> Visitor<'de> for JsonaVisitor {
     where
         E: serde::de::Error,
     {
-        Ok(BoolInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations: None,
-            value: v.into(),
-        }
-        .wrap()
-        .into())
+        Ok(BoolInner::new(v, None).wrap().into())
     }
 
     fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
-        Ok(NumberInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations: None,
-            repr: NumberRepr::Dec,
-            value: JsonNumber::from(v).into(),
-        }
-        .wrap()
-        .into())
+        Ok(NumberInner::new(JsonNumber::from(v), None).wrap().into())
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
-        Ok(NumberInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations: None,
-            repr: NumberRepr::Dec,
-            value: JsonNumber::from(v).into(),
-        }
-        .wrap()
-        .into())
+        Ok(NumberInner::new(JsonNumber::from(v), None).wrap().into())
     }
 
     fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
@@ -111,32 +83,14 @@ impl<'de> Visitor<'de> for JsonaVisitor {
                 ))
             }
         };
-        Ok(NumberInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations: None,
-            repr: NumberRepr::Dec,
-            value: value.into(),
-        }
-        .wrap()
-        .into())
+        Ok(NumberInner::new(value, None).wrap().into())
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
-        Ok(StringInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations: None,
-            repr: StringRepr::Double,
-            value: v.to_string().into(),
-        }
-        .wrap()
-        .into())
+        Ok(StringInner::new(v.into(), None).wrap().into())
     }
 
     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
@@ -188,13 +142,7 @@ impl<'de> Visitor<'de> for JsonaVisitor {
     where
         A: serde::de::SeqAccess<'de>,
     {
-        let array = ArrayInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations: None,
-            items: Default::default(),
-        };
+        let array = ArrayInner::new(Default::default(), None);
 
         array.items.update(|items| loop {
             match seq.next_element::<Node>() {
@@ -213,13 +161,7 @@ impl<'de> Visitor<'de> for JsonaVisitor {
     where
         A: serde::de::MapAccess<'de>,
     {
-        let object = ObjectInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations: None,
-            properties: Default::default(),
-        };
+        let object = ObjectInner::new(Default::default(), None);
 
         object.properties.update(|entries| loop {
             match map.next_entry::<String, Node>() {

@@ -21,23 +21,16 @@ impl Node {
             }
             .wrap()
             .into(),
-            Value::Number(v) => {
-                let repr = if v.is_f64() {
-                    NumberRepr::Float
-                } else {
-                    NumberRepr::Dec
-                };
-                NumberInner {
-                    errors: Default::default(),
-                    syntax: None,
-                    node_syntax: None,
-                    annotations,
-                    repr,
-                    value: v.clone().into(),
-                }
-                .wrap()
-                .into()
+            Value::Number(v) => NumberInner {
+                errors: Default::default(),
+                syntax: None,
+                node_syntax: None,
+                annotations,
+                repr: Default::default(),
+                value: v.clone().into(),
             }
+            .wrap()
+            .into(),
             Value::String(v) => StringInner {
                 errors: Default::default(),
                 syntax: None,
@@ -122,23 +115,16 @@ impl Node {
             }
             .wrap()
             .into(),
-            Value::Number(v) => {
-                let repr = if v.is_f64() {
-                    NumberRepr::Float
-                } else {
-                    NumberRepr::Dec
-                };
-                NumberInner {
-                    errors: Default::default(),
-                    syntax: None,
-                    node_syntax: None,
-                    annotations: None,
-                    repr,
-                    value: v.clone().into(),
-                }
-                .wrap()
-                .into()
+            Value::Number(v) => NumberInner {
+                errors: Default::default(),
+                syntax: None,
+                node_syntax: None,
+                annotations: None,
+                repr: Default::default(),
+                value: v.clone().into(),
             }
+            .wrap()
+            .into(),
             Value::String(v) => StringInner {
                 errors: Default::default(),
                 syntax: None,

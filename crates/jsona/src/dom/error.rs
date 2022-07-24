@@ -8,6 +8,8 @@ pub enum Error {
     UnexpectedSyntax { syntax: SyntaxElement },
     #[error("the string contains invalid escape sequence(s)")]
     InvalidEscapeSequence { syntax: SyntaxElement },
+    #[error("the syntax was not valid number")]
+    InvalidNumber { syntax: SyntaxElement },
     #[error("conflicting keys")]
     ConflictingKeys { key: Key, other: Key },
 }

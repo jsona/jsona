@@ -3,7 +3,7 @@ use super::keys::{KeyOrIndex, Keys};
 use super::visitor::{VisitControl, Visitor};
 use crate::parser;
 use crate::private::Sealed;
-use crate::syntax::SyntaxElement;
+use crate::syntax::{SyntaxElement, SyntaxKind};
 use crate::util::shared::Shared;
 use crate::util::{quote, unquote, QuoteType};
 
@@ -247,6 +247,17 @@ pub(crate) struct NullInner {
     pub(crate) annotations: Option<Annotations>,
 }
 
+impl NullInner {
+    pub(crate) fn new(annotations: Option<Annotations>) -> Self {
+        NullInner {
+            errors: Default::default(),
+            syntax: None,
+            node_syntax: None,
+            annotations,
+        }
+    }
+}
+
 wrap_node! {
     #[derive(Debug, Clone)]
     pub struct Null { inner: NullInner }
@@ -269,6 +280,18 @@ pub(crate) struct BoolInner {
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) value: OnceCell<bool>,
+}
+
+impl BoolInner {
+    pub(crate) fn new(value: bool, annotations: Option<Annotations>) -> Self {
+        BoolInner {
+            errors: Default::default(),
+            syntax: None,
+            node_syntax: None,
+            annotations,
+            value: value.into(),
+        }
+    }
 }
 
 wrap_node! {
@@ -306,6 +329,19 @@ pub(crate) struct NumberInner {
     pub(crate) value: OnceCell<JsonNumber>,
 }
 
+impl NumberInner {
+    pub(crate) fn new(value: JsonNumber, annotations: Option<Annotations>) -> Self {
+        NumberInner {
+            errors: Default::default(),
+            syntax: None,
+            node_syntax: None,
+            annotations,
+            repr: Default::default(),
+            value: value.into(),
+        }
+    }
+}
+
 wrap_node! {
     #[derive(Debug, Clone)]
     pub struct Number { inner: NumberInner }
@@ -323,7 +359,17 @@ impl Number {
 
                     match self.inner.repr {
                         NumberRepr::Dec => {
-                            if text.starts_with('-') {
+                            if s.kind() == SyntaxKind::FLOAT {
+                                match text.parse::<f64>().ok().and_then(JsonNumber::from_f64) {
+                                    Some(v) => v,
+                                    None => {
+                                        self.inner.errors.update(|errors| {
+                                            errors.push(Error::InvalidNumber { syntax: s.clone() })
+                                        });
+                                        JsonNumber::from_f64(0.0).unwrap()
+                                    }
+                                }
+                            } else if text.starts_with('-') {
                                 JsonNumber::from(text.parse::<i64>().unwrap_or_default())
                             } else {
                                 JsonNumber::from(text.parse::<u64>().unwrap_or_default())
@@ -341,11 +387,6 @@ impl Number {
                             u64::from_str_radix(text.trim_start_matches("0x"), 16)
                                 .unwrap_or_default(),
                         ),
-                        NumberRepr::Float => text
-                            .parse::<f64>()
-                            .ok()
-                            .and_then(JsonNumber::from_f64)
-                            .unwrap_or_else(|| JsonNumber::from_f64(0.0).unwrap()),
                     }
                 })
                 .unwrap_or_else(|| JsonNumber::from(0))
@@ -367,7 +408,12 @@ pub enum NumberRepr {
     Bin,
     Oct,
     Hex,
-    Float,
+}
+
+impl Default for NumberRepr {
+    fn default() -> Self {
+        Self::Dec
+    }
 }
 
 #[derive(Debug)]
@@ -378,6 +424,19 @@ pub(crate) struct StringInner {
     pub(crate) annotations: Option<Annotations>,
     pub(crate) repr: StringRepr,
     pub(crate) value: OnceCell<StdString>,
+}
+
+impl StringInner {
+    pub(crate) fn new(value: StdString, annotations: Option<Annotations>) -> Self {
+        StringInner {
+            errors: Default::default(),
+            syntax: None,
+            node_syntax: None,
+            annotations,
+            repr: Default::default(),
+            value: value.into(),
+        }
+    }
 }
 
 wrap_node! {
@@ -426,9 +485,15 @@ impl String {
 
 #[derive(Debug, Copy, Clone)]
 pub enum StringRepr {
-    Single,
     Double,
+    Single,
     Backtick,
+}
+
+impl Default for StringRepr {
+    fn default() -> Self {
+        Self::Double
+    }
 }
 
 #[derive(Debug)]
@@ -438,6 +503,18 @@ pub(crate) struct ArrayInner {
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) items: Shared<Vec<Node>>,
+}
+
+impl ArrayInner {
+    pub(crate) fn new(items: Vec<Node>, annotations: Option<Annotations>) -> Self {
+        ArrayInner {
+            errors: Default::default(),
+            syntax: None,
+            node_syntax: None,
+            annotations,
+            items: items.into(),
+        }
+    }
 }
 
 wrap_node! {
@@ -471,6 +548,18 @@ pub(crate) struct ObjectInner {
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
     pub(crate) properties: Shared<Map>,
+}
+
+impl ObjectInner {
+    pub(crate) fn new(properties: Map, annotations: Option<Annotations>) -> Self {
+        ObjectInner {
+            errors: Default::default(),
+            syntax: None,
+            node_syntax: None,
+            annotations,
+            properties: properties.into(),
+        }
+    }
 }
 
 wrap_node! {

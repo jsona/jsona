@@ -205,7 +205,7 @@ fn scalar_from_syntax(
                     node_syntax: Some(root),
                     annotations,
                     value: v.into(),
-                    repr: NumberRepr::Float,
+                    repr: NumberRepr::Dec,
                 }
                 .wrap()
                 .into()

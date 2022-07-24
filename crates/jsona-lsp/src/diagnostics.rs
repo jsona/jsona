@@ -191,6 +191,7 @@ fn collect_dom_errors(
                     });
                 }
                 jsona::dom::Error::InvalidEscapeSequence { syntax: _ }
+                | jsona::dom::Error::InvalidNumber { syntax: _ }
                 | jsona::dom::Error::UnexpectedSyntax { syntax: _ } => {}
             }
         }

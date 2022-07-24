@@ -1,13 +1,15 @@
+//! The JSONA abstract syntax tree module.
+
 mod mapper;
 
-pub use crate::mapper::{Mapper, Position, Range};
+pub use self::mapper::{Mapper, Position, Range};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Number as JsonNumber, Value};
 use std::{str::FromStr, string::String as StdString};
 
-use jsona::dom::error::{Error as DomError, ParseError};
-use jsona::dom::{DomNode, Node};
+use crate::dom::error::{Error as DomError, ParseError};
+use crate::dom::{self, DomNode, Node};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "type")]
@@ -49,7 +51,7 @@ pub struct String {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Array {
-    pub elements: Vec<Ast>,
+    pub items: Vec<Ast>,
     pub annotations: Vec<Annotation>,
     pub range: Option<Range>,
 }
@@ -140,6 +142,10 @@ impl FromStr for Ast {
                                 let range = mapper.range(syntax.text_range());
                                 ast_errors.push(Error::new("UnexpectedSyntax", &message, range));
                             }
+                            DomError::InvalidNumber { syntax } => {
+                                let range = mapper.range(syntax.text_range());
+                                ast_errors.push(Error::new("InvalidNumber", &message, range));
+                            }
                             DomError::InvalidEscapeSequence { syntax } => {
                                 let range = mapper.range(syntax.text_range());
                                 ast_errors.push(Error::new(
@@ -154,6 +160,54 @@ impl FromStr for Ast {
             },
         }
         Err(ast_errors)
+    }
+}
+
+impl From<Ast> for Node {
+    fn from(ast: Ast) -> Self {
+        match ast {
+            Ast::Null(Null { annotations, .. }) => {
+                dom::NullInner::new(from_annotations(annotations))
+                    .wrap()
+                    .into()
+            }
+            Ast::Bool(Bool {
+                value, annotations, ..
+            }) => dom::BoolInner::new(value, from_annotations(annotations))
+                .wrap()
+                .into(),
+            Ast::Number(Number {
+                value, annotations, ..
+            }) => dom::NumberInner::new(value, from_annotations(annotations))
+                .wrap()
+                .into(),
+            Ast::String(String {
+                value, annotations, ..
+            }) => dom::StringInner::new(value, from_annotations(annotations))
+                .wrap()
+                .into(),
+            Ast::Array(Array {
+                items, annotations, ..
+            }) => {
+                let items: Vec<Node> = items.into_iter().map(Node::from).collect();
+                dom::ArrayInner::new(items, from_annotations(annotations))
+                    .wrap()
+                    .into()
+            }
+            Ast::Object(Object {
+                properties,
+                annotations,
+                ..
+            }) => {
+                let mut props = dom::Map::default();
+                for prop in properties {
+                    props.add(dom::Key::property(prop.key.name), Node::from(prop.value));
+                }
+                dom::ObjectInner::new(props, from_annotations(annotations))
+                    .wrap()
+                    .into()
+            }
+        }
     }
 }
 
@@ -203,7 +257,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
                 .map(|v| node_to_ast(v, mapper))
                 .collect();
             Ast::Array(Array {
-                elements,
+                items: elements,
                 annotations,
                 range,
             })
@@ -234,4 +288,24 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
 fn dom_range<T: DomNode>(node: &T, mapper: &Mapper) -> Option<Range> {
     node.syntax()
         .and_then(|syntax| mapper.range(syntax.text_range()))
+}
+
+fn from_annotations(annotations: Vec<Annotation>) -> Option<dom::Annotations> {
+    let mut members = dom::Map::default();
+    if members.is_empty() {
+        return None;
+    }
+    for anno in annotations {
+        members.add(
+            dom::Key::annotation(anno.key.name),
+            serde_json::from_value(anno.value.value).unwrap(),
+        )
+    }
+    Some(
+        dom::AnnotationsInner {
+            errors: Default::default(),
+            members: members.into(),
+        }
+        .into(),
+    )
 }

@@ -800,16 +800,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jsona-ast"
-version = "0.1.0"
-dependencies = [
- "jsona",
- "rowan",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "jsona-cli"
 version = "0.1.0"
 dependencies = [
