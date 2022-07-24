@@ -224,6 +224,7 @@ fn lex_comment_block(lex: &mut Lexer<SyntaxKind>) -> bool {
 
         asterisk_found = false;
     }
+    lex.bump(remainder[0..total_len].as_bytes().len());
     false
 }
 
@@ -260,6 +261,7 @@ fn lex_string(lex: &mut Lexer<SyntaxKind>, quote: char, multiline: bool) -> bool
 
         escaped = false;
     }
+    lex.bump(remainder[0..total_len].as_bytes().len());
     false
 }
 

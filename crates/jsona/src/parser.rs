@@ -5,7 +5,7 @@ use crate::syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode};
 use crate::util::check_escape;
 use logos::{Lexer, Logos};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
-use std::convert::TryInto;
+use std::collections::HashSet;
 
 macro_rules! with_node {
     ($builder:expr, $kind:ident, $($content:tt)*) => {
@@ -213,17 +213,6 @@ impl<'p> Parser<'p> {
             }
             DOUBLE_QUOTE | SINGLE_QUOTE => {
                 self.validate_string();
-                if let Err(err_indices) = check_escape(self.lexer.slice()) {
-                    for e in err_indices {
-                        self.add_error(&Error {
-                            range: TextRange::new(
-                                (self.lexer.span().start + e).try_into().unwrap(),
-                                (self.lexer.span().start + e).try_into().unwrap(),
-                            ),
-                            message: "invalid escape sequence".into(),
-                        });
-                    }
-                };
                 with_node!(self.builder, SCALAR, self.consume_current_token())
             }
             BACKTICK_QUOTE => {
@@ -578,18 +567,24 @@ impl<'p> Parser<'p> {
     }
 
     fn validate_string(&mut self) {
+        let mut indexes: HashSet<usize> = HashSet::default();
+
         if let Err(err_indices) = validates::string(self.lexer.slice()) {
-            for e in err_indices {
-                let span = self.lexer.span();
-                self.add_error(&Error {
-                    range: TextRange::new(
-                        TextSize::from((span.start + e) as u32),
-                        TextSize::from((span.start + e) as u32),
-                    ),
-                    message: "invalid character in string".into(),
-                });
-            }
+            indexes.extend(err_indices);
         };
+        if let Err(err_indices) = check_escape(self.lexer.slice()) {
+            indexes.extend(err_indices);
+        };
+        let span = self.lexer.span();
+        for e in indexes {
+            self.add_error(&Error {
+                range: TextRange::new(
+                    TextSize::from((span.start + e) as u32),
+                    TextSize::from((span.start + e + 1) as u32),
+                ),
+                message: "invalid character in string".into(),
+            });
+        }
     }
     fn validate_backtick(&mut self) {
         if let Err(err_indices) = validates::backtick_string(self.lexer.slice()) {
@@ -598,7 +593,7 @@ impl<'p> Parser<'p> {
                 self.add_error(&Error {
                     range: TextRange::new(
                         TextSize::from((span.start + e) as u32),
-                        TextSize::from((span.start + e) as u32),
+                        TextSize::from((span.start + e + 1) as u32),
                     ),
                     message: "invalid character in string".into(),
                 });
@@ -674,10 +669,12 @@ pub(crate) mod validates {
     pub(crate) fn string(s: &str) -> Result<(), Vec<usize>> {
         let mut err_indices = Vec::new();
 
-        for (i, c) in s.chars().enumerate() {
+        let mut index = 0;
+        for c in s.chars() {
             if c != '\t' && c.is_ascii_control() {
-                err_indices.push(i);
+                err_indices.push(index);
             }
+            index += c.len_utf8();
         }
 
         if err_indices.is_empty() {
@@ -690,10 +687,12 @@ pub(crate) mod validates {
     pub(crate) fn backtick_string(s: &str) -> Result<(), Vec<usize>> {
         let mut err_indices = Vec::new();
 
-        for (i, c) in s.chars().enumerate() {
+        let mut index = 0;
+        for c in s.chars() {
             if c != '\t' && c != '\n' && c != '\r' && c.is_ascii_control() {
-                err_indices.push(i);
+                err_indices.push(index);
             }
+            index += c.len_utf8();
         }
 
         if err_indices.is_empty() {
