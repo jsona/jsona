@@ -74,7 +74,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
             return Err(Error::unknown_def(scope.keys.clone(), &ref_value));
         }
         return Ok(Schema {
-            ref_value: Some(format!("#/defs/{}", ref_value)),
+            ref_value: Some(format!("#/$defs/{}", ref_value)),
             ..Default::default()
         });
     }
@@ -93,7 +93,6 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                 let child_scope = scope.spwan(key.into(), child.clone());
                 let key = key.value();
                 let pattern = parse_str_annotation(&child_scope, "@pattern")?;
-                let optional = exist_annotation(&child_scope, "@optional");
                 let child_schema = parse_node(child_scope.clone())?;
                 if let Some(pattern) = pattern {
                     let props = schema.pattern_properties.get_or_insert(Default::default());
@@ -105,9 +104,10 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                     }
                     props.insert(pattern, child_schema);
                 } else {
+                    let required = exist_annotation(&child_scope, "@required");
                     let props = schema.properties.get_or_insert(Default::default());
                     props.insert(key.to_string(), child_schema);
-                    if !optional {
+                    if required {
                         schema
                             .required
                             .get_or_insert(Default::default())
@@ -170,7 +170,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     if !def_value.is_empty() {
         scope.defs.borrow_mut().insert(def_value.clone(), schema);
         return Ok(Schema {
-            ref_value: Some(format!("#/defs/{}", def_value)),
+            ref_value: Some(format!("#/$defs/{}", def_value)),
             ..Default::default()
         });
     }

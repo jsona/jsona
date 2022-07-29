@@ -8,11 +8,7 @@ use codespan_reporting::{
     },
 };
 use itertools::Itertools;
-use jsona::{
-    dom::{self, DomNode},
-    parser,
-    rowan::TextRange,
-};
+use jsona::{dom, parser, rowan::TextRange};
 use jsona_util::{environment::Environment, jsona_schema::NodeValidationError};
 use std::ops::Range;
 use tokio::io::AsyncWriteExt;
@@ -101,11 +97,7 @@ impl<E: Environment> App<E> {
 
         let mut out_diag = Vec::<u8>::new();
         for err in errors {
-            let text_range = err
-                .node
-                .syntax()
-                .map(|v| v.text_range())
-                .unwrap_or_default();
+            let text_range = err.node.node_text_range().unwrap_or_default();
             let diag = Diagnostic::error()
                 .with_message(&err.info)
                 .with_labels(Vec::from([

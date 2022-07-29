@@ -1,7 +1,7 @@
 use either::Either;
+use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -69,10 +69,7 @@ pub struct Schema {
     pub min_properties: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<Vec<String>>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "additionalProperties"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "patternProperties")]
     pub pattern_properties: Option<IndexMap<String, Schema>>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -147,7 +144,8 @@ impl SchemaOrSchemaArray {
 impl Schema {
     pub fn pointer(&self, keys: &Keys) -> Vec<&Schema> {
         let mut result = vec![];
-        pointer_impl(&mut result, self, self, keys);
+        let mut pointed = false;
+        pointer_impl(&mut result, self, self, keys, &mut pointed);
         result
     }
     pub fn is_object(&self) -> bool {
@@ -193,6 +191,7 @@ fn pointer_impl<'a>(
     root_schema: &'a Schema,
     local_schema: &'a Schema,
     keys: &Keys,
+    pointed: &mut bool,
 ) {
     let local_schema = match local_schema.ref_value.as_ref() {
         Some(ref_value) => {
@@ -200,9 +199,9 @@ fn pointer_impl<'a>(
                 root_schema
             } else {
                 match root_schema.defs.as_ref().and_then(|defs| {
-                    Regex::new(r#"^#/$defs/(\w+)$"#)
+                    Regex::new(r#"^#/\$defs/(\w+)$"#)
                         .ok()
-                        .and_then(|v| v.captures(ref_value).and_then(|v| v.get(1)))
+                        .and_then(|v| v.captures(ref_value).ok().flatten().and_then(|v| v.get(1)))
                         .and_then(|v| defs.get(v.as_str()))
                 }) {
                     Some(v) => v,
@@ -215,28 +214,33 @@ fn pointer_impl<'a>(
     if let Some(schemas) = local_schema
         .one_of
         .as_ref()
-        .or(local_schema.all_of.as_ref())
         .or(local_schema.any_of.as_ref())
+        .or(local_schema.all_of.as_ref())
     {
-        for local_schema in schemas.iter() {
-            pointer_impl(result, root_schema, local_schema, keys)
+        let mut pointed = false;
+        for schema in schemas.iter() {
+            pointer_impl(result, root_schema, schema, keys, &mut pointed);
+            if pointed && local_schema.one_of.is_some() {
+                break;
+            }
         }
     } else {
         let (key, keys) = keys.shift();
         match key {
             None => {
                 result.push(local_schema);
+                *pointed = true;
             }
             Some(key) => match key {
                 KeyOrIndex::Index(index) => {
                     if let Some(local_schema) = local_schema.items.as_ref() {
                         match local_schema.value.as_ref() {
                             Either::Left(local_schema) => {
-                                pointer_impl(result, root_schema, local_schema, &keys)
+                                pointer_impl(result, root_schema, local_schema, &keys, pointed)
                             }
                             Either::Right(schemas) => {
                                 if let Some(local_schema) = schemas.get(index) {
-                                    pointer_impl(result, root_schema, local_schema, &keys)
+                                    pointer_impl(result, root_schema, local_schema, &keys, pointed)
                                 }
                             }
                         }
@@ -248,13 +252,13 @@ fn pointer_impl<'a>(
                         .as_ref()
                         .and_then(|v| v.get(key.value()))
                     {
-                        pointer_impl(result, root_schema, local_schema, &keys)
+                        pointer_impl(result, root_schema, local_schema, &keys, pointed)
                     }
                     if let Some(schemas) = local_schema.pattern_properties.as_ref() {
                         for (pat, local_schema) in schemas.iter() {
                             if let Ok(re) = Regex::new(pat) {
-                                if re.is_match(key.value()) {
-                                    pointer_impl(result, root_schema, local_schema, &keys)
+                                if re.is_match(key.value()).is_ok() {
+                                    pointer_impl(result, root_schema, local_schema, &keys, pointed)
                                 }
                             }
                         }
@@ -264,7 +268,7 @@ fn pointer_impl<'a>(
                         .as_ref()
                         .and_then(|v| v.value.as_ref().right())
                     {
-                        pointer_impl(result, root_schema, local_schema, &keys)
+                        pointer_impl(result, root_schema, local_schema, &keys, pointed)
                     }
                 }
                 _ => {}

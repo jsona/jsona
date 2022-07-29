@@ -213,7 +213,6 @@ pub struct PositionInfo {
 }
 
 fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node)> {
-    tracing::info!("check node at {}", keys.to_string());
     if let Some(annotations) = node.annotations() {
         let map = annotations.value().read();
         for (key, value) in map.kv_iter() {

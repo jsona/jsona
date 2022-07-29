@@ -237,10 +237,7 @@ async fn collect_schema_errors<E: Environment>(
 
         match ws.schemas.validate(&schema_association.url, dom).await {
             Ok(errors) => diags.extend(errors.into_iter().map(|err| {
-                let range = err
-                    .keys
-                    .last_text_range()
-                    .unwrap_or_else(|| err.node.text_range().unwrap());
+                let range = err.node.node_text_range().unwrap_or_default();
                 let range = doc.mapper.range(range).unwrap_or_default().into_lsp();
                 Diagnostic {
                     range,

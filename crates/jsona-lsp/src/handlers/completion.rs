@@ -64,9 +64,13 @@ pub async fn completion<E: Environment>(
         keys = Keys::single(Key::annotation(query.key.as_ref().unwrap().text()))
     }
 
-    tracing::info!(?query, "debug completion keys={}", keys);
-
     let schemas = ws.schemas_at_path(&document_uri, &keys).await;
+    tracing::info!(
+        ?query,
+        "debug completion keys={} schemas={}",
+        keys,
+        schemas.is_some()
+    );
 
     let result = match &query.scope {
         ScopeKind::AnnotationKey => {
@@ -107,17 +111,11 @@ fn complete_properties(
     schemas: &[Schema],
 ) -> Option<CompletionResponse> {
     let mut comp_items = vec![];
-    let current_key = query.key.as_ref().map(|v| v.text()).unwrap_or_default();
     let is_annotation = query.scope == ScopeKind::AnnotationKey;
     for schema in schemas.iter() {
         if !schema.is_object() {
             continue;
         }
-        tracing::info!(
-            "complete property key={} schema={}",
-            current_key,
-            serde_json::to_string(schema).unwrap()
-        );
         match schema.properties.as_ref() {
             None => continue,
             Some(properties) => {
@@ -405,10 +403,6 @@ fn complete_value_impl(
     schemas: &[Schema],
 ) {
     for schema in schemas.iter() {
-        tracing::debug!(
-            "complete value schema={}",
-            serde_json::to_string(schema).unwrap()
-        );
         if let Some(value) = schema.const_value.as_ref() {
             comp_items.push(completion_item_from_value(schema, value, seperator));
         }
