@@ -7,7 +7,7 @@ description = "A jsona dsl for jsonschema"
 [dependencies]
 either = { version = "1.7", features = ["serde"] }
 indexmap = { version = "1.9", features = ["serde-1"] }
-jsona = { path = "../jsona" }
+jsona = { path = "../jsona", version = "0.4"}
 regex = "1.6"
 fancy-regex = "0.10"
 serde = { version = "1", features = ["derive"] }

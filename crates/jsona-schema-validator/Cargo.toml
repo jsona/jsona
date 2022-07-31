@@ -11,6 +11,6 @@ thiserror = "1"
 indexmap = { version = "1.9", features = ["serde", "rayon"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-jsona = { path = "../jsona" }
-jsona-schema = { path = "../jsona-schema" }
+jsona = { path = "../jsona", version = "0.4"}
+jsona-schema = { path = "../jsona-schema", version = "0.1"}
 jsonschema = { version = "0.16", default-features = false }

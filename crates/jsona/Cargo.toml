@@ -1,6 +1,6 @@
 [package]
 name = "jsona"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2018"
 description = "JSONA is JSON superset. JSONA = JSON (less grammatical restrictions) + Annotation."
