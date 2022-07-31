@@ -192,6 +192,10 @@ impl Keys {
         )
     }
 
+    pub fn first(&self) -> Option<&KeyOrIndex> {
+        self.keys.first()
+    }
+
     pub fn last(&self) -> Option<&KeyOrIndex> {
         self.keys.last()
     }

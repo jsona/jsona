@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
+use jsona_schema_validator::JSONASchemaValue;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
@@ -7,7 +8,6 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 use time::OffsetDateTime;
 use url::Url;
 
-use crate::jsona_schema::JSONASchemaValue;
 use crate::{environment::Environment, LruCache};
 
 pub const DEFAULT_LRU_CACHE_EXPIRATION_TIME: Duration = Duration::from_secs(60);

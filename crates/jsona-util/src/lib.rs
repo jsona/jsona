@@ -1,6 +1,5 @@
 pub mod config;
 pub mod environment;
-pub mod jsona_schema;
 pub mod log;
 pub mod schema;
 pub mod util;

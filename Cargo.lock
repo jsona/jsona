@@ -873,6 +873,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsona-schema-validator"
+version = "0.1.0"
+dependencies = [
+ "indexmap",
+ "jsona",
+ "jsona-schema",
+ "jsonschema",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "jsona-util"
 version = "0.1.0"
 dependencies = [
@@ -887,7 +900,7 @@ dependencies = [
  "hex",
  "indexmap",
  "jsona",
- "jsona-schema",
+ "jsona-schema-validator",
  "jsonschema",
  "lru",
  "parking_lot",

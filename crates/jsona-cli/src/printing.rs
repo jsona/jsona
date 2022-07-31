@@ -9,7 +9,7 @@ use codespan_reporting::{
 };
 use itertools::Itertools;
 use jsona::{dom, parser, rowan::TextRange};
-use jsona_util::{environment::Environment, jsona_schema::NodeValidationError};
+use jsona_util::{environment::Environment, schema::NodeValidationError};
 use std::ops::Range;
 use tokio::io::AsyncWriteExt;
 

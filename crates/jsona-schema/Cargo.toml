@@ -2,8 +2,7 @@
 name = "jsona-schema"
 version = "0.1.0"
 edition = "2021"
-description = "A jsonschema dsl in jsona format"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A jsona dsl for jsonschema"
 
 [dependencies]
 either = { version = "1.7", features = ["serde"] }

@@ -1,49 +1,58 @@
-use anyhow::{anyhow, bail};
+use std::str::FromStr;
+
 use indexmap::IndexMap;
 use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node};
-use jsona_schema::{from_node, Schema};
+use jsona_schema::from_node;
 use jsonschema::{error::ValidationErrorKind, paths::JSONPointer, JSONSchema};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-pub struct JSONASchema {
-    value: JSONSchema,
-    annotations: IndexMap<String, JSONSchema>,
+pub use jsona_schema::Schema;
+
+pub struct JSONASchemaValidator {
+    pub value: JSONSchema,
+    pub annotations: IndexMap<String, JSONSchema>,
 }
 
-impl JSONASchema {
-    pub fn new(schema: &JSONASchemaValue) -> Result<Self, anyhow::Error> {
-        let value = compile_json_schema(&schema.value)
-            .map_err(|err| anyhow!("invalid .value schema, {}", err))?;
+impl JSONASchemaValidator {
+    pub fn new(schema: &JSONASchemaValue) -> Result<Self, Error> {
+        let value = compile_json_schema(&schema.value, ".value")?;
         let mut annotations = IndexMap::default();
         if let Some(annotations_schemas) = schema.annotations.properties.as_ref() {
             for (key, value) in annotations_schemas.iter() {
-                let annotation = compile_json_schema(value)
-                    .map_err(|err| anyhow!("invalid @{} schema, {}", key, err))?;
+                let key_value = format!("@{}", key);
+                let annotation = compile_json_schema(value, &key_value)?;
                 annotations.insert(key.to_string(), annotation);
             }
         }
-        Ok(JSONASchema { value, annotations })
+        Ok(JSONASchemaValidator { value, annotations })
     }
-    pub fn validate(&self, node: &Node) -> Result<Vec<NodeValidationError>, anyhow::Error> {
+    pub fn validate(&self, node: &Node) -> Vec<NodeValidationError> {
         let mut errors = vec![];
-        jsona_schema_validate(&self.value, &mut errors, node, Keys::default())?;
+        jsona_schema_validate(&self.value, &mut errors, node, Keys::default());
         for (keys, annotation_node) in visit_annotations(node).into_iter() {
             if let Some(schema) = keys
                 .last_annotation_key()
                 .and_then(|v| self.annotations.get(&v.to_string()))
             {
-                jsona_schema_validate(schema, &mut errors, &annotation_node, keys)?;
+                jsona_schema_validate(schema, &mut errors, &annotation_node, keys);
             }
         }
-        Ok(errors)
+        errors
     }
 }
 
-fn compile_json_schema(schema: &Schema) -> Result<JSONSchema, anyhow::Error> {
-    let json = serde_json::to_value(schema)?;
+fn compile_json_schema(schema: &Schema, key: &str) -> Result<JSONSchema, Error> {
+    let json = serde_json::to_value(schema).map_err(|err| Error::ConvertJsonschema {
+        key: key.into(),
+        message: err.to_string(),
+    })?;
     JSONSchema::options()
         .compile(&json)
-        .map_err(|e| anyhow!("{}", e))
+        .map_err(|err| Error::ConvertJsonschema {
+            key: key.into(),
+            message: err.to_string(),
+        })
 }
 
 fn jsona_schema_validate(
@@ -51,48 +60,49 @@ fn jsona_schema_validate(
     errors: &mut Vec<NodeValidationError>,
     node: &Node,
     keys: Keys,
-) -> Result<(), anyhow::Error> {
+) {
     let value = node.to_plain_json();
     if let Err(errs) = schema.validate(&value) {
         for err in errs {
             let info = err.to_string();
-            let error =
-                NodeValidationError::new(node, keys.clone(), err.kind, err.instance_path, info)?;
-            errors.push(error);
+            if let Some(error) =
+                NodeValidationError::new(node, keys.clone(), err.kind, err.instance_path, info)
+            {
+                errors.push(error);
+            }
         }
-    }
-    Ok(())
+    };
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct JSONASchemaValue {
-    value: Box<Schema>,
-    annotations: Box<Schema>,
+    pub value: Box<Schema>,
+    pub annotations: Box<Schema>,
 }
 
 impl JSONASchemaValue {
-    pub fn from_jsona(data: &[u8]) -> Result<Self, anyhow::Error> {
-        let data = std::str::from_utf8(data)?;
-        let node: Node = data.parse().map_err(|_| anyhow!("invalid jsona doc"))?;
-        Self::from_node(node)
-    }
-    pub fn from_node(node: Node) -> Result<Self, anyhow::Error> {
+    pub fn from_node(node: Node) -> Result<Self, Error> {
         if node.validate().is_err() {
-            bail!("invalid jsona");
+            return Err(Error::InvalidJsonaNode);
         };
         let value_node = node
             .try_get(&KeyOrIndex::property("value"))
-            .map_err(|_| anyhow!("failed to get value at .value"))?;
-        let value_schema =
-            from_node(&value_node).map_err(|_| anyhow!("failed to parse schema at .value"))?;
+            .map_err(|_| Error::InvalidNode(".value".into()))?;
+        let value_schema = from_node(&value_node).map_err(|err| Error::InvalidSchemaValue {
+            key: ".value".into(),
+            message: err.to_string(),
+        })?;
         let mut annotations_schemas: IndexMap<String, Schema> = Default::default();
         let annotations_value = node
             .try_get_as_object(&KeyOrIndex::property("annotations"))
-            .map_err(|_| anyhow!("failed to parse annotations"))?;
+            .map_err(|_| Error::InvalidNode(".annotations".into()))?;
         if let Some(annotations_value) = annotations_value {
             for (key, value) in annotations_value.value().read().kv_iter() {
-                let schema = from_node(value)
-                    .map_err(|_| anyhow!("failed to parse schema at .annotations.{}", key))?;
+                let key_value = format!("@{}", key.value());
+                let schema = from_node(value).map_err(|err| Error::InvalidSchemaValue {
+                    key: key_value.clone(),
+                    message: err.to_string(),
+                })?;
                 annotations_schemas.insert(format!("@{}", key.value()), schema);
             }
         }
@@ -131,6 +141,28 @@ impl JSONASchemaValue {
     }
 }
 
+impl FromStr for JSONASchemaValue {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let node: Node = s.parse().map_err(|_| Error::InvalidJsonaDoc)?;
+        Self::from_node(node)
+    }
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum Error {
+    #[error("invalid jsona doc")]
+    InvalidJsonaDoc,
+    #[error("invalid jsona node")]
+    InvalidJsonaNode,
+    #[error("invalid node at {0}")]
+    InvalidNode(String),
+    #[error("invalid schema value at {key}")]
+    InvalidSchemaValue { key: String, message: String },
+    #[error("convert to convert jsonschema at {key}")]
+    ConvertJsonschema { key: String, message: String },
+}
+
 /// A validation error that contains text ranges as well.
 #[derive(Debug)]
 pub struct NodeValidationError {
@@ -147,13 +179,13 @@ impl NodeValidationError {
         kind: ValidationErrorKind,
         instance_path: JSONPointer,
         info: String,
-    ) -> Result<Self, anyhow::Error> {
+    ) -> Option<Self> {
         let mut keys = keys;
         let mut node = node.clone();
 
         'outer: for path in &instance_path {
             match path {
-                jsonschema::paths::PathChunk::Property(p) => match node {
+                jsonschema::paths::PathChunk::Property(p) => match &node {
                     Node::Object(t) => {
                         let entries = t.value().read();
                         for (k, entry) in entries.kv_iter() {
@@ -163,21 +195,19 @@ impl NodeValidationError {
                                 continue 'outer;
                             }
                         }
-                        return Err(anyhow!("invalid key {} at {}", p, keys));
+                        break 'outer;
                     }
-                    _ => return Err(anyhow!("invalid key {} at {}", p, keys)),
+                    _ => break 'outer,
                 },
                 jsonschema::paths::PathChunk::Index(idx) => {
-                    node = node
-                        .try_get(&KeyOrIndex::Index(*idx))
-                        .map_err(|_| anyhow!("invalid index {} at {}", idx, keys))?;
+                    node = node.try_get(&KeyOrIndex::Index(*idx)).ok()?;
                     keys = keys.join((*idx).into());
                 }
                 jsonschema::paths::PathChunk::Keyword(_) => {}
             }
         }
 
-        Ok(Self {
+        Some(Self {
             keys,
             node,
             kind,

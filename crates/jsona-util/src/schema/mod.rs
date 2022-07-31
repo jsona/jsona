@@ -1,16 +1,15 @@
 use anyhow::{anyhow, bail};
 use jsona::dom::{Keys, Node};
-use jsona_schema::Schema;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use url::Url;
 
 use self::{associations::SchemaAssociations, cache::Cache};
-use crate::{
-    environment::Environment,
-    jsona_schema::{JSONASchema, JSONASchemaValue, NodeValidationError},
-    LruCache,
+use crate::{environment::Environment, LruCache};
+
+pub use jsona_schema_validator::{
+    JSONASchemaValidator, JSONASchemaValue, NodeValidationError, Schema,
 };
 
 pub mod associations;
@@ -22,7 +21,7 @@ pub struct Schemas<E: Environment> {
     associations: SchemaAssociations,
     concurrent_requests: Arc<Semaphore>,
     http: reqwest::Client,
-    validators: Arc<Mutex<LruCache<Url, Arc<JSONASchema>>>>,
+    validators: Arc<Mutex<LruCache<Url, Arc<JSONASchemaValidator>>>>,
     cache: Cache<E>,
 }
 
@@ -74,7 +73,7 @@ impl<E: Environment> Schemas<E> {
                     .map_err(|err| anyhow!("load schema {schema_url} throw {}", err))?
             }
         };
-        validator.validate(value)
+        Ok(validator.validate(value))
     }
 
     pub async fn add_schema(&self, schema_url: &Url, schema: Arc<JSONASchemaValue>) {
@@ -121,7 +120,7 @@ impl<E: Environment> Schemas<E> {
         Ok(schemas)
     }
 
-    fn get_validator(&self, schema_url: &Url) -> Option<Arc<JSONASchema>> {
+    fn get_validator(&self, schema_url: &Url) -> Option<Arc<JSONASchemaValidator>> {
         if self.cache().lru_expired() {
             self.validators.lock().clear();
         }
@@ -133,8 +132,8 @@ impl<E: Environment> Schemas<E> {
         &self,
         schema_url: Url,
         schema: &JSONASchemaValue,
-    ) -> Result<Arc<JSONASchema>, anyhow::Error> {
-        let v = Arc::new(JSONASchema::new(schema)?);
+    ) -> Result<Arc<JSONASchemaValidator>, anyhow::Error> {
+        let v = Arc::new(JSONASchemaValidator::new(schema)?);
         self.validators.lock().put(schema_url, v.clone());
         Ok(v)
     }
@@ -162,9 +161,10 @@ impl<E: Environment> Schemas<E> {
             }
             scheme => bail!("the scheme `{scheme}` is not supported"),
         };
-        JSONASchemaValue::from_jsona(&data).map_err(|error| {
+        let data = std::str::from_utf8(&data).map_err(|_| anyhow!("invalid utf8"))?;
+        data.parse::<JSONASchemaValue>().map_err(|error| {
             tracing::warn!(?error, "fail to parse schema `{}`", index_url);
-            error
+            anyhow!("{}", error.to_string())
         })
     }
 }

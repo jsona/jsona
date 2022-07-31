@@ -1,0 +1,16 @@
+[package]
+name = "jsona-schema-validator"
+version = "0.1.0"
+edition = "2021"
+description = "A jsona schema validator"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = "1"
+indexmap = { version = "1.9", features = ["serde", "rayon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+jsona = { path = "../jsona" }
+jsona-schema = { path = "../jsona-schema" }
+jsonschema = { version = "0.16", default-features = false }

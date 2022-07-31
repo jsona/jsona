@@ -1,6 +1,6 @@
 # jsona-schema
 
-A jsonschema dsl in jsona format. 
+A jsona dsl for jsonschema
 
 ## Annotation
 
