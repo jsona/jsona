@@ -94,6 +94,7 @@ pub enum JsonaCommand {
     #[clap(visible_aliases = &["fmt"])]
     Format(FormatCommand),
     /// Language server operations.
+    #[cfg(feature = "lsp")]
     Lsp {
         #[clap(subcommand)]
         cmd: LspCommand,
