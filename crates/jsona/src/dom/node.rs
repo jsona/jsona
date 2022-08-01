@@ -347,7 +347,7 @@ wrap_node! {
 }
 
 impl Number {
-    /// An nubmer value.
+    /// An number value.
     pub fn value(&self) -> &JsonNumber {
         self.inner.value.get_or_init(|| {
             self.inner

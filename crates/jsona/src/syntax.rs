@@ -24,7 +24,7 @@ pub enum SyntaxKind {
     IDENT,
 
     #[regex(r"@[A-Za-z0-9_]*")]
-    ANNOATION_KEY,
+    ANNOTATION_KEY,
 
     /// Not part of the regular JSONA syntax, only used to allow
     /// glob patterns in keys.

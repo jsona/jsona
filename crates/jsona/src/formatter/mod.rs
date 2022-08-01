@@ -401,7 +401,7 @@ fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
                 _ => {}
             },
             NodeOrToken::Token(t) => match t.kind() {
-                ANNOATION_KEY => {
+                ANNOTATION_KEY => {
                     if ctx.col_offset > 0 && !scope.is_last_char(' ') {
                         ctx.col_offset += scope.write(" ");
                     }

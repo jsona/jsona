@@ -45,7 +45,7 @@ pub(crate) fn keys_from_syntax(
                 };
                 match child.kind() {
                     BRACKET_START => after_bracket = true,
-                    ANNOATION_KEY => {
+                    ANNOTATION_KEY => {
                         let key = KeyInner {
                             errors: Shared::default(),
                             syntax: Some(child.clone().into()),
@@ -368,7 +368,7 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
     };
     let key = match syntax
         .children_with_tokens()
-        .find(|v| v.kind() == ANNOATION_KEY)
+        .find(|v| v.kind() == ANNOTATION_KEY)
     {
         Some(key) => KeyInner {
             errors: Shared::default(),

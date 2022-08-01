@@ -104,9 +104,9 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_annotations(&mut self) -> ParserResult<()> {
-        if let Ok(ANNOATION_KEY) = self.peek_token() {
+        if let Ok(ANNOTATION_KEY) = self.peek_token() {
             self.builder.start_node(ANNOTATIONS.into());
-            while let Ok(ANNOATION_KEY) = self.peek_token() {
+            while let Ok(ANNOTATION_KEY) = self.peek_token() {
                 if self.lexer.slice().len() == 1 {
                     self.report_error("invalid annotation key");
                 }
@@ -118,7 +118,7 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_anno_entry(&mut self) -> ParserResult<()> {
-        self.must_token_or(ANNOATION_KEY, r#"expected annotation key"#)?;
+        self.must_token_or(ANNOTATION_KEY, r#"expected annotation key"#)?;
         if self.annotation_scope {
             self.report_error("nested annotation");
         }
@@ -331,7 +331,7 @@ impl<'p> Parser<'p> {
             };
 
             match t {
-                ANNOATION_KEY => {
+                ANNOTATION_KEY => {
                     if after_dot || exist_annotation_key {
                         return self.consume_error_token("unexpected annotation key");
                     } else {

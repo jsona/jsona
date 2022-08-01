@@ -72,7 +72,7 @@ pub struct Property {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Annotation {
     pub key: Key,
-    pub value: AnnoationValue,
+    pub value: AnnotationValue,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -82,7 +82,7 @@ pub struct Key {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct AnnoationValue {
+pub struct AnnotationValue {
     pub value: Value,
     pub range: Option<Range>,
 }
@@ -217,8 +217,8 @@ impl From<Ast> for Node {
 
 fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
     let mut annotations: Vec<Annotation> = vec![];
-    if let Some(annos) = value.annotations() {
-        for (key, value) in annos.value().read().kv_iter() {
+    if let Some(value_annotations) = value.annotations() {
+        for (key, value) in value_annotations.value().read().kv_iter() {
             let key_range = dom_range(key, mapper);
             let value_range = dom_range(value, mapper);
             annotations.push({
@@ -227,7 +227,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
                         name: key.value().to_string(),
                         range: key_range,
                     },
-                    value: AnnoationValue {
+                    value: AnnotationValue {
                         value: value.to_plain_json(),
                         range: value_range,
                     },

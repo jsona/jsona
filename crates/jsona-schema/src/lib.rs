@@ -50,7 +50,7 @@ struct Scope {
 }
 
 impl Scope {
-    fn spwan(&self, key: KeyOrIndex, node: Node) -> Self {
+    fn spawn(&self, key: KeyOrIndex, node: Node) -> Self {
         Self {
             node,
             keys: self.keys.clone().join(key),
@@ -90,7 +90,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     if schema_type == "object" {
         if let Node::Object(obj) = &scope.node {
             for (key, child) in obj.value().read().kv_iter() {
-                let child_scope = scope.spwan(key.into(), child.clone());
+                let child_scope = scope.spawn(key.into(), child.clone());
                 let key = key.value();
                 let pattern = parse_str_annotation(&child_scope, "@pattern")?;
                 let child_schema = parse_node(child_scope.clone())?;
@@ -128,7 +128,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                         schema.schema_type = None;
                         let mut schemas = vec![];
                         for (i, child) in arr.iter().enumerate() {
-                            let child_scope = scope.spwan(i.into(), child.clone());
+                            let child_scope = scope.spawn(i.into(), child.clone());
                             schemas.push(parse_node(child_scope)?);
                         }
                         match compound.as_str() {
@@ -144,14 +144,14 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                     }
                     None => {
                         if arr.len() == 1 {
-                            let child_scope = scope.spwan(0_usize.into(), arr[0].clone());
+                            let child_scope = scope.spawn(0_usize.into(), arr[0].clone());
                             schema.items = Some(SchemaOrSchemaArray {
                                 value: Either::Left(parse_node(child_scope)?.into()),
                             })
                         } else {
                             let mut schemas = vec![];
                             for (i, child) in arr.iter().enumerate() {
-                                let child_scope = scope.spwan(i.into(), child.clone());
+                                let child_scope = scope.spawn(i.into(), child.clone());
                                 schemas.push(parse_node(child_scope)?);
                             }
                             schema.items = Some(SchemaOrSchemaArray {

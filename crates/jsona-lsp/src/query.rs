@@ -18,14 +18,14 @@ pub struct Query {
     pub scope: ScopeKind,
     /// Query node contains offset
     pub node_at_offset: TextSize,
-    /// Current property/annotaionKey key
+    /// Current property/annotationKey key
     pub key: Option<SyntaxToken>,
     /// Current value
     pub value: Option<SyntaxNode>,
     /// Whether add value for property/annotationKey completion
     pub add_value: bool,
-    /// Whether insert seperator
-    pub add_seperator: bool,
+    /// Whether insert separator
+    pub add_separator: bool,
 }
 
 impl Query {
@@ -39,14 +39,14 @@ impl Query {
         let mut node_at_offset = offset;
         let mut key = None;
         let mut value = None;
-        let mut add_seperator = false;
+        let mut add_separator = false;
         let mut add_value = false;
         if let Some(token) = before
             .as_ref()
             .and_then(|t| Query::prev_none_ws_comment(t.syntax.clone()))
         {
             match token.kind() {
-                SyntaxKind::ANNOATION_KEY => {
+                SyntaxKind::ANNOTATION_KEY => {
                     add_value = !token
                         .siblings_with_tokens(Direction::Next)
                         .any(|v| v.kind() == SyntaxKind::ANNOTATION_VALUE);
@@ -66,9 +66,9 @@ impl Query {
                             None
                         }
                     });
-                    add_seperator = match value.as_ref() {
-                        Some(v) => value_add_seperator(v),
-                        None => colon_add_seperator(token),
+                    add_separator = match value.as_ref() {
+                        Some(v) => value_add_separator(v),
+                        None => colon_add_separator(token),
                     };
                 }
                 SyntaxKind::PARENTHESES_START => {
@@ -115,7 +115,7 @@ impl Query {
                             }
                             SyntaxKind::SCALAR => {
                                 kind = ScopeKind::Value;
-                                add_seperator = value_add_seperator(&node);
+                                add_separator = value_add_separator(&node);
                                 value = Some(node);
                             }
                             SyntaxKind::OBJECT => kind = ScopeKind::Object,
@@ -138,7 +138,7 @@ impl Query {
             scope: kind,
             node_at_offset,
             add_value,
-            add_seperator,
+            add_separator: add_separator,
             key,
             value,
         }
@@ -254,7 +254,7 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
     Some((keys, node.clone()))
 }
 
-fn value_add_seperator(node: &SyntaxNode) -> bool {
+fn value_add_separator(node: &SyntaxNode) -> bool {
     for syntax in node.siblings_with_tokens(Direction::Next) {
         match syntax.kind() {
             SyntaxKind::NEWLINE => return true,
@@ -266,7 +266,7 @@ fn value_add_seperator(node: &SyntaxNode) -> bool {
     false
 }
 
-fn colon_add_seperator(mut token: SyntaxToken) -> bool {
+fn colon_add_separator(mut token: SyntaxToken) -> bool {
     loop {
         match token.next_token() {
             Some(tok) => match tok.kind() {

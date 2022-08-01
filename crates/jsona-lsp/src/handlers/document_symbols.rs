@@ -30,7 +30,7 @@ pub(crate) fn create_symbols(doc: &DocumentState) -> Vec<DocumentSymbol> {
     let mut symbols: Vec<DocumentSymbol> = Vec::new();
 
     let dom = doc.dom.clone();
-    symbols_for_annotaions(&dom, mapper, &mut symbols);
+    symbols_for_annotations(&dom, mapper, &mut symbols);
     match dom {
         Node::Object(obj) => {
             symbols.extend(symbols_for_object(&obj, mapper));
@@ -126,7 +126,7 @@ fn symbols_for_value(
     }
 }
 
-fn symbols_for_annotaions(node: &Node, mapper: &Mapper, symbols: &mut Vec<DocumentSymbol>) {
+fn symbols_for_annotations(node: &Node, mapper: &Mapper, symbols: &mut Vec<DocumentSymbol>) {
     if let Some(annotations) = node.annotations() {
         for (key, value) in annotations.value().read().kv_iter() {
             symbols_for_value(
@@ -145,7 +145,7 @@ fn symbols_for_array(arr: &dom::Array, mapper: &Mapper) -> Vec<DocumentSymbol> {
     let mut symbols = vec![];
 
     for (index, value) in items.iter().enumerate() {
-        symbols_for_annotaions(value, mapper, &mut symbols);
+        symbols_for_annotations(value, mapper, &mut symbols);
         symbols_for_value(index.to_string(), None, value, mapper, &mut symbols);
     }
 
@@ -156,7 +156,7 @@ fn symbols_for_object(obj: &dom::Object, mapper: &Mapper) -> Vec<DocumentSymbol>
     let properties = obj.value().read();
     let mut symbols = vec![];
     for (key, value) in properties.kv_iter() {
-        symbols_for_annotaions(value, mapper, &mut symbols);
+        symbols_for_annotations(value, mapper, &mut symbols);
         symbols_for_value(
             key.to_string(),
             key.text_range(),

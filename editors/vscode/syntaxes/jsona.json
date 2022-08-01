@@ -158,7 +158,7 @@
 		"string": {
 			"patterns": [
 				{
-					"include": "#stringSignle"
+					"include": "#stringSingle"
 				},
 				{
 					"include": "#stringDouble"
@@ -191,7 +191,7 @@
 				}
 			]
 		},
-		"stringSignle": {
+		"stringSingle": {
 			"name": "string.quoted.single.jsona",
 			"begin": "'",
 			"beginCaptures": {

@@ -92,7 +92,7 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
                     }
                     Node::Bool(_) | Node::Number(_) | Node::String(_) => {
                         if let Some(text) = value.scalar_text() {
-                            write_scalar_annotaion(scope.clone(), key, text);
+                            write_scalar_annotation(scope.clone(), key, text);
                         }
                     }
                     Node::Array(_) | Node::Object(_) => {
@@ -114,6 +114,6 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
     scope.newline();
 }
 
-fn write_scalar_annotaion<T: Display>(scope: Scope, key: &Key, value: T) {
+fn write_scalar_annotation<T: Display>(scope: Scope, key: &Key, value: T) {
     scope.write(format!(" {}({})", key, value));
 }
