@@ -1,4 +1,7 @@
-use std::str::FromStr;
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 use indexmap::IndexMap;
 use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node};
@@ -213,5 +216,11 @@ impl NodeValidationError {
             kind,
             info,
         })
+    }
+}
+
+impl Display for NodeValidationError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        format!("{} at {}", self.info, self.keys).fmt(f)
     }
 }

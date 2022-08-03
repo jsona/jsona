@@ -14,7 +14,6 @@ itertools = "0.10"
 jsona = { path = "../jsona", version = "0.4" }
 jsona-util = { path = "../jsona-util", version = "0.1" }
 jsona-lsp = { path = "../jsona-lsp", version = "0.1", optional = true }
-reqwest = "0.11"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2.2"

@@ -89,12 +89,12 @@ impl SchemaAssociations {
     }
 
     pub fn add_from_config(&self, config: &Config) {
-        for schema_opts in &config.schemas {
-            let file_rule = match schema_opts.file_rule.clone() {
+        for schema_rule in &config.rules {
+            let file_rule = match schema_rule.file_rule.clone() {
                 Some(rule) => rule,
                 None => continue,
             };
-            if let Some(url) = &schema_opts.url {
+            if let Some(url) = &schema_rule.url {
                 self.associations.write().push((
                     file_rule.into(),
                     SchemaAssociation {

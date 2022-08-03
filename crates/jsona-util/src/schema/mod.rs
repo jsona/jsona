@@ -20,13 +20,12 @@ pub struct Schemas<E: Environment> {
     env: E,
     associations: SchemaAssociations,
     concurrent_requests: Arc<Semaphore>,
-    http: reqwest::Client,
     validators: Arc<Mutex<LruCache<Url, Arc<JSONASchemaValidator>>>>,
     cache: Cache<E>,
 }
 
 impl<E: Environment> Schemas<E> {
-    pub fn new(env: E, http: reqwest::Client) -> Self {
+    pub fn new(env: E) -> Self {
         let cache = Cache::new(env.clone());
 
         Self {
@@ -34,7 +33,6 @@ impl<E: Environment> Schemas<E> {
             cache,
             env,
             concurrent_requests: Arc::new(Semaphore::new(10)),
-            http,
             validators: Arc::new(Mutex::new(LruCache::new(3))),
         }
     }
@@ -141,14 +139,7 @@ impl<E: Environment> Schemas<E> {
     async fn fetch_external(&self, index_url: &Url) -> Result<JSONASchemaValue, anyhow::Error> {
         let _permit = self.concurrent_requests.acquire().await?;
         let data: Vec<u8> = match index_url.scheme() {
-            "http" | "https" => self
-                .http
-                .get(index_url.clone())
-                .send()
-                .await?
-                .bytes()
-                .await?
-                .to_vec(),
+            "http" | "https" => self.env.fetch_file(index_url).await?,
             "file" => {
                 self.env
                     .read_file(

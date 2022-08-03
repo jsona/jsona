@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-pub use crate::commands::GeneralArgs;
+pub use crate::commands::{AppArgs, Colors, GeneralArgs};
 
 pub mod commands;
 pub mod printing;
@@ -20,17 +20,8 @@ pub struct App<E: Environment> {
 
 impl<E: Environment> App<E> {
     pub fn new(env: E) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        let http = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(5))
-            .build()
-            .unwrap();
-
-        #[cfg(target_arch = "wasm32")]
-        let http = reqwest::Client::default();
-
         Self {
-            schemas: Schemas::new(env.clone(), http),
+            schemas: Schemas::new(env.clone()),
             colors: env.atty_stderr(),
             config: None,
             env,

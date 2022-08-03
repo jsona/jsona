@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, time::Duration};
 
 use crate::config::CONFIG_FILE_NAMES;
 
@@ -90,7 +90,22 @@ impl Environment for NativeEnvironment {
         Ok(tokio::fs::write(path, bytes).await?)
     }
 
-    fn to_file_path(&self, url: &reqwest::Url) -> Option<std::path::PathBuf> {
+    async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(10))
+            .build()
+            .unwrap();
+        let data = client
+            .get(url.clone())
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .to_vec();
+        Ok(data)
+    }
+
+    fn to_file_path(&self, url: &url::Url) -> Option<std::path::PathBuf> {
         url.to_file_path().ok()
     }
 

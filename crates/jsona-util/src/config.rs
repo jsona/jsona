@@ -40,7 +40,7 @@ pub struct Config {
     /// Formatting options.
     pub formatting: Option<formatter::OptionsIncomplete>,
     /// schema validation options.
-    pub schemas: Vec<SchemaRule>,
+    pub rules: Vec<SchemaRule>,
     #[serde(skip)]
     pub file_rule: Option<GlobRule>,
 }
@@ -51,7 +51,7 @@ impl Debug for Config {
             .field("include", &self.include)
             .field("exclude", &self.exclude)
             .field("formatting", &self.formatting)
-            .field("schemas", &self.schemas)
+            .field("rules", &self.rules)
             .finish()
     }
 }
@@ -79,8 +79,8 @@ impl Config {
             self.exclude.as_deref().unwrap_or(&[] as &[String]),
         )?);
 
-        for schema_opts in &mut self.schemas {
-            schema_opts.prepare(e, base)?;
+        for schema_rule in &mut self.rules {
+            schema_rule.prepare(e, base)?;
         }
         Ok(())
     }
@@ -97,7 +97,7 @@ impl Config {
     }
 
     pub fn schema_for<'r>(&'r self, path: &'r Path) -> Option<&'r SchemaRule> {
-        self.schemas.iter().find(|v| v.is_included(path))
+        self.rules.iter().find(|v| v.is_included(path))
     }
 
     pub fn update_format_options(&self, path: &Path, options: &mut formatter::Options) {
@@ -116,7 +116,7 @@ impl Config {
     fn make_absolute(&mut self, e: &impl Environment, base: &Path) {
         make_absolute_paths(&mut self.include, e, base);
         make_absolute_paths(&mut self.exclude, e, base);
-        for schema_rule in &mut self.schemas {
+        for schema_rule in &mut self.rules {
             make_absolute_paths(&mut schema_rule.include, e, base);
             make_absolute_paths(&mut schema_rule.exclude, e, base);
         }

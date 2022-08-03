@@ -41,6 +41,8 @@ pub trait Environment: Clone + Send + Sync + 'static {
 
     async fn write_file(&self, path: &Path, bytes: &[u8]) -> Result<(), anyhow::Error>;
 
+    async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error>;
+
     fn to_file_path(&self, url: &Url) -> Option<PathBuf>;
 
     fn is_absolute(&self, path: &Path) -> bool;

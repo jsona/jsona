@@ -138,7 +138,7 @@ impl Query {
             scope: kind,
             node_at_offset,
             add_value,
-            add_separator: add_separator,
+            add_separator,
             key,
             value,
         }

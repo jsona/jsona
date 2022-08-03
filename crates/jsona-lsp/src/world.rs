@@ -120,25 +120,11 @@ pub struct WorkspaceState<E: Environment> {
 
 impl<E: Environment> WorkspaceState<E> {
     pub(crate) fn new(env: E, root: Url) -> Self {
-        let client;
-        #[cfg(target_arch = "wasm32")]
-        {
-            client = reqwest::Client::builder().build().unwrap();
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            client = reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()
-                .unwrap();
-        }
-
         Self {
             root,
             documents: Default::default(),
             jsona_config: Default::default(),
-            schemas: Schemas::new(env, client),
+            schemas: Schemas::new(env),
             config: LspConfig::default(),
         }
     }
