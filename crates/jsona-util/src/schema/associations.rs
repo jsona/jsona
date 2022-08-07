@@ -13,7 +13,7 @@ pub const SCHEMA_KEY: &str = "@jsonaschema";
 pub mod priority {
     pub const CONFIG: usize = 50;
     pub const LSP_CONFIG: usize = 60;
-    pub const DIRECTIVE: usize = 75;
+    pub const SCHEMA_FIELD: usize = 75;
     pub const MAX: usize = usize::MAX;
 }
 
@@ -22,7 +22,6 @@ pub mod source {
     pub const LSP_CONFIG: &str = "lsp_config";
     pub const MANUAL: &str = "manual";
     pub const SCHEMA_FIELD: &str = "$schema";
-    pub const DIRECTIVE: &str = "directive";
 }
 
 #[derive(Clone, Default)]
@@ -47,10 +46,12 @@ impl SchemaAssociations {
         self.associations.write().clear();
     }
 
-    /// Adds the schema from either a directive, or a `@schema` key in the root.
+    /// Adds the schema from a `@jsonaschema` annotation in the root.
     pub fn add_from_document(&self, doc_url: &Url, root: &Node) {
         self.retain(|(rule, assoc)| match rule {
-            AssociationRule::Url(u) => !(u == doc_url && assoc.meta["source"] == source::DIRECTIVE),
+            AssociationRule::Url(u) => {
+                !(u == doc_url && assoc.meta["source"] == source::SCHEMA_FIELD)
+            }
             _ => true,
         });
         if let Some(url) = root
@@ -80,8 +81,8 @@ impl SchemaAssociations {
                     AssociationRule::Url(doc_url.clone()),
                     SchemaAssociation {
                         url,
-                        priority: priority::DIRECTIVE,
-                        meta: json!({ "source": source::DIRECTIVE }),
+                        priority: priority::SCHEMA_FIELD,
+                        meta: json!({ "source": source::SCHEMA_FIELD }),
                     },
                 ));
             }

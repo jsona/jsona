@@ -36,9 +36,7 @@ pub(crate) async fn document_open<E: Environment>(
             .associations()
             .retain(|(rule, assoc)| match rule {
                 AssociationRule::Url(u) => {
-                    !(u == &p.text_document.uri
-                        && (assoc.meta["source"] != source::DIRECTIVE
-                            || assoc.meta["source"] != source::SCHEMA_FIELD))
+                    !(u == &p.text_document.uri && assoc.meta["source"] != source::SCHEMA_FIELD)
                 }
                 _ => true,
             });
@@ -87,9 +85,7 @@ pub(crate) async fn document_change<E: Environment>(
             .associations()
             .retain(|(rule, assoc)| match rule {
                 AssociationRule::Url(u) => {
-                    !(u == &p.text_document.uri
-                        && (assoc.meta["source"] != source::DIRECTIVE
-                            || assoc.meta["source"] != source::SCHEMA_FIELD))
+                    !(u == &p.text_document.uri && assoc.meta["source"] != source::SCHEMA_FIELD)
                 }
                 _ => true,
             });
