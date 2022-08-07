@@ -13,7 +13,7 @@ pub fn glob(source: &str, target: &str) -> bool {
                             continue 'outer;
                         }
                     }
-                    return true;
+                    return false;
                 }
                 None => return true,
             },
@@ -53,4 +53,5 @@ fn test_glob_key() {
     assert!(!glob("abc", "adc"));
     assert!(!glob("abc", "abcd"));
     assert!(!glob("a?c", "abbc"));
+    assert!(!glob("*.log", "abc"));
 }
