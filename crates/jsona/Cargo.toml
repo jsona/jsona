@@ -2,16 +2,14 @@
 name = "jsona"
 version = "0.4.0"
 authors = ["sigoden <sigoden@gmail.com>"]
-edition = "2018"
-description = "JSONA is JSON superset. JSONA = JSON (less grammatical restrictions) + Annotation."
-documentation = "https://github.com/sigoden/jsona"
-repository = "https://github.com/sigoden/jsona"
-keywords = ["jsona", "parser"]
+edition = "2021"
+description = "A JSONA parser, analyzer and formatter library"
+homepage = "https://jsona.github.io"
+repository = "https://github.com/jsona/jsona"
+keywords = ["jsona", "parser", "formatter", "linter", "ast"]
 categories = ["encoding", "parser-implementations"]
-license = "MIT"
-readme = "README.md"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT OR Apache-2.0"
+readme = false
 
 [dependencies]
 arc-swap = "1.5"

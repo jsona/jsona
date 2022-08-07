@@ -2,8 +2,12 @@
 name = "jsona-cli"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A JSONA toolkit CLI"
+homepage = "https://jsona.github.io/cli"
+repository = "https://github.com/jsona/jsona"
+keywords = ["jsona", "parser", "formatter", "linter"]
+categories = ["development-tools", "command-line-utilities"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 anyhow = { version = "1", features = ["backtrace"] }
@@ -41,5 +45,5 @@ name = "jsona"
 path = "bin/jsona.rs"
 
 [features]
-default = []
+default = ["lsp"]
 lsp = ["jsona-lsp", "async-ctrlc"]

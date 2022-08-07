@@ -2,7 +2,10 @@
 name = "jsona-schema"
 version = "0.1.0"
 edition = "2021"
-description = "A jsona dsl for jsonschema"
+description = "A jsonschema dsl in jsona"
+repository = "https://github.com/jsona/jsona"
+keywords = ["jsona", "dsl", "jsonschema"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 either = { version = "1.7", features = ["serde"] }

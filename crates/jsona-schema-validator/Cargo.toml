@@ -2,9 +2,11 @@
 name = "jsona-schema-validator"
 version = "0.1.0"
 edition = "2021"
-description = "A jsona schema validator"
+description = "A jsonaschema validator implementation."
+repository = "https://github.com/jsona/jsona"
+keywords = ["jsona", "validator", "jsonaschema"]
+license = "MIT OR Apache-2.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 thiserror = "1"

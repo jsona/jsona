@@ -9,10 +9,14 @@
     "vscode": "^1.44.0"
   },
   "icon": "icon.png",
-  "homepage": "https://github.com/sigoden/jsona/blob/main/editors/vscode/README.md",
+  "homepage": "https://github.com/jsona/jsona",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sigoden/jsona"
+    "url": "https://github.com/jsona/jsona",
+    "directory": "editors/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/jsona/jsona/issues"
   },
   "keywords": [
     "jsona",

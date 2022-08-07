@@ -3,8 +3,9 @@ name = "jsona-util"
 version = "0.1.0"
 edition = "2021"
 description = "Shared code for jsona utilities."
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+repository = "https://github.com/jsona/jsona"
+keywords = ["jsona", "util"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 async-trait = "0.1"

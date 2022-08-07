@@ -1,3 +1,3 @@
-# Rust jsona parser 
+# JSONA
 
-JSONA is JSON superset. JSONA = JSON (less grammatical restrictions) + Annotation. see [json/spec](https://github.com/jsona/spec) for details.
+JSONA is JSON superset. JSONA = JSON(Data) + Annotation(Logic).  more details on [**Website**](https://jsona.github.io).

@@ -1,7 +1,7 @@
 
 A JSONA language support extension with lsp supported.
 
-It is currently a **preview extension**, it might contain bugs, or might even crash. If you encounter any issues, please report them [on github](https://github.com/sigoden/jsona/issues).
+It is currently a **preview extension**, it might contain bugs, or might even crash. If you encounter any issues, please report them [on github](https://github.com/jsona/jsona/issues).
 
 - [Features](#features)
   - [Syntax highlighting](#syntax-highlighting)
@@ -53,4 +53,4 @@ Schemas can be associated with document URIs with the `jsona.schema.associations
 
 # Configuration File
 
-Jsona CLI's [configuration file](https://github.com/sigoden/jsona/blob/main/docs/config-file.md) is supported and automatically found in workspace roots, or can be manually set in the VS Code configuration.
+Jsona CLI's [configuration file](https://github.com/jsona/jsona/blob/main/docs/config-file.md) is supported and automatically found in workspace roots, or can be manually set in the VS Code configuration.
