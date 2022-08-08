@@ -36,6 +36,10 @@ jobs:
           os: ubuntu-latest
           use-cross: true
           cargo-flags: ""
+        - target: armv7-unknown-linux-musleabihf
+          os: ubuntu-latest
+          use-cross: true
+          cargo-flags: ""
     runs-on: ${{matrix.os}}
 
     steps:
