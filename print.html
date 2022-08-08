@@ -1,0 +1,548 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>JSONA</title>
+        <meta name="robots" content="noindex" />
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="spec.html"><strong aria-hidden="true">1.</strong> Specification</a></li><li class="chapter-item expanded "><a href="cli.html"><strong aria-hidden="true">2.</strong> Command Line</a></li><li class="chapter-item expanded "><a href="lsp.html"><strong aria-hidden="true">3.</strong> Language Server</a></li><li class="chapter-item expanded "><a href="config.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="schema.html"><strong aria-hidden="true">5.</strong> Jsona Schema</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">JSONA</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="specification"><a class="header" href="#specification">Specification</a></h1>
+<ul>
+<li><a href="spec.html#specification">Specification</a>
+<ul>
+<li><a href="spec.html#introduction">Introduction</a></li>
+<li><a href="spec.html#example">Example</a></li>
+<li><a href="spec.html#json">JSON</a>
+<ul>
+<li><a href="spec.html#support-for-comments">Support for comments</a></li>
+<li><a href="spec.html#use-quotes-freely-on-property-key">Use quotes freely on property key</a></li>
+<li><a href="spec.html#allow-extra-trailing-commas">Allow extra trailing commas</a></li>
+<li><a href="spec.html#omit-part-of-floating-point-numbers">Omit part of floating point numbers</a></li>
+<li><a href="spec.html#multiple-bases-support">Multiple bases support</a></li>
+<li><a href="spec.html#support-single-quotes-and-backtick-quotes">Support single quotes and backtick quotes</a></li>
+<li><a href="spec.html#multi-line-string">Multi-line string</a></li>
+<li><a href="spec.html#escape-string">Escape string</a></li>
+</ul>
+</li>
+<li><a href="spec.html#annotation">Annotation</a>
+<ul>
+<li><a href="spec.html#insert-position">Insert position</a></li>
+<li><a href="spec.html#annotation-value">Annotation value</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<p>JSONA = JSON + Annotation. JSON describes the data, Annotation describes the logic.</p>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p>The examples below cover all the features of JSONA.</p>
+<pre><code>/*
+ multiple line comment
+*/
+
+// single line comment
+
+{
+    @foo /* abc */ @optional
+    @null(null) // single line comment
+    @bool(true)
+    @float(3.14)
+    @number(-3)
+    @string('abc &quot;def&quot; ghi')
+    @array([3,4])
+    @object({
+        k1: &quot;v1&quot;,
+        k2: &quot;v2&quot;,
+    })
+
+    nullValue: /* xyz */ null,
+    boolTrue: true,
+    boolFalse: false,
+    float: 3.14,
+    floatNegative: -3.14,
+    floatNegativeWithoutInteger: -.14,
+    floatNegativeWithoutDecimal: -3.,
+    integer: 3,
+    hex: 0x1a,
+    binary: 0b01,
+    octal: 0o12,
+    integerNegative: -3,
+    stringSingleQuota: 'abc &quot;def&quot; ghi',
+    stringDoubleQuota: &quot;abc 'def' ghi&quot;,
+    stringBacktick: `abc
+def \`
+xyz`,
+    stringEscape1: '\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}',
+    stringEscape2: &quot;\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}&quot;,
+    stringEscape3: `\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}`,
+    arrayEmpty: [], 
+    arrayEmptyMultiLine: [ @array
+    ],
+    arrayEmptyWithAnnotation: [],  // @array
+    arraySimple: [ @array
+        &quot;a&quot;, @upper
+        &quot;b&quot;,
+    ],
+    arrayOnline: [&quot;a&quot;, &quot;b&quot;], @array
+    arrayExtraComma: [&quot;a&quot;, &quot;b&quot;,],
+    objectEmpty: {},
+    objectEmptyMultiLine: { @object
+    },
+    objectEmptyWithAnnotation: {}, @use(&quot;Object4&quot;)
+    objectSimple: { @save(&quot;Object4&quot;)
+        k1: &quot;v1&quot;, @upper
+        k2: &quot;v2&quot;,
+    },
+    objectOneLine: { k1: &quot;v1&quot;, k2: &quot;v2&quot; }, @object
+    objectExtraComma: { k1: &quot;v1&quot;, k2: &quot;v2&quot;, },
+}
+</code></pre>
+<h2 id="json"><a class="header" href="#json">JSON</a></h2>
+<p>JSONA is a superset of JSON, borrowing the syntax of ECMAScript to alleviate some of the limitations of JSON.</p>
+<h3 id="support-for-comments"><a class="header" href="#support-for-comments">Support for comments</a></h3>
+<pre><code>/**
+ multiple lines comment
+*/
+// single line  comment
+{
+  @anno /* inline comment */ @anno
+}
+</code></pre>
+<h3 id="use-quotes-freely-on-property-key"><a class="header" href="#use-quotes-freely-on-property-key">Use quotes freely on property key</a></h3>
+<pre><code>{
+  &quot;a&quot;: 1,
+  b: 2,
+  'a': 3,
+  `a`: 4,
+}
+</code></pre>
+<h3 id="allow-extra-trailing-commas"><a class="header" href="#allow-extra-trailing-commas">Allow extra trailing commas</a></h3>
+<pre><code>{
+  a: 3,
+  b: 4,
+  c: [
+    'x',
+    'y',
+  ],
+}
+</code></pre>
+<h3 id="omit-part-of-floating-point-numbers"><a class="header" href="#omit-part-of-floating-point-numbers">Omit part of floating point numbers</a></h3>
+<pre><code>{
+  a: 3.,
+  b: .1,
+  c: 3.1,
+}
+</code></pre>
+<h3 id="multiple-bases-support"><a class="header" href="#multiple-bases-support">Multiple bases support</a></h3>
+<pre><code>{
+  integer: 3,
+  hex: 0x1a,
+  binary: 0b01,
+  octal: 0o12,
+}
+</code></pre>
+<h3 id="support-single-quotes-and-backtick-quotes"><a class="header" href="#support-single-quotes-and-backtick-quotes">Support single quotes and backtick quotes</a></h3>
+<pre><code>{
+  x: 'abc &quot;def&quot; ghi',
+  y: &quot;abc 'def' ghi&quot;,
+  z: `abc &quot;def&quot;, 'ghi'`,
+}
+</code></pre>
+<h3 id="multi-line-string"><a class="header" href="#multi-line-string">Multi-line string</a></h3>
+<pre><code>{
+  x: `abc
+  def`
+}
+</code></pre>
+<h3 id="escape-string"><a class="header" href="#escape-string">Escape string</a></h3>
+<pre><code>{
+  x: '\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}', // single quote
+  y: &quot;\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}&quot;, // double quote
+  z: `\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}`, // backtick quote
+}
+</code></pre>
+<h2 id="annotation"><a class="header" href="#annotation">Annotation</a></h2>
+<p>Annotations are marked with <code>@</code> followed by a variable name. Annotations may or may not have value.</p>
+<h3 id="insert-position"><a class="header" href="#insert-position">Insert position</a></h3>
+<p>Here's a list of where all the annotations are in JSONA:</p>
+<pre><code>{ @anno 
+  @anno
+  v1: 1, @anno
+  v2: {}, @anno
+  v3: [], @anno
+  v4: [ @anno
+  ],
+  v5: [
+    @anno
+  ],
+  v6: [
+  ], @anno
+} @anno
+@anno
+</code></pre>
+<h3 id="annotation-value"><a class="header" href="#annotation-value">Annotation value</a></h3>
+<p>Annotation values ​​must be enclosed in parentheses, but can be omitted.</p>
+<p>Annotation values ​​must be valid but no annotation JSONA, annotation values ​​cannot nest annotation values.</p>
+<pre><code>@anno
+@anno(null)
+@anno(true)
+@anno('a')
+@anno(3)
+@anno(0.3)
+@anno([])
+@anno(['a'])
+@anno({})
+@anno({a:3})
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="command-line"><a class="header" href="#command-line">Command Line</a></h1>
+<p>JSONA CLI aims to be an one stop shop tool for working with JSONA files via the command line. The features include validation, formatting, and querying JSONA documents with a jq-like fashion.</p>
+<h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
+<h3 id="binary-releases"><a class="header" href="#binary-releases">Binary Releases</a></h3>
+<p>We pre-compile each release for all major operating systems, these releases can be found on <a href="https://github.com/jsona/jsona/releases">GitHub Releases</a>.</p>
+<h3 id="cargo"><a class="header" href="#cargo">Cargo</a></h3>
+<p>If you have a Rust toolchain installed, you can install CLI via the jsona-cli crate from crates.io.</p>
+<pre><code>cargo install jsona-cli --locked
+</code></pre>
+<blockquote>
+<p>Make sure to use <code>--locked</code> if you run into weird compile errors due to incompatible dependencies.</p>
+</blockquote>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<pre><code>USAGE:
+    jsona [OPTIONS] &lt;SUBCOMMAND&gt;
+
+OPTIONS:
+        --colors &lt;COLORS&gt;    [default: auto] [possible values: auto, always, never]
+    -h, --help               Print help information
+        --log-spans          Enable logging spans
+    -V, --version            Print version information
+        --verbose            Enable a verbose logging format
+
+SUBCOMMANDS:
+    format    Format JSONA documents [aliases: fmt]
+    get       Extract a value from the given JSONA document
+    help      Print this message or the help of the given subcommand(s)
+    lint      Lint JSONA documents [aliases: check, validate]
+    lsp       Language server operations
+</code></pre>
+<h3 id="configuration"><a class="header" href="#configuration">Configuration</a></h3>
+<h4 id="log-level"><a class="header" href="#log-level">Log Level</a></h4>
+<p>JSONA CLI uses the Rust <code>tracing</code> library for configurable logging features and respects the <code>RUST_LOG</code> environment variable. All logs regardless of log level are printed to the standard error output.</p>
+<p>In most cases you might wish to disable logging below a certain log level.
+As an example if you wish to only see error messages, you can do the following:</p>
+<pre><code class="language-sh">RUST_LOG=error jsona lint foo.jsona
+</code></pre>
+<p>The available log levels:</p>
+<ul>
+<li><code>trace</code></li>
+<li><code>debug</code></li>
+<li><code>info</code></li>
+<li><code>warn</code></li>
+<li><code>error</code></li>
+</ul>
+<h4 id="configuration-file"><a class="header" href="#configuration-file">Configuration File</a></h4>
+<p>JSONA CLI by default searches for a JSONA config file in the current working directory, this behavior can be disabled by either supplying <code>--no-auto-config</code> or <code>--config &lt;path&gt;</code> flags.</p>
+<h3 id="validation"><a class="header" href="#validation">Validation</a></h3>
+<p>JSONA CLI supports validation of JSONA files, by default it will only look for syntax errors and some semantic errors such as duplicate keys.</p>
+<pre><code class="language-sh">jsona lint foo.jsona
+</code></pre>
+<h4 id="schema-validation"><a class="header" href="#schema-validation">Schema Validation</a></h4>
+<p>JSONA supports validation via <a href="crates/jsona-schema-validator">JSONA Schemas</a>.</p>
+<pre><code class="language-sh">jsona lint --schema https://example.com/foo-schema.json foo.jsona
+</code></pre>
+<h3 id="formatting"><a class="header" href="#formatting">Formatting</a></h3>
+<p>It is possible to format files in-place or via standard i/o.</p>
+<pre><code class="language-sh">jsona fmt foo.jsona
+</code></pre>
+<p>Or</p>
+<pre><code class="language-sh">cat foo.jsona | jsona fmt -
+</code></pre>
+<blockquote>
+<p>By default JSONA CLI will bail on documents that contain syntax errors to avoid destructive edits, you can use the <code>--force</code> flag to suppress this and try to format the invalid document(s) anyway.</p>
+</blockquote>
+<h4 id="options"><a class="header" href="#options">Options</a></h4>
+<p>Formatter options are read from the <a href="./configuration.html#configuration-file">configuration file</a>, on top of that it is possible to specify overrides via the <code>--option</code> flag:</p>
+<pre><code class="language-sh">jsona fmt --option trailing_comma=true foo.jsona
+</code></pre>
+<h4 id="check"><a class="header" href="#check">Check</a></h4>
+<p>It is possible to check whether the given files are properly formatted via the <code>--check</code> flag. When this flag is supplied, no formatting will be done.</p>
+<h3 id="querying"><a class="header" href="#querying">Querying</a></h3>
+<p>It is possible to query specific values via a simple query expressions.</p>
+<pre><code>jsona get -f foo.jsona 'foo[1].bar'
+</code></pre>
+<p>This will print value in plain json. Use option <code>-A</code> to print json with annotations.</p>
+<h3 id="language-server"><a class="header" href="#language-server">Language Server</a></h3>
+<p>The JSONA language server can be used via the CLI and it supports communication via standard i/o or TCP.</p>
+<h4 id="via-standard-io"><a class="header" href="#via-standard-io">Via Standard i/o</a></h4>
+<pre><code>jsona lsp stdio
+</code></pre>
+<p>In this mode JSONA CLI expects messages from the standard input, and will print messages intended for the client to the standard output.</p>
+<h4 id="via-tcp"><a class="header" href="#via-tcp">Via TCP</a></h4>
+<pre><code>jsona lsp tcp --address 0.0.0.0:9181
+</code></pre>
+<p>The server will listen on the given TCP address.</p>
+<p>Multiple clients are not supported.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="language-server-1"><a class="header" href="#language-server-1">Language Server</a></h1>
+<p>JSONA LSP Server and IDE support.</p>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+Diagnostic</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Completion</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Document Symbol</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Folding Range</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Formatting</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Hover</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Selection Range</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Schema-related Commands</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
+<h2 id="configuration-file-1"><a class="header" href="#configuration-file-1">Configuration File</a></h2>
+<p>JSONA supports configuration via file, unsurprisingly it uses the JSONA format.</p>
+<p>By default, every tool looks for one in the working directory or the root of the workspace by <code>.jsona</code></p>
+<h3 id="include"><a class="header" href="#include">Include</a></h3>
+<p>The <code>include</code> property is an array of <a href="https://en.wikipedia.org/wiki/Glob_(programming)">glob</a> path strings that are relative to the working directory (or root of the workspace),
+the matched files are included in the operations by the tools unless explicitly overwritten. The pattern supports globstars (<code>**</code>) for recursive search.</p>
+<p>If this property is omitted, <code>JSONA</code> files will be searched in the entire child directory tree from the root.</p>
+<blockquote>
+<p>If <code>include</code> is present but empty, <strong>no files will be included</strong>.</p>
+</blockquote>
+<pre><code class="language-toml">include = [&quot;api.jsona&quot;, &quot;some_directory/**/*.jsona&quot;]
+</code></pre>
+<h3 id="exclude"><a class="header" href="#exclude">Exclude</a></h3>
+<p>The <code>exclude</code> property has the same semantics as <code>include</code> and takes precedence over it.</p>
+<p>The following will exclude <code>mixin.jsona</code> from the includes written above, so files matching <code>some_directory/**/*.toml</code> will be included only.</p>
+<pre><code class="language-toml">exclude = [&quot;mixin.jsona&quot;]
+</code></pre>
+<h3 id="formatting-options"><a class="header" href="#formatting-options">Formatting Options</a></h3>
+<p>The <code>formatting</code> table contains optional <a href="config.html#formatting-options">formatting options</a> for the formatter:</p>
+<pre><code class="language-toml">[formatting]
+tailing_comma = false
+</code></pre>
+<h3 id="rules"><a class="header" href="#rules">Rules</a></h3>
+<p>The <code>rule</code> array of tables consist of rules that overwrite the above configuration based on some conditions.
+Thus it has the same <code>formatting</code> and <code>schema</code> settings, and the <code>include</code> and <code>exclude</code> with the same semantics as their <a href="config.html#include">global variants</a>, however this time they are used to determine whether the rule applies.</p>
+<blockquote>
+<p>In case of overlapping rules, the last defined rule always takes precedence.</p>
+</blockquote>
+<p>Let's say we want to sort our <code>Cargo</code> dependencies, but nothing else, here is how we would do that:</p>
+<pre><code class="language-toml">[formatting]
+tailing_comma = false
+
+[[rule]]
+name = &quot;openapi&quot;
+include = [&quot;**/api*.jsona&quot;]
+path = &quot;./schemastore/openapi.schema.jsona&quot;
+
+[rule.formatting]
+tailing_comma = true
+</code></pre>
+<h2 id="formatter-options"><a class="header" href="#formatter-options">Formatter Options</a></h2>
+<p>This page contains a list of formatting options the formatter accepts.</p>
+<blockquote>
+<p>In some environments (e.g. in Visual Studio Code and JavaScript) the option keys are <em>camelCase</em> to better fit the conventions. For example <code>tailing_comma</code> becomes <code>tailingComma</code>.</p>
+</blockquote>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">option</th><th style="text-align: left">description</th><th style="text-align: left">default</th></tr></thead><tbody>
+<tr><td style="text-align: left">indent_string</td><td style="text-align: left">Indentation to use, should be tabs or spaces but technically could be anything</td><td style="text-align: left">2 spaces (&quot;  &quot;)</td></tr>
+<tr><td style="text-align: left">trailing_comma</td><td style="text-align: left">Put trailing commas for multiline arrays/objects</td><td style="text-align: left">true</td></tr>
+<tr><td style="text-align: left">trailing_newline</td><td style="text-align: left">Add trailing newline to the source</td><td style="text-align: left">true</td></tr>
+</tbody></table>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="jsona-schema"><a class="header" href="#jsona-schema">Jsona Schema</a></h1>
+<p>A jsonaschmea is mainly used for: </p>
+<ul>
+<li>verify jsona document</li>
+<li>code completions</li>
+</ul>
+<h2 id="developing-schemas"><a class="header" href="#developing-schemas">Developing Schemas</a></h2>
+<p>See <a href="https://github.com/jsona/schemastore/README.md">schemastore</a> for more details.</p>
+<h2 id="using-schema"><a class="header" href="#using-schema">Using schema</a></h2>
+<p>JSONA schemas can be assigned to JSONA documents according to the following in priority order starting with the highest priority:</p>
+<ul>
+<li>set manually in the environment, e.g. as <a href="./cli.html#using-a-specific-schema">a CLI flag</a> or an IDE setting</li>
+<li>as an URL under the <code>@jsonaschema</code> annotation in the root of the document</li>
+<li>configuration file <a href="./config.html#rules">rule</a></li>
+<li>contributed by an <a href="schema.html#visual-studio-code-extensions">extension</a> <em>(Visual Studio Code only)</em></li>
+</ul>
+<h2 id="visual-studio-code-extensions"><a class="header" href="#visual-studio-code-extensions">Visual Studio Code extensions</a></h2>
+<p>Similarly to <a href="https://code.visualstudio.com/api/references/contribution-points#contributes.jsonValidation"><code>jsonValidation</code></a>, it is possible for extensions to contribute their own schemas.</p>
+<p>Other than <code>fileMatch</code>, it is also possible to specify <code>regexMatch</code> that is matched against the entire document URI.</p>
+<pre><code class="language-json">{
+  &quot;contributes&quot;: {
+    &quot;jsonaValidation&quot;: [
+      {
+        &quot;regexMatch&quot;: &quot;^.*foo.jsona$&quot;,
+        &quot;url&quot;: &quot;https://json.schemastore.org/foo.json&quot;
+      }
+    ]
+  }
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+    </body>
+</html>
