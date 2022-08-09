@@ -7,10 +7,10 @@ use crate::syntax::{SyntaxElement, SyntaxKind};
 use crate::util::shared::Shared;
 use crate::util::{quote, unquote, QuoteType};
 
+use indexmap::IndexMap;
 use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};
 use serde_json::Number as JsonNumber;
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::string::String as StdString;
 use std::sync::Arc;
@@ -768,7 +768,7 @@ impl std::hash::Hash for Key {
 
 #[derive(Debug, Clone, Default)]
 pub struct Map {
-    pub(crate) value: HashMap<Key, (Node, Option<SyntaxElement>)>,
+    pub(crate) value: IndexMap<Key, (Node, Option<SyntaxElement>)>,
 }
 
 impl Map {
