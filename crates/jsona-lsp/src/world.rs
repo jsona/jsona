@@ -23,7 +23,7 @@ use lsp_types::Url;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::json;
-use std::{path::Path, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 pub type World<E> = Arc<WorldState<E>>;
 
@@ -221,10 +221,7 @@ impl<E: Environment> WorkspaceState<E> {
             let source = std::str::from_utf8(&source)?;
             self.jsona_config = Config::from_jsona(source)?;
 
-            // This is different from the path we found the config in, in this case
-            // we wish to keep the scheme of the path.
-            let base_path = Path::new(self.root.as_str());
-            self.jsona_config.prepare(env, base_path)?;
+            self.jsona_config.prepare(env, &root_path)?;
 
             tracing::debug!("using config: {:#?}", self.jsona_config);
         }

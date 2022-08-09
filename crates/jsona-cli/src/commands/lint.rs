@@ -7,6 +7,7 @@ use jsona::parser;
 use jsona_util::{
     environment::Environment,
     schema::associations::{AssociationRule, SchemaAssociation},
+    util::to_file_url,
 };
 use serde_json::json;
 use std::path::Path;
@@ -23,11 +24,21 @@ impl<E: Environment> App<E> {
 
         if !cmd.no_schema {
             if let Some(schema_url) = cmd.schema.clone() {
+                let url: Url = match schema_url.parse() {
+                    Ok(url) => url,
+                    Err(_) => {
+                        let cwd = self.env.cwd().ok_or_else(|| {
+                            anyhow!("could not figure the current working directory")
+                        })?;
+                        to_file_url(&schema_url, &cwd)
+                            .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_url))?
+                    }
+                };
                 self.schemas.associations().add(
                     AssociationRule::regex(".*")?,
                     SchemaAssociation {
                         meta: json!({"source": "command-line"}),
-                        url: schema_url,
+                        url,
                         priority: 999,
                     },
                 );
@@ -135,7 +146,7 @@ pub struct LintCommand {
 
     /// URL to the schema to be used for validation.
     #[clap(long)]
-    pub schema: Option<Url>,
+    pub schema: Option<String>,
 
     /// Disable all schema validations.
     #[clap(long)]

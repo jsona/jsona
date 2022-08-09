@@ -1,14 +1,14 @@
 use std::fmt::Debug;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use jsona::dom::Node;
 use jsona::formatter;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::environment::Environment;
-use crate::util::GlobRule;
+use crate::util::{to_file_url, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
 
@@ -84,7 +84,7 @@ impl Config {
         )?);
 
         for schema_rule in &mut self.rules {
-            schema_rule.prepare(e, base)?;
+            schema_rule.prepare(base)?;
         }
         Ok(())
     }
@@ -186,7 +186,7 @@ impl Debug for SchemaRule {
 }
 
 impl SchemaRule {
-    fn prepare(&mut self, e: &impl Environment, base: &Path) -> Result<(), anyhow::Error> {
+    fn prepare(&mut self, base: &Path) -> Result<(), anyhow::Error> {
         let default_include = String::from("**");
         self.file_rule = Some(GlobRule::new(
             self.include
@@ -196,13 +196,7 @@ impl SchemaRule {
         )?);
         let url = match self.path.take() {
             Some(p) => {
-                let s = if e.is_absolute(Path::new(&p)) {
-                    PathBuf::from(p).to_string_lossy().into_owned()
-                } else {
-                    safe_json_path(base, p.as_str())
-                };
-
-                Some(Url::parse(&s).with_context(|| format!("invalid schema path `{s}`"))?)
+                Some(to_file_url(&p, base).ok_or_else(|| anyhow!("invalid schema path `{}`", p))?)
             }
             None => self.url.take(),
         };
@@ -223,19 +217,12 @@ impl SchemaRule {
 
 fn make_absolute_paths(paths: &mut Option<Vec<String>>, e: &impl Environment, base: &Path) {
     if let Some(paths) = paths {
-        for pat in paths {
-            if !e.is_absolute(Path::new(pat)) {
-                *pat = safe_json_path(base, pat.as_str())
+        for p in paths {
+            if !e.is_absolute(Path::new(p)) {
+                if let Some(url) = to_file_url(p, base) {
+                    *p = url.to_string()
+                }
             }
         }
-    }
-}
-
-fn safe_json_path(base: &Path, pat: &str) -> String {
-    let output = base.join(pat).to_string_lossy().into_owned();
-    if output.starts_with("file:") {
-        output
-    } else {
-        format!("file://{}", output)
     }
 }

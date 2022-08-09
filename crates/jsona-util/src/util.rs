@@ -36,3 +36,17 @@ impl GlobRule {
         !self.exclude.is_match(text.as_ref())
     }
 }
+
+/// Convert path to file url
+pub fn to_file_url(path: &str, base: &Path) -> Option<url::Url> {
+    if let Ok(url) = url::Url::parse(path) {
+        return Some(url);
+    }
+    let path = Path::new(path);
+    let path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        base.join(path)
+    };
+    url::Url::from_file_path(&path).ok()
+}
