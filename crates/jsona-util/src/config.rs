@@ -39,8 +39,12 @@ pub struct Config {
 
     /// Formatting options.
     pub formatting: Option<formatter::OptionsIncomplete>,
-    /// schema validation options.
+
+    /// Rules are used to override configurations by path.
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub rules: Vec<SchemaRule>,
+
     #[serde(skip)]
     pub file_rule: Option<GlobRule>,
 }
