@@ -1,0 +1,80 @@
+#!/bin/bash
+set -e
+
+CRATES=( \
+    jsona \
+    jsona-schema \
+    jsona-schema-validator \
+    jsona-util \
+    jsona-lsp \
+    jsona-cli \
+)
+
+# @cmd Run jsona-cli
+# @arg args*
+run() {
+    cargo run -p jsona-cli -- $@
+}
+
+# @cmd Build jsona-cli
+# @alias i
+# @flag --prod
+install() {
+    if [[ $argc_prod -eq 1 ]]; then
+        cargo build -r -p jsona-cli
+        cp -f target/release/jsona $HOME/.cargo/bin/
+        ls -alh $HOME/.cargo/bin/jsona
+    else
+        cargo build -p jsona-cli
+        cp -f target/debug/jsona $HOME/.cargo/bin/
+        ls -alh $HOME/.cargo/bin/jsona
+    fi
+}
+
+# @cmd Publish crate to carte.io
+publish() {
+    for name in ${CRATES[@]}; do
+        online_ver=$(curl -fsSL https://crates.io/api/v1/crates/$name 2>/dev/null | jq -r '.crate.newest_version')
+        crate_ver=$(cargo pkgid -p $name | sed 's/.*#//')
+        if [[ "$online_ver" != "$crate_ver" ]]; then
+            read -p "Upgrade $name from $online_ver to $crate_ver (y/n)? " choice
+            if [[ "$choice" == y ]]; then
+                cargo publish -p $name
+            fi
+        fi
+    done
+}
+
+# @cmd Print jsona syntax
+# @arg jsona_file!
+example.syntax() {
+    cargo run -p jsona --example syntax -- $argc_jsona_file
+}
+
+# @cmd Parse jsona dom and print value
+# @arg jsona_file!
+example.ast() {
+    cargo run -p jsona --example syntax -- $argc_jsona_file
+}
+
+# @cmd Format jsona doc
+# @arg jsona_file!
+example.format() {
+    cargo run -p jsona --example format -- $argc_jsona_file
+}
+
+# @cmd Convert jsona jsonschema to plain jsonschema
+# @arg jsona_file!
+# @arg pointer
+example.to-json-schema() {
+    cargo run -p jsona-schema --example to-json-schema -- $argc_jsona_file $argc_pointer
+}
+
+# @cmd Get jsona schema value
+# @arg jsona_file!
+# @arg pointer
+example.jsona-schema-value() {
+    cargo run -p jsona-schema-validator --example jsona-schema-value -- $argc_jsona_file $argc_pointer
+}
+
+eval "$(argc --argc-eval $0 "$@")"
