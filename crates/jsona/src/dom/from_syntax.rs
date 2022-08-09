@@ -18,14 +18,15 @@ use crate::{
 pub fn from_syntax(root: SyntaxElement) -> Node {
     assert!(root.kind() == VALUE);
     let annotations = annotations_from_syntax(root.clone());
-    match first_value_child(&root) {
-        None => invalid_from_syntax(root, annotations),
-        Some(syntax) => match syntax.kind() {
+    if let Some(syntax) = first_value_child(&root) {
+        match syntax.kind() {
             SCALAR => scalar_from_syntax(root, syntax, annotations),
             ARRAY => array_from_syntax(root, syntax, annotations),
             OBJECT => object_from_syntax(root, syntax, annotations),
-            _ => invalid_from_syntax(root, annotations),
-        },
+            k => unreachable!("unexpected syntax {:?}", k),
+        }
+    } else {
+        null_from_syntax(root, annotations, false)
     }
 }
 
@@ -132,7 +133,7 @@ fn scalar_from_syntax(
     let errors: Vec<Error> = Default::default();
     let syntax = match syntax.into_node().and_then(|v| v.first_child_or_token()) {
         Some(v) => v,
-        _ => return invalid_from_syntax(root, annotations),
+        _ => unreachable!("scalar syntax must contain a token"),
     };
     match syntax.kind() {
         NULL => NullInner {
@@ -210,7 +211,7 @@ fn scalar_from_syntax(
                 .wrap()
                 .into()
             } else {
-                invalid_from_syntax(root, annotations)
+                unreachable!("unexpected float token {}", syntax.to_string())
             }
         }
         SINGLE_QUOTE => StringInner {
@@ -243,7 +244,7 @@ fn scalar_from_syntax(
         }
         .wrap()
         .into(),
-        _ => invalid_from_syntax(root, annotations),
+        _ => null_from_syntax(root, annotations, true),
     }
 }
 
@@ -399,14 +400,22 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
     add_to_map(map, errors, key, value, Some(syntax.into()));
 }
 
-fn invalid_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>) -> Node {
-    let errors = Vec::from([Error::UnexpectedSyntax {
-        syntax: syntax.clone(),
-    }]);
+fn null_from_syntax(
+    syntax: SyntaxElement,
+    annotations: Option<Annotations>,
+    invalid: bool,
+) -> Node {
+    let errors = if invalid {
+        Vec::from([Error::UnexpectedSyntax {
+            syntax: syntax.clone(),
+        }])
+    } else {
+        Default::default()
+    };
     NullInner {
         errors: errors.into(),
-        node_syntax: Some(syntax.clone()),
-        syntax: Some(syntax),
+        node_syntax: Some(syntax),
+        syntax: None,
         annotations,
     }
     .wrap()
