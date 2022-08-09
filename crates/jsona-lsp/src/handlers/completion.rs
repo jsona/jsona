@@ -55,16 +55,19 @@ pub async fn completion<E: Environment>(
         return Ok(None);
     }
 
-    let (mut keys, node) = match Query::node_at(&doc.dom, query.node_at_offset) {
+    let (keys, node) = match Query::node_at(&doc.dom, query.node_at_offset) {
         Some(v) => v,
         None => return Ok(None),
     };
+    let query_keys = match &query.scope {
+        ScopeKind::AnnotationKey => {
+            Keys::single(Key::annotation(query.key.as_ref().unwrap().text()))
+        }
+        ScopeKind::PropertyKey => keys.parent().unwrap_or_default(),
+        _ => keys.clone(),
+    };
 
-    if query.scope == ScopeKind::AnnotationKey {
-        keys = Keys::single(Key::annotation(query.key.as_ref().unwrap().text()))
-    }
-
-    let schemas = ws.schemas_at_path(&document_uri, &keys).await;
+    let schemas = ws.schemas_at_path(&document_uri, &query_keys).await;
     tracing::debug!(
         ?query,
         "completion keys={} schemas={}",
@@ -76,7 +79,7 @@ pub async fn completion<E: Environment>(
         ScopeKind::AnnotationKey => {
             let props = node.annotations().map(|v| v.map_keys()).unwrap_or_default();
             match schemas.as_ref() {
-                Some(schemas) => complete_properties(doc, &query, &props, schemas),
+                Some(schemas) => complete_annotations_and_properties(doc, &query, &props, schemas),
                 None => complete_annotations_schemaless(doc, &query, &props),
             }
         }
@@ -86,7 +89,7 @@ pub async fn completion<E: Environment>(
                 .map(|v| v.properties_keys())
                 .unwrap_or_default();
             match schemas.as_ref() {
-                Some(schemas) => complete_properties(doc, &query, &props, schemas),
+                Some(schemas) => complete_annotations_and_properties(doc, &query, &props, schemas),
                 None => complete_properties_schemaless(doc, &query, &props, &keys),
             }
         }
@@ -104,7 +107,7 @@ pub async fn completion<E: Environment>(
     Ok(result)
 }
 
-fn complete_properties(
+fn complete_annotations_and_properties(
     doc: &DocumentState,
     query: &Query,
     exist_props: &[String],
@@ -260,12 +263,6 @@ fn complete_properties_schemaless(
             if exist_props.contains(&key) {
                 continue;
             }
-
-            tracing::info!(
-                "completion_item_from_prop key={} value={}",
-                key.to_string(),
-                value.to_string()
-            );
             let value_schema = schema_from_node(value);
             comp_items.push(completion_item_from_prop(
                 doc,
@@ -557,6 +554,7 @@ fn insert_text_for_property(
     } else {
         quote(prop_key, false)
     };
+    let space = if query.compact { "" } else { " " };
     if !query.add_value {
         return (prop_key, false);
     }
@@ -571,7 +569,7 @@ fn insert_text_for_property(
         }
         (format!("{}({})", prop_key, value), suggest)
     } else {
-        (format!("{}: {},", prop_key, value), suggest)
+        (format!("{}:{}{},", prop_key, space, value), suggest)
     }
 }
 

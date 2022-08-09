@@ -241,6 +241,13 @@ impl Keys {
         self.all_plain
     }
 
+    pub fn parent(&self) -> Option<Keys> {
+        if self.len() < 2 {
+            return None;
+        }
+        Some(Keys::new(self.iter().take(self.len() - 1).cloned()))
+    }
+
     pub fn shift(&self) -> (Option<KeyOrIndex>, Self) {
         if self.is_empty() {
             return (None, self.clone());

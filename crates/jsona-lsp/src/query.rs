@@ -2,7 +2,7 @@
 
 use jsona::{
     dom::{node::DomNode, Keys, Node},
-    rowan::{Direction, TextSize, TokenAtOffset},
+    rowan::{Direction, TextSize, TokenAtOffset, WalkEvent},
     syntax::{SyntaxKind, SyntaxNode, SyntaxToken},
 };
 
@@ -24,6 +24,8 @@ pub struct Query {
     pub value: Option<SyntaxNode>,
     /// Whether add value for property/annotationKey completion
     pub add_value: bool,
+    /// Is compact node
+    pub compact: bool,
     /// Whether insert separator
     pub add_separator: bool,
 }
@@ -34,13 +36,14 @@ impl Query {
         let before = offset
             .checked_sub(TextSize::from(1))
             .and_then(|offset| Self::position_info_at(&syntax, offset));
+        let compact = is_compact_node(&before);
 
         let mut kind = ScopeKind::Unknown;
         let mut node_at_offset = offset;
         let mut key = None;
         let mut value = None;
         let mut add_separator = false;
-        let mut add_value = false;
+        let mut add_value = true;
         if let Some(token) = before
             .as_ref()
             .and_then(|t| Query::prev_none_ws_comment(t.syntax.clone()))
@@ -111,7 +114,7 @@ impl Query {
                                 add_value = !token
                                     .siblings_with_tokens(Direction::Next)
                                     .any(|v| v.kind() == SyntaxKind::COLON);
-                                kind = ScopeKind::PropertyKey
+                                kind = ScopeKind::PropertyKey;
                             }
                             SyntaxKind::SCALAR => {
                                 kind = ScopeKind::Value;
@@ -139,6 +142,7 @@ impl Query {
             node_at_offset,
             add_value,
             add_separator,
+            compact,
             key,
             value,
         }
@@ -281,4 +285,26 @@ fn colon_add_separator(mut token: SyntaxToken) -> bool {
             None => return false,
         }
     }
+}
+
+fn is_compact_node(before: &Option<PositionInfo>) -> bool {
+    if let Some(token) = before.as_ref().map(|v| &v.syntax) {
+        if let Some(parent) = token.parent_ancestors().find(|v| {
+            matches!(
+                v.kind(),
+                SyntaxKind::ANNOTATION_VALUE | SyntaxKind::OBJECT | SyntaxKind::ARRAY
+            )
+        }) {
+            for event in parent.preorder_with_tokens() {
+                if let WalkEvent::Enter(ele) = event {
+                    if let Some(t) = ele.as_token() {
+                        if t.kind() == SyntaxKind::NEWLINE {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    true
 }

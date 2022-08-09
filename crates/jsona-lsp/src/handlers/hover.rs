@@ -57,14 +57,14 @@ pub(crate) async fn hover<E: Environment>(
     };
 
     if let Some(key) = query.key.as_ref() {
-        tracing::info!(?query, "hover on keys={}", keys);
+        tracing::debug!(?query, "hover on keys={}", keys);
         let content = schemas
             .iter()
             .flat_map(|schema| schema.description.clone())
             .join("\n\n");
         return Ok(Some(create_hover(doc, content, key.text_range())));
     } else if let Some(node) = query.value.as_ref() {
-        tracing::info!(?query, "hover on keys={} value={}", keys, node.to_string());
+        tracing::debug!(?query, "hover on keys={} value={}", keys, node.to_string());
         let content = schemas
             .iter()
             .flat_map(|schema| schema.description.clone())
