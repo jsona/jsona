@@ -97,7 +97,11 @@ impl<E: Environment> App<E> {
 
         let mut out_diag = Vec::<u8>::new();
         for err in errors {
-            let text_range = err.node.node_text_range().unwrap_or_default();
+            let text_range = err
+                .node
+                .node_text_range()
+                .or_else(|| err.keys.last_text_range())
+                .unwrap_or_default();
             let diag = Diagnostic::error()
                 .with_message(&err.info)
                 .with_labels(Vec::from([
