@@ -6,7 +6,7 @@
   "publisher": "sigoden",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.44.0"
+    "vscode": "^1.61.0"
   },
   "icon": "icon.png",
   "homepage": "https://github.com/jsona/vscode-jsona",
@@ -158,10 +158,11 @@
       }
     ]
   },
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "scripts": {
-    "vscode:prepublish": "yarn build",
-    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node"
+    "vscode:prepublish": "yarn build-base --minify",
+    "package": "vsce package -o jsona.vsix",
+    "build-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node"
   },
   "dependencies": {
     "esbuild": "^0.14.49",
