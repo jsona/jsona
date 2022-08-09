@@ -15,7 +15,7 @@ arc-swap = "1.5"
 either = "1.7"
 figment = { version = "0.10", features = ["json"] }
 futures = "0.3.5"
-indexmap = { version = "~1.6.2", features = ["serde"] }
+indexmap = { version = "1.9", features = ["serde"] }
 itertools = "0.10"
 lsp-async-stub = "0.6" 
 lsp-types = { version = "0.93", features = ["proposed"] }

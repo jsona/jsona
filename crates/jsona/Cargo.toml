@@ -13,7 +13,7 @@ readme = false
 
 [dependencies]
 arc-swap = "1.5"
-indexmap = "~1.6.2"
+indexmap = { version = "1.9", features = ["serde"] }
 logos = "0.12"
 once_cell = "1.13"
 rowan = "0.15"

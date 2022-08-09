@@ -65,9 +65,9 @@ pub async fn completion<E: Environment>(
     }
 
     let schemas = ws.schemas_at_path(&document_uri, &keys).await;
-    tracing::info!(
+    tracing::debug!(
         ?query,
-        "debug completion keys={} schemas={}",
+        "completion keys={} schemas={}",
         keys,
         schemas.is_some()
     );

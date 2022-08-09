@@ -27,7 +27,7 @@ sha1 = "0.10"
 ahash = { version = "0.7", features = ["serde"] }
 lru = "0.7"
 hex = "0.4"
-indexmap = { version = "~1.6.2", features = ["serde", "rayon"] }
+indexmap = { version = "1.9", features = ["serde", "rayon"] }
 regex = "1.6"
 tap = "1.0"
 jsonschema = { version = "0.16", default-features = false }
