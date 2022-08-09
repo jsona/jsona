@@ -15,15 +15,20 @@ export function getOutput(): vscode.OutputChannel {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-  output = vscode.window.createOutputChannel("JSONA");
-
   const jsonaPath =
-    vscode.workspace.getConfiguration().get("jsona.executable.path") ??
-    which.sync("jsona", { nothrow: true });
+    vscode.workspace.getConfiguration().get("jsona.executable.path") ?? await getServerPath(context) ??  which.sync("jsona", { nothrow: true });
+  
+  // getOutput().appendLine(`Use jsona at ${jsonaPath}`);
 
   if (typeof jsonaPath !== "string") {
-    // TODO: download it.
-    output.appendLine("failed to locate Jsona executable");
+    await vscode.window.showErrorMessage(
+        "Unfortunately we don't ship binaries for your platform yet. " +
+            "You need to manually clone the jsona repository and " +
+            "run `cargo build --release -p jsona-cli` to build the language server from sources. " +
+            "If you feel that your platform should be supported, please create an issue " +
+            "about that [here](https://github.com/jsona/jsona/issues) and we " +
+            "will consider it."
+    );
     return;
   }
 
@@ -91,4 +96,16 @@ export async function activate(context: vscode.ExtensionContext) {
       },
     }
   );
+}
+
+async function getServerPath(context: vscode.ExtensionContext) {
+    const ext = process.platform === "win32" ? ".exe" : "";
+    const bundled = vscode.Uri.joinPath(context.extensionUri, "server", `jsona${ext}`);
+    const bundledExists = await vscode.workspace.fs.stat(bundled).then(
+        () => true,
+        () => false
+    );
+    if (bundledExists) {
+        return bundled.fsPath
+    }
 }
