@@ -10,6 +10,6 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-jsona = { path = "../../../jsona/crates/jsona" }
+jsona = { git = "https://github.com/jsona/jsona.git" }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4"

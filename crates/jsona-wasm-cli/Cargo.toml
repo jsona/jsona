@@ -16,10 +16,10 @@ clap = { version = "3.2", features = ["derive"] }
 console_error_panic_hook = "0.1"
 futures = "0.3"
 js-sys = "0.3"
-jsona = { path = "../../../jsona/crates/jsona" }
-jsona-util = { path = "../../../jsona/crates/jsona-util" }
-jsona-cli = {  path = "../../../jsona/crates/jsona-cli", optional = true }
-jsona-lsp = { path = "../../../jsona/crates/jsona-lsp", optional = true }
+jsona = { git = "https://github.com/jsona/jsona.git" }
+jsona-util = { git = "https://github.com/jsona/jsona.git" }
+jsona-cli = {  git = "https://github.com/jsona/jsona.git", optional = true }
+jsona-lsp = { git = "https://github.com/jsona/jsona.git", optional = true }
 lsp-async-stub = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
