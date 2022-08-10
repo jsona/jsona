@@ -24,6 +24,8 @@ pub struct Query {
     pub value: Option<SyntaxNode>,
     /// Whether add value for property/annotationKey completion
     pub add_value: bool,
+    /// Whether insert space in value completion
+    pub add_space: bool,
     /// Is compact node
     pub compact: bool,
     /// Whether insert separator
@@ -44,6 +46,7 @@ impl Query {
         let mut value = None;
         let mut add_separator = false;
         let mut add_value = true;
+        let mut add_space = false;
         if let Some(token) = before
             .as_ref()
             .and_then(|t| Query::prev_none_ws_comment(t.syntax.clone()))
@@ -69,6 +72,14 @@ impl Query {
                             None
                         }
                     });
+                    if !is_compact_node(&before)
+                        && before
+                            .as_ref()
+                            .map(|v| v.syntax.kind() == SyntaxKind::COLON)
+                            .unwrap_or_default()
+                    {
+                        add_space = true;
+                    }
                     add_separator = match value.as_ref() {
                         Some(v) => value_add_separator(v),
                         None => colon_add_separator(token),
@@ -142,6 +153,7 @@ impl Query {
             node_at_offset,
             add_value,
             add_separator,
+            add_space,
             compact,
             key,
             value,

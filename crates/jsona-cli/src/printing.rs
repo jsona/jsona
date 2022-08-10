@@ -64,16 +64,15 @@ impl<E: Environment> App<E> {
                         Label::secondary((), std_range(other.text_range().unwrap()))
                             .with_message("duplicate found here"),
                     ])),
-                dom::Error::InvalidEscapeSequence { syntax: string } => Diagnostic::error()
+                dom::Error::UnexpectedSyntax { syntax }
+                | dom::Error::InvalidEscapeSequence { syntax }
+                | dom::Error::InvalidNumber { syntax } => Diagnostic::error()
                     .with_message(error.to_string())
                     .with_labels(Vec::from([Label::primary(
                         (),
-                        std_range(string.text_range()),
+                        std_range(syntax.text_range()),
                     )
-                    .with_message("the string contains invalid escape sequences")])),
-                _ => {
-                    unreachable!("this is a bug")
-                }
+                    .with_message(error.to_string())])),
             };
 
             if self.colors {
@@ -99,7 +98,7 @@ impl<E: Environment> App<E> {
         for err in errors {
             let text_range = err
                 .node
-                .node_text_range()
+                .text_range()
                 .or_else(|| err.keys.last_text_range())
                 .unwrap_or_default();
             let diag = Diagnostic::error()

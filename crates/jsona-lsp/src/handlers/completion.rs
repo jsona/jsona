@@ -149,7 +149,6 @@ fn complete_array(
     let index = query.index_at().unwrap_or_default();
     let mut types: HashSet<String> = HashSet::default();
     let mut new_schemas = vec![];
-    let separator = if query.add_separator { "," } else { "" };
     for schema in schemas.iter() {
         if let Some(items) = schema.items.as_ref() {
             let items = items.to_vec();
@@ -164,9 +163,9 @@ fn complete_array(
             }
         }
     }
-    complete_value_impl(&mut comp_items, &mut types, separator, &new_schemas);
+    complete_value_impl(&mut comp_items, &mut types, query, &new_schemas);
     if comp_items.is_empty() && query.value.is_none() {
-        complete_value_type(&mut comp_items, &types, separator);
+        complete_value_type(&mut comp_items, &types, query);
     }
     completion_item_set_text_edit(doc, query, &mut comp_items);
     Some(CompletionResponse::Array(comp_items))
@@ -179,10 +178,9 @@ fn complete_value(
 ) -> Option<CompletionResponse> {
     let mut comp_items = vec![];
     let mut types: HashSet<String> = HashSet::default();
-    let separator = if query.add_separator { "," } else { "" };
-    complete_value_impl(&mut comp_items, &mut types, separator, schemas);
+    complete_value_impl(&mut comp_items, &mut types, query, schemas);
     if comp_items.is_empty() && query.value.is_none() {
-        complete_value_type(&mut comp_items, &types, separator);
+        complete_value_type(&mut comp_items, &types, query);
     }
     completion_item_set_text_edit(doc, query, &mut comp_items);
     Some(CompletionResponse::Array(comp_items))
@@ -196,6 +194,9 @@ fn complete_annotations_schemaless(
     let mut comp_items = vec![];
     let mut exist_anno_keys: HashSet<String> = HashSet::default();
     exist_anno_keys.insert("@".to_string());
+    if let Some(key) = query.key.as_ref() {
+        exist_anno_keys.insert(key.to_string());
+    }
     for (anno_keys, anno_value) in visit_annotations(&doc.dom) {
         if let Some(anno_key) = anno_keys.last_annotation_key() {
             let anno_key = anno_key.value().to_string();
@@ -289,7 +290,6 @@ fn complete_array_schemaless(
         None => return None,
         Some(v) => v,
     };
-    let separator = if query.add_separator { "," } else { "" };
     let mut exist_labels: HashSet<String> = HashSet::default();
     let visitor = Visitor::new(&doc.dom, parent_key, |keys, node, parent_key| {
         match keys.last() {
@@ -312,7 +312,7 @@ fn complete_array_schemaless(
             None => continue,
         };
         for value in arr.value().read().iter() {
-            if let Some(comp_item) = completion_item_from_node(value, separator) {
+            if let Some(comp_item) = completion_item_from_node(query, value) {
                 if exist_labels.contains(&comp_item.label) {
                     continue;
                 }
@@ -335,7 +335,6 @@ fn complete_value_schemaless(
         None => return None,
         Some(v) => v,
     };
-    let separator = if query.add_separator { "," } else { "" };
     let mut exist_labels: HashSet<String> = HashSet::default();
     let visitor = Visitor::new(&doc.dom, parent_key, |keys, _, parent_key| {
         match keys.last() {
@@ -353,7 +352,7 @@ fn complete_value_schemaless(
         }
     });
     for (_, value) in visitor.into_iter() {
-        if let Some(comp_item) = completion_item_from_node(&value, separator) {
+        if let Some(comp_item) = completion_item_from_node(query, &value) {
             if exist_labels.contains(&comp_item.label) {
                 continue;
             }
@@ -365,7 +364,7 @@ fn complete_value_schemaless(
     Some(CompletionResponse::Array(comp_items))
 }
 
-fn completion_item_from_node(node: &Node, separator: &str) -> Option<CompletionItem> {
+fn completion_item_from_node(query: &Query, node: &Node) -> Option<CompletionItem> {
     if !node.is_valid_node() {
         return None;
     }
@@ -383,11 +382,13 @@ fn completion_item_from_node(node: &Node, separator: &str) -> Option<CompletionI
         Node::Array(_) => ("[]".to_string(), insert_text_for_value(&json!({}))),
         Node::Object(_) => ("{}".to_string(), insert_text_for_value(&json!([]))),
     };
+    let separator = if query.add_separator { "," } else { "" };
+    let space = if query.add_space { " " } else { "" };
     let schema = schema_from_node(node);
     Some(CompletionItem {
         label,
         kind: Some(suggestion_kind(&schema.schema_type)),
-        insert_text: Some(format!("{}{}", value, separator)),
+        insert_text: Some(format!("{}{}{}", space, value, separator)),
         insert_text_format: Some(InsertTextFormat::PLAIN_TEXT),
         ..Default::default()
     })
@@ -396,24 +397,24 @@ fn completion_item_from_node(node: &Node, separator: &str) -> Option<CompletionI
 fn complete_value_impl(
     comp_items: &mut Vec<CompletionItem>,
     types: &mut HashSet<String>,
-    separator: &str,
+    query: &Query,
     schemas: &[Schema],
 ) {
     for schema in schemas.iter() {
         if let Some(value) = schema.const_value.as_ref() {
-            comp_items.push(completion_item_from_value(schema, value, separator));
+            comp_items.push(completion_item_from_value(query, schema, value));
         }
         if let Some(enum_value) = schema.enum_value.as_ref() {
             for value in enum_value {
-                comp_items.push(completion_item_from_value(schema, value, separator));
+                comp_items.push(completion_item_from_value(query, schema, value));
             }
         }
         if let Some(value) = schema.default.as_ref() {
-            comp_items.push(completion_item_from_value(schema, value, separator));
+            comp_items.push(completion_item_from_value(query, schema, value));
         }
         if let Some(examples) = schema.examples.as_ref() {
             for value in examples {
-                comp_items.push(completion_item_from_value(schema, value, separator));
+                comp_items.push(completion_item_from_value(query, schema, value));
             }
         }
         if let Some(schema_type) = schema.schema_type.as_deref() {
@@ -425,7 +426,7 @@ fn complete_value_impl(
 fn complete_value_type(
     comp_items: &mut Vec<CompletionItem>,
     types: &HashSet<String>,
-    separator: &str,
+    query: &Query,
 ) {
     let mut items = vec![];
     for schema_type in types {
@@ -453,7 +454,7 @@ fn complete_value_type(
         }
     }
     for (label, text) in items {
-        comp_items.push(completion_item_from_literal(label, text, separator));
+        comp_items.push(completion_item_from_literal(query, label, text));
     }
 }
 
@@ -495,22 +496,31 @@ fn completion_item_from_prop(
     }
 }
 
-fn completion_item_from_value(schema: &Schema, value: &Value, separator: &str) -> CompletionItem {
+fn completion_item_from_value(query: &Query, schema: &Schema, value: &Value) -> CompletionItem {
+    let separator = if query.add_separator { "," } else { "" };
+    let space = if query.add_space { " " } else { "" };
     CompletionItem {
         label: sanitize_label(stringify_value(value)),
         kind: Some(suggestion_kind(&schema.schema_type)),
-        insert_text: Some(format!("{}{}", insert_text_for_value(value), separator)),
+        insert_text: Some(format!(
+            "{}{}{}",
+            space,
+            insert_text_for_value(value),
+            separator
+        )),
         insert_text_format: Some(InsertTextFormat::SNIPPET),
         documentation: make_doc(schema),
         ..Default::default()
     }
 }
 
-fn completion_item_from_literal(label: &str, text: &str, separator: &str) -> CompletionItem {
+fn completion_item_from_literal(query: &Query, label: &str, text: &str) -> CompletionItem {
+    let separator = if query.add_separator { "," } else { "" };
+    let space = if query.add_space { " " } else { "" };
     CompletionItem {
         label: label.into(),
         kind: Some(CompletionItemKind::VALUE),
-        insert_text: Some(format!("{}{}", text, separator)),
+        insert_text: Some(format!("{}{}{}", space, text, separator)),
         insert_text_format: Some(InsertTextFormat::SNIPPET),
         ..Default::default()
     }

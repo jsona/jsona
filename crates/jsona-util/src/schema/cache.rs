@@ -1,8 +1,7 @@
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
-use jsona_schema_validator::JSONASchemaValue;
 use parking_lot::Mutex;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use std::{path::PathBuf, sync::Arc, time::Duration};
 use time::OffsetDateTime;
@@ -14,15 +13,18 @@ pub const DEFAULT_LRU_CACHE_EXPIRATION_TIME: Duration = Duration::from_secs(60);
 pub const DEFAULT_CACHE_EXPIRATION_TIME: Duration = Duration::from_secs(60 * 10);
 
 #[derive(Clone)]
-pub struct Cache<E: Environment> {
+pub struct Cache<E: Environment, T> {
     env: E,
     expiration_times: Arc<ArcSwap<(Duration, Duration)>>,
     lru_expires_by: Arc<Mutex<OffsetDateTime>>,
-    schemas: Arc<Mutex<LruCache<Url, Arc<JSONASchemaValue>>>>,
+    values: Arc<Mutex<LruCache<Url, Arc<T>>>>,
     cache_path: Arc<ArcSwap<Option<PathBuf>>>,
 }
 
-impl<E: Environment> Cache<E> {
+impl<E: Environment, T> Cache<E, T>
+where
+    T: Clone + Serialize + DeserializeOwned,
+{
     pub fn new(env: E) -> Self {
         Self {
             expiration_times: Arc::new(ArcSwap::new(Arc::new((
@@ -31,17 +33,17 @@ impl<E: Environment> Cache<E> {
             )))),
             lru_expires_by: Arc::new(Mutex::new(env.now() + DEFAULT_LRU_CACHE_EXPIRATION_TIME)),
             env,
-            schemas: Arc::new(Mutex::new(LruCache::new(10))),
+            values: Arc::new(Mutex::new(LruCache::new(10))),
             cache_path: Default::default(),
         }
     }
 
-    pub fn get_schema(&self, url: &Url) -> Option<Arc<JSONASchemaValue>> {
-        self.schemas.lock().get(url).cloned()
+    pub fn get(&self, url: &Url) -> Option<Arc<T>> {
+        self.values.lock().get(url).cloned()
     }
 
-    pub fn contains_schema(&self, url: &Url) -> bool {
-        self.schemas.lock().contains(url)
+    pub fn contains(&self, url: &Url) -> bool {
+        self.values.lock().contains(url)
     }
 
     pub fn set_cache_path(&self, path: Option<PathBuf>) {
@@ -52,15 +54,15 @@ impl<E: Environment> Cache<E> {
         &self,
         value_url: &Url,
         include_expired: bool,
-    ) -> Result<Arc<JSONASchemaValue>, anyhow::Error> {
+    ) -> Result<Arc<T>, anyhow::Error> {
         let now = self.env.now();
 
         // We invalidate the in-memory cache at a regular interval.
         if self.lru_expired() {
-            self.schemas.lock().clear();
+            self.values.lock().clear();
         }
 
-        if let Some(s) = self.schemas.lock().get(value_url) {
+        if let Some(s) = self.values.lock().get(value_url) {
             return Ok(s.clone());
         }
 
@@ -68,26 +70,26 @@ impl<E: Environment> Cache<E> {
             Some(cache_path) => {
                 let file_name = cache_hash(value_url);
                 let p = cache_path.join(file_name);
-                let schema: CachedJson = serde_json::from_slice(&self.env.read_file(&p).await?)?;
+                let schema: CachedJson<T> = serde_json::from_slice(&self.env.read_file(&p).await?)?;
 
                 if !include_expired && schema.expires_by < now {
                     return Err(anyhow!("document expired"));
                 }
 
                 let s = Arc::new(schema.value);
-                self.schemas.lock().put(value_url.clone(), s.clone());
+                self.values.lock().put(value_url.clone(), s.clone());
                 Ok(s)
             }
             None => Err(anyhow!("cache path not set")),
         }
     }
 
-    pub async fn store(&self, url: Url, value: Arc<JSONASchemaValue>) -> Result<(), anyhow::Error> {
-        self.schemas.lock().put(url.clone(), value.clone());
+    pub async fn store(&self, url: Url, value: Arc<T>) -> Result<(), anyhow::Error> {
+        self.values.lock().put(url.clone(), value.clone());
         self.save(url, value).await
     }
 
-    pub async fn save(&self, url: Url, value: Arc<JSONASchemaValue>) -> Result<(), anyhow::Error> {
+    pub async fn save(&self, url: Url, value: Arc<T>) -> Result<(), anyhow::Error> {
         let expires_by = self.env.now() + self.expiration_times.load().1;
 
         match &**self.cache_path.load() {
@@ -128,10 +130,10 @@ impl<E: Environment> Cache<E> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CachedJson {
+pub struct CachedJson<T> {
     pub expires_by: OffsetDateTime,
     pub url: Url,
-    pub value: JSONASchemaValue,
+    pub value: T,
 }
 
 fn cache_hash(url: &Url) -> String {

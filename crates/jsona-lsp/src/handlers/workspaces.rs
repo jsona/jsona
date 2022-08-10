@@ -25,9 +25,7 @@ pub async fn workspace_change<E: Environment>(
             .entry(added.uri.clone())
             .or_insert(WorkspaceState::new(context.env.clone(), added.uri));
 
-        ws.schemas
-            .cache()
-            .set_cache_path(init_config.cache_path.clone());
+        ws.schemas.set_cache_path(init_config.cache_path.clone());
 
         if let Err(error) = ws.initialize(context.clone(), &context.env).await {
             tracing::error!(?error, "failed to initialize workspace");

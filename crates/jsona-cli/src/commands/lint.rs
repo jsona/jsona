@@ -1,12 +1,12 @@
 use crate::{App, GeneralArgs};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::parser;
 use jsona_util::{
     environment::Environment,
-    schema::associations::{AssociationRule, SchemaAssociation},
+    schema::associations::{AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORES},
     util::to_file_url,
 };
 use serde_json::json;
@@ -16,9 +16,7 @@ use url::Url;
 
 impl<E: Environment> App<E> {
     pub async fn execute_lint(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
-        self.schemas
-            .cache()
-            .set_cache_path(cmd.general.cache_path.clone());
+        self.schemas.set_cache_path(cmd.general.cache_path.clone());
 
         let config = self.load_config(&cmd.general).await?;
 
@@ -44,6 +42,24 @@ impl<E: Environment> App<E> {
                 );
             } else {
                 self.schemas.associations().add_from_config(&config);
+
+                for catalog in &cmd.schemastore {
+                    self.schemas
+                        .associations()
+                        .add_from_schemastore(catalog)
+                        .await
+                        .with_context(|| "failed to load schema catalog")?;
+                }
+
+                if cmd.default_schemastore {
+                    for catalog in DEFAULT_SCHEMASTORES {
+                        self.schemas
+                            .associations()
+                            .add_from_schemastore(&Url::parse(catalog).unwrap())
+                            .await
+                            .with_context(|| "failed to load schema catalog")?;
+                    }
+                }
             }
         }
 
@@ -147,6 +163,16 @@ pub struct LintCommand {
     /// URL to the schema to be used for validation.
     #[clap(long)]
     pub schema: Option<String>,
+
+    /// URL to a schema catalog (index) that is compatible with jsonaschema stores.
+    ///
+    /// Can be specified multiple times.
+    #[clap(long)]
+    pub schemastore: Vec<Url>,
+
+    /// Use the default online catalogs for schemas.
+    #[clap(long)]
+    pub default_schemastore: bool,
 
     /// Disable all schema validations.
     #[clap(long)]

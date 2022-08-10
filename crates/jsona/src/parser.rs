@@ -164,7 +164,10 @@ impl<'p> Parser<'p> {
     }
 
     fn parse_value(&mut self) -> ParserResult<()> {
-        let t = self.must_peek_token()?;
+        let t = match self.peek_token() {
+            Ok(t) => t,
+            Err(_) => return Ok(()),
+        };
         match t {
             BRACE_START => {
                 with_node!(self.builder, OBJECT, self.parse_object())
