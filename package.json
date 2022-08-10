@@ -2,7 +2,7 @@
   "name": "vscode-jsona",
   "displayName": "JSONA",
   "description": "Fully-featured JSONA support",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "sigoden",
   "license": "MIT",
   "engines": {
