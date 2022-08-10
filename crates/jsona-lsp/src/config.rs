@@ -1,8 +1,12 @@
 use figment::{providers::Serialized, Figment};
-use jsona_util::{schema::cache::DEFAULT_LRU_CACHE_EXPIRATION_TIME, HashMap};
+use jsona_util::{
+    schema::{associations::DEFAULT_SCHEMASTORES, cache::DEFAULT_LRU_CACHE_EXPIRATION_TIME},
+    HashMap,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
+use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,6 +52,7 @@ impl LspConfig {
 pub struct SchemaConfig {
     pub enabled: bool,
     pub associations: HashMap<String, String>,
+    pub catalogs: Vec<Url>,
     pub links: bool,
     pub cache: SchemaCacheConfig,
 }
@@ -57,6 +62,10 @@ impl Default for SchemaConfig {
         Self {
             enabled: true,
             associations: Default::default(),
+            catalogs: DEFAULT_SCHEMASTORES
+                .iter()
+                .map(|c| c.parse().unwrap())
+                .collect(),
             links: false,
             cache: Default::default(),
         }
