@@ -90,7 +90,7 @@ impl Environment for NativeEnvironment {
         Ok(tokio::fs::write(path, bytes).await?)
     }
 
-    #[cfg(feature="fetch")]
+    #[cfg(feature = "fetch")]
     async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
@@ -106,7 +106,7 @@ impl Environment for NativeEnvironment {
         Ok(data)
     }
 
-    #[cfg(not(feature="fetch"))]
+    #[cfg(not(feature = "fetch"))]
     async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
         anyhow::bail!("failed to fetch `{url}`, fetch is not supported")
     }
