@@ -1,6 +1,6 @@
 [package]
 name = "jsona-schema"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A jsonschema dsl in jsona"
 repository = "https://github.com/jsona/jsona"
@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 either = { version = "1.7", features = ["serde"] }
 indexmap = { version = "1.9", features = ["serde"] }
-jsona = { path = "../jsona", version = "0.3"}
+jsona = { path = "../jsona", version = "0.4" }
 regex = "1.6"
 fancy-regex = "0.10"
 serde = { version = "1", features = ["derive"] }
