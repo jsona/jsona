@@ -23,7 +23,7 @@ pub const DEFAULT_SCHEMASTORES: &[&str] =
 pub const SCHEMA_KEY: &str = "@jsonaschema";
 
 pub mod priority {
-    pub const CATALOG: usize = 30;
+    pub const STORE: usize = 30;
     pub const CONFIG: usize = 50;
     pub const LSP_CONFIG: usize = 60;
     pub const SCHEMA_FIELD: usize = 75;
@@ -31,7 +31,7 @@ pub mod priority {
 }
 
 pub mod source {
-    pub const CATALOG: &str = "catalog";
+    pub const STORE: &str = "store";
     pub const CONFIG: &str = "config";
     pub const LSP_CONFIG: &str = "lsp_config";
     pub const MANUAL: &str = "manual";
@@ -83,10 +83,10 @@ impl<E: Environment> SchemaAssociations<E> {
                             meta: json!({
                                 "name": schema.name,
                                 "description": schema.description,
-                                "source": source::CATALOG,
+                                "source": source::STORE,
                                 "catalog_url": url,
                             }),
-                            priority: priority::CATALOG,
+                            priority: priority::STORE,
                         },
                     ));
                 }

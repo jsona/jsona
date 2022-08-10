@@ -52,7 +52,7 @@ impl LspConfig {
 pub struct SchemaConfig {
     pub enabled: bool,
     pub associations: HashMap<String, String>,
-    pub catalogs: Vec<Url>,
+    pub stores: Vec<Url>,
     pub links: bool,
     pub cache: SchemaCacheConfig,
 }
@@ -62,7 +62,7 @@ impl Default for SchemaConfig {
         Self {
             enabled: true,
             associations: Default::default(),
-            catalogs: DEFAULT_SCHEMASTORES
+            stores: DEFAULT_SCHEMASTORES
                 .iter()
                 .map(|c| c.parse().unwrap())
                 .collect(),

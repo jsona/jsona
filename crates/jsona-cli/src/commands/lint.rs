@@ -43,21 +43,21 @@ impl<E: Environment> App<E> {
             } else {
                 self.schemas.associations().add_from_config(&config);
 
-                for catalog in &cmd.schemastore {
+                for store in &cmd.schemastore {
                     self.schemas
                         .associations()
-                        .add_from_schemastore(catalog)
+                        .add_from_schemastore(store)
                         .await
-                        .with_context(|| "failed to load schema catalog")?;
+                        .with_context(|| "failed to load schema store")?;
                 }
 
                 if cmd.default_schemastore {
-                    for catalog in DEFAULT_SCHEMASTORES {
+                    for store in DEFAULT_SCHEMASTORES {
                         self.schemas
                             .associations()
-                            .add_from_schemastore(&Url::parse(catalog).unwrap())
+                            .add_from_schemastore(&Url::parse(store).unwrap())
                             .await
-                            .with_context(|| "failed to load schema catalog")?;
+                            .with_context(|| "failed to load schema store")?;
                     }
                 }
             }
@@ -164,7 +164,7 @@ pub struct LintCommand {
     #[clap(long)]
     pub schema: Option<String>,
 
-    /// URL to a schema catalog (index) that is compatible with jsonaschema stores.
+    /// URL to a schema store (index) that is compatible with jsonaschema stores.
     ///
     /// Can be specified multiple times.
     #[clap(long)]

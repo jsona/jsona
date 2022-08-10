@@ -198,14 +198,14 @@ impl<E: Environment> WorkspaceState<E> {
             );
         }
 
-        for catalog in &self.config.schema.catalogs {
+        for store in &self.config.schema.stores {
             if let Err(error) = self
                 .schemas
                 .associations()
-                .add_from_schemastore(catalog)
+                .add_from_schemastore(store)
                 .await
             {
-                tracing::error!(%error, "failed to add schemas from catalog");
+                tracing::error!(%error, "failed to add schemas from store");
             }
         }
 
