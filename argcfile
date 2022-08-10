@@ -1,26 +1,39 @@
 #!/bin/bash
 set -e
 
-# @cmd Build core
-build.core() {
-    yarn --cwd js workspace @jsona/core build
-}
+PKGS=( \
+    core \
+    util-types \
+    lsp \
+)
 
-# @cmd Build util-types
-build.util-types() {
-    yarn --cwd js workspace @jsona/util-types build
-}
-
-# @cmd Build lsp
-build.lsp() {
-    yarn --cwd js workspace @jsona/lsp build
-}
-
-# @cmd Build lsp
+# @cmd Build js
+# @arg name[core|util-types|lsp|all]
 build() {
-    build.core
-    build.util-types
-    build.lsp
+    if [[ "$1" == "all" ]]; then
+        for name in ${PKGS[@]}; do
+            yarn --cwd js workspace @jsona/$name build
+        done
+    else
+        yarn --cwd js workspace @jsona/$1 build
+    fi
+}
+
+# @cmd Publish to npm
+publish() {
+    for name in ${PKGS[@]}; do
+        online_ver=$(npm show @jsona/$name version)
+        pkg_ver=$(node -p "require('./js/"$name"/package.json').version")
+        if [[ "$online_ver" != "$pkg_ver" ]]; then
+            read -p "Upgrade $name from $online_ver to $pkg_ver (y/n)? " choice
+            if [[ "$choice" == y ]]; then
+                (cd js/$name && npm publish @jsona/$name)
+                echo publish @jsona/$name:$pkg_ver
+            fi
+        else
+            echo @jsona/$name:$pkg_ver is latest version
+        fi
+    done
 }
 
 
