@@ -239,7 +239,7 @@ async fn collect_schema_errors<E: Environment>(
             Ok(errors) => diags.extend(errors.into_iter().map(|err| {
                 let text_range = err
                     .node
-                    .node_text_range()
+                    .text_range()
                     .or_else(|| err.keys.last_text_range())
                     .unwrap_or_default();
                 let range = doc.mapper.range(text_range).unwrap_or_default().into_lsp();

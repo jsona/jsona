@@ -154,7 +154,7 @@ impl<E: Environment> WorkspaceState<E> {
             return Ok(());
         }
 
-        self.schemas.cache().set_expiration_times(
+        self.schemas.set_cache_expiration_times(
             Duration::from_secs(self.config.schema.cache.memory_expiration),
             Duration::from_secs(self.config.schema.cache.disk_expiration),
         );
@@ -196,6 +196,17 @@ impl<E: Environment> WorkspaceState<E> {
                     priority: priority::LSP_CONFIG,
                 },
             );
+        }
+
+        for catalog in &self.config.schema.catalogs {
+            if let Err(error) = self
+                .schemas
+                .associations()
+                .add_from_schemastore(catalog)
+                .await
+            {
+                tracing::error!(%error, "failed to add schemas from catalog");
+            }
         }
 
         self.emit_associations(context).await;
