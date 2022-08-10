@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Context};
-use itertools::Itertools;
 use jsona_util::{config::Config, environment::Environment, schema::Schemas};
 use std::{
     path::{Path, PathBuf},
@@ -100,12 +99,6 @@ impl<E: Environment> App<E> {
         if patterns.is_empty() {
             patterns = Vec::from([cwd.join("**/*.jsona").to_string_lossy().into_owned()])
         };
-
-        let patterns = patterns
-            .into_iter()
-            .unique()
-            .map(|p| glob::Pattern::new(&p).map(|_| p))
-            .collect::<Result<Vec<_>, _>>()?;
 
         let files = patterns
             .into_iter()
