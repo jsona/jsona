@@ -1,5 +1,6 @@
 use globset::{Glob, GlobSetBuilder};
 use std::path::Path;
+use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct GlobRule {
@@ -38,8 +39,8 @@ impl GlobRule {
 }
 
 /// Convert path to file url
-pub fn to_file_url(path: &str, base: &Path) -> Option<url::Url> {
-    if let Ok(url) = url::Url::parse(path) {
+pub fn to_file_url(path: &str, base: &Path) -> Option<Url> {
+    if let Ok(url) = Url::parse(path) {
         return Some(url);
     }
     let path = Path::new(path);
@@ -48,5 +49,13 @@ pub fn to_file_url(path: &str, base: &Path) -> Option<url::Url> {
     } else {
         base.join(path)
     };
-    url::Url::from_file_path(&path).ok()
+    let path = path.display().to_string();
+    let path = if path.starts_with("file://") {
+        path
+    } else if cfg!(windows) {
+        format!("file://{}", path.replace('\\', "/"))
+    } else {
+        format!("file://{}", path)
+    };
+    Url::parse(&path).ok()
 }

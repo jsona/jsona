@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 either = { version = "1.7", features = ["serde"] }
-indexmap = { version = "1.9", features = ["serde"] }
+indexmap = { version = "~1.6", features = ["serde"] }
 jsona = { path = "../jsona", version = "0.4" }
 regex = "1.6"
 fancy-regex = "0.10"

@@ -115,8 +115,10 @@ impl<E: Environment> SchemaAssociations<E> {
             .get(&KeyOrIndex::annotation(SCHEMA_KEY))
             .and_then(|v| v.as_string().cloned())
         {
-            if let Some(url) = to_file_url(url.value(), &doc_url.to_file_path().unwrap_or_default())
-            {
+            if let Some(url) = to_file_url(
+                url.value(),
+                &self.env.to_file_path(doc_url).unwrap_or_default(),
+            ) {
                 self.associations.write().push((
                     AssociationRule::Url(doc_url.clone()),
                     SchemaAssociation {
