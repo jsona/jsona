@@ -18,7 +18,7 @@ use crate::{
 use super::cache::Cache;
 
 pub const DEFAULT_SCHEMASTORES: &[&str] =
-    &["https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.0/index.json"];
+    &["https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json"];
 
 pub const SCHEMA_KEY: &str = "@jsonaschema";
 
