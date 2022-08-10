@@ -19,6 +19,7 @@ export default {
   plugins: [
     typescript(),
     rust({
+      inlineWasm: true,
       cargoArgs: ["-F", "lsp"],
     }),
     commonjs(),
@@ -27,6 +28,6 @@ export default {
       preferBuiltins: true,
       rootDir: path.join(process.cwd(), ".."),
     }),
-    // minify(),
+    minify(),
   ],
 };
