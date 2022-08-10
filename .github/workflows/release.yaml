@@ -3,13 +3,11 @@ name: Release
 on:
   push:
     tags:
-    - v[0-9]+.[0-9]+.[0-9]+*
+    - v[0-9]+.[0-9]+.[0-9]
 
 jobs:
   dist:
     name: Publish to Github Releases
-    outputs:
-      rc: ${{ steps.check-tag.outputs.rc }}
 
     strategy:
       matrix:
@@ -40,18 +38,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Check Tag
-      id: check-tag
-      shell: bash
-      run: |
-        tag=${GITHUB_REF##*/}
-        echo "::set-output name=version::$tag"
-        if [[ "$tag" =~ [0-9]+.[0-9]+.[0-9]+$ ]]; then
-          echo "::set-output name=rc::false"
-        else
-          echo "::set-output name=rc::true"
-        fi
-
     - uses: actions/setup-node@v3
       with:
         node-version: '14'
@@ -64,10 +50,6 @@ jobs:
       shell: bash
       run: |
         version=$(cat JSONA_VERSION)
-        args=""
-        if [[ "${{ steps.check-tag.outputs.rc }}" == "true" ]]; then
-          args="--pre-release"
-        fi
         mkdir -p server dist
         output=dist/jsona-${{ matrix.code-target }}.vsix
 
@@ -75,15 +57,15 @@ jobs:
           jsona_file=jsona-$version-${{ matrix.target }}.zip
           curl -L -o $jsona_file https://github.com/jsona/jsona/releases/download/$version/$jsona_file
           7z -oserver x $jsona_file
-          npx vsce package -o $output --target ${{ matrix.code-target }} $args
+          npx vsce package -o $output --target ${{ matrix.code-target }}
         else
           jsona_file=jsona-$version-${{ matrix.target }}.tar.gz
           wget https://github.com/jsona/jsona/releases/download/$version/$jsona_file
           tar -C server -xf $jsona_file
-          npx vsce package -o $output --target ${{ matrix.code-target }} $args
+          npx vsce package -o $output --target ${{ matrix.code-target }}
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]]; then
             rm -rf server
-            npx vsce package -o dist/jsona-no-server.vsix $args
+            npx vsce package -o dist/jsona-no-server.vsix
           fi
         fi
 
@@ -140,17 +122,13 @@ jobs:
       with:
         draft: false
         files: dist/*
-        prerelease: ${{ steps.check-tag.outputs.rc == 'true' }}
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish Extension
       shell: bash
       run: |
-        args=""
-        if [[ "${{ steps.check-tag.outputs.rc }}" == "true" ]]; then
-          args="--pre-release"
-        fi
         rm -rf dist/jsona-no-server.vsix
         yarn install --frozen-lockfile
-        npx vsce publish --pat ${{ secrets.MARKETPLACE_TOKEN }} --packagePath dist/jsona-*.vsix $args
+        npx vsce publish --pat ${{ secrets.MARKETPLACE_TOKEN }} --packagePath dist/jsona-*.vsix
