@@ -47,11 +47,13 @@ impl<E: Environment> Schemas<E> {
     }
 
     pub fn set_cache_path(&self, path: Option<PathBuf>) {
+        tracing::debug!("set cache path {:?}", path);
         self.cache_schema.set_cache_path(path.clone());
         self.cache_value.set_cache_path(path);
     }
 
-    pub fn set_expiration_times(&self, mem: Duration, disk: Duration) {
+    pub fn set_cache_expiration_times(&self, mem: Duration, disk: Duration) {
+        tracing::debug!("set cache expiration time, mem: {:?} disk: {:?}", mem, disk);
         self.cache_schema.set_expiration_times(mem, disk);
         self.cache_schema.set_expiration_times(mem, disk);
     }

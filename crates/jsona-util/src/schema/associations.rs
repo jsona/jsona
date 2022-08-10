@@ -186,7 +186,7 @@ impl<E: Environment> SchemaAssociations<E> {
         {
             Ok(idx) => idx,
             Err(error) => {
-                tracing::warn!(?error, "failed to fetch catalog");
+                tracing::warn!(?error, "failed to load schemastore");
                 if let Ok(s) = self.cache.load(index_url, true).await {
                     return Ok(serde_json::from_value((*s).clone())?);
                 }
@@ -203,7 +203,7 @@ impl<E: Environment> SchemaAssociations<E> {
                 )
                 .await
             {
-                tracing::warn!(%error, "failed to cache index");
+                tracing::warn!(%error, "failed to cache schemastore");
             }
         }
 
@@ -226,6 +226,7 @@ impl<E: Environment> SchemaAssociations<E> {
             }
             scheme => bail!("the scheme `{scheme}` is not supported"),
         };
+        println!("{}", std::str::from_utf8(&data).unwrap());
         Ok(data)
     }
 }

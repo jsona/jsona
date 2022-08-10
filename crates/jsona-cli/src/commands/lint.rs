@@ -43,7 +43,7 @@ impl<E: Environment> App<E> {
             } else {
                 self.schemas.associations().add_from_config(&config);
 
-                for catalog in &cmd.schema_catalog {
+                for catalog in &cmd.schemastore {
                     self.schemas
                         .associations()
                         .add_from_schemastore(catalog)
@@ -51,7 +51,7 @@ impl<E: Environment> App<E> {
                         .with_context(|| "failed to load schema catalog")?;
                 }
 
-                if cmd.default_schema_catalogs {
+                if cmd.default_schemastore {
                     for catalog in DEFAULT_SCHEMASTORES {
                         self.schemas
                             .associations()
@@ -164,15 +164,15 @@ pub struct LintCommand {
     #[clap(long)]
     pub schema: Option<String>,
 
-    /// URL to a schema catalog (index) that is compatible with jsonaschema catalogs.
+    /// URL to a schema catalog (index) that is compatible with jsonaschema stores.
     ///
     /// Can be specified multiple times.
     #[clap(long)]
-    pub schema_catalog: Vec<Url>,
+    pub schemastore: Vec<Url>,
 
     /// Use the default online catalogs for schemas.
     #[clap(long)]
-    pub default_schema_catalogs: bool,
+    pub default_schemastore: bool,
 
     /// Disable all schema validations.
     #[clap(long)]

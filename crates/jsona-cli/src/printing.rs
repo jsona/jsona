@@ -98,7 +98,7 @@ impl<E: Environment> App<E> {
         for err in errors {
             let text_range = err
                 .node
-                .node_text_range()
+                .text_range()
                 .or_else(|| err.keys.last_text_range())
                 .unwrap_or_default();
             let diag = Diagnostic::error()

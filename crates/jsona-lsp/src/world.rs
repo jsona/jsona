@@ -154,7 +154,7 @@ impl<E: Environment> WorkspaceState<E> {
             return Ok(());
         }
 
-        self.schemas.set_expiration_times(
+        self.schemas.set_cache_expiration_times(
             Duration::from_secs(self.config.schema.cache.memory_expiration),
             Duration::from_secs(self.config.schema.cache.disk_expiration),
         );
