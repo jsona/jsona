@@ -1,6 +1,6 @@
 [package]
 name = "jsona-util"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Shared code for jsona utilities."
 repository = "https://github.com/jsona/jsona"
@@ -18,7 +18,7 @@ anyhow = "1"
 atty = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-jsona = { path = "../jsona", version = "0.3" }
+jsona = { path = "../jsona", version = "0.4" }
 jsona-schema-validator = { path = "../jsona-schema-validator", version = "0.1"}
 globset = "0.4"
 arc-swap = "1.5"
