@@ -54,7 +54,7 @@ export async function activate(context: vscode.ExtensionContext) {
           .get("jsona.executable.environment") ?? undefined,
     },
   };
-
+  await vscode.workspace.fs.createDirectory(context.globalStorageUri);
   let serverOpts: client.ServerOptions = {
     run,
     debug: run,
