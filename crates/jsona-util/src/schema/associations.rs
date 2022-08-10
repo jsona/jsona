@@ -18,7 +18,7 @@ use crate::{
 use super::cache::Cache;
 
 pub const DEFAULT_SCHEMASTORES: &[&str] =
-    &["https://cdn.jsdelivr.net/gh/jsona/schemastore/index.json"];
+    &["https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.0/index.json"];
 
 pub const SCHEMA_KEY: &str = "@jsonaschema";
 
@@ -226,7 +226,6 @@ impl<E: Environment> SchemaAssociations<E> {
             }
             scheme => bail!("the scheme `{scheme}` is not supported"),
         };
-        println!("{}", std::str::from_utf8(&data).unwrap());
         Ok(data)
     }
 }
