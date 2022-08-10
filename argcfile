@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+# @cmd Build core
+build.core() {
+    cd js
+    yarn workspace @jsona/core build
+}
+
+# @cmd Build util-types
+build.util-types() {
+    cd js
+    yarn workspace @jsona/util-types build
+}
+
+# @cmd Build lsp
+build.lsp() {
+    cd js
+    yarn workspace @jsona/lsp build
+}
+
+# @cmd Build lsp
+build() {
+    build.core
+    build.util-types
+    build.cli
+}
+
+
+eval "$(argc --argc-eval $0 "$@")"

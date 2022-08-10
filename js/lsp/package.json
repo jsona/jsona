@@ -1,0 +1,37 @@
+{
+  "name": "@jsona/lsp",
+  "version": "0.1.0",
+  "author": "Sigoden Huang <sigoden@gmail.com>",
+  "description": "A Jsona lsp.",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "yarn rollup --silent -c rollup.config.js",
+    "prebuild": "rimraf dist",
+    "prepublish": "yarn build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsona/jsona-wasm",
+    "directory": "js/lsp"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@jsona/util-types": "^0.1.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^22.0.0",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@types/node": "^17.0.41",
+    "@wasm-tool/rollup-plugin-rust": "^2.2.2",
+    "esbuild": "^0.14.45",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.75.6",
+    "rollup-plugin-esbuild": "^4.9.1",
+    "rollup-plugin-typescript2": "^0.32.1",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.3"
+  }
+}

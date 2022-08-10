@@ -1,0 +1,6 @@
+/target
+.vscode
+node_modules
+*.lock
+*.log
+js/**/dist

@@ -1,0 +1,36 @@
+[package]
+name = "jsona-wasm-cli"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1" 
+async-trait = "0.1"
+clap = { version = "3.2", features = ["derive"] }
+console_error_panic_hook = "0.1"
+futures = "0.3"
+js-sys = "0.3"
+jsona = { path = "../../../jsona/crates/jsona" }
+jsona-util = { path = "../../../jsona/crates/jsona-util" }
+jsona-cli = {  path = "../../../jsona/crates/jsona-cli", optional = true }
+jsona-lsp = { path = "../../../jsona/crates/jsona-lsp", optional = true }
+lsp-async-stub = "0.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", default-features = false, features = ["sync", "parking_lot", "io-util"] }
+time = { version = "0.3", features = ["parsing"] }
+tracing = "0.1"
+url = "2.2"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+
+[features]
+default = []
+cli = ["jsona-cli"]
+lsp = ["jsona-lsp"]
