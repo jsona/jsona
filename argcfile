@@ -27,11 +27,10 @@ publish() {
         if [[ "$online_ver" != "$pkg_ver" ]]; then
             read -p "Upgrade $name from $online_ver to $pkg_ver (y/n)? " choice
             if [[ "$choice" == y ]]; then
-                (cd js/$name && npm publish @jsona/$name)
-                echo publish @jsona/$name:$pkg_ver
+                (cd js/$name && npm publish)
             fi
         else
-            echo @jsona/$name:$pkg_ver is latest version
+            echo @jsona/$name:$pkg_ver is up to date
         fi
     done
 }
