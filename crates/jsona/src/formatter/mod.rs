@@ -531,5 +531,5 @@ fn ident_block_comment(text: &str, ident: &str) -> String {
 }
 
 fn count_newlines(text: &str) -> usize {
-    text.chars().filter(|v| v.is_whitespace()).count()
+    text.lines().count()
 }
