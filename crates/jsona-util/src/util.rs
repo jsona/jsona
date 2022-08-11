@@ -53,7 +53,7 @@ pub fn to_file_url(path: &str, base: &Path) -> Option<Url> {
     let path = if path.starts_with("file://") {
         path
     } else if cfg!(windows) {
-        format!("file://{}", path.replace('\\', "/"))
+        format!("file:///{}", path.replace('\\', "/"))
     } else {
         format!("file://{}", path)
     };
