@@ -11,7 +11,7 @@ use std::{str::FromStr, string::String as StdString};
 use crate::dom::error::{Error as DomError, ParseError};
 use crate::dom::{self, DomNode, Node};
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Ast {
     Null(Null),
@@ -22,72 +22,72 @@ pub enum Ast {
     Object(Object),
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Null {
     pub annotations: Vec<Annotation>,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Bool {
     pub value: bool,
     pub annotations: Vec<Annotation>,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Number {
     pub value: JsonNumber,
     pub annotations: Vec<Annotation>,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct String {
     pub value: StdString,
     pub annotations: Vec<Annotation>,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Array {
     pub items: Vec<Ast>,
     pub annotations: Vec<Annotation>,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Object {
     pub properties: Vec<Property>,
     pub annotations: Vec<Annotation>,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Property {
     pub key: Key,
     pub value: Ast,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Annotation {
     pub key: Key,
     pub value: AnnotationValue,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Key {
     pub name: StdString,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct AnnotationValue {
     pub value: Value,
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Error {
     pub kind: StdString,
     pub message: StdString,
