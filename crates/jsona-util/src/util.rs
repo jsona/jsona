@@ -38,27 +38,64 @@ impl GlobRule {
     }
 }
 
+pub const FILE_PROTOCOL: &str = "file://";
+
 /// Convert path to file url
 pub fn to_file_url(path: &str, base: &Path) -> Option<Url> {
-    if path.starts_with("file://") {
-        return Url::parse(path).ok();
+    fn is_window_path(path: &str) -> bool {
+        let mut chars = path.chars();
+        matches!(
+            (chars.next().map(|v| v.is_ascii_alphabetic()), chars.next()),
+            (Some(true), Some(':'))
+        )
     }
-    let path = Path::new(path);
-    let path = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        base.join(path)
-    };
-    let path = path.display().to_string();
-    let path = if let Some(path) = path.strip_prefix("file://") {
-        path.to_string()
-    } else if cfg!(windows) {
-        format!("/{}", path.replace('\\', "/"))
+    let path = if let Some(tail) = path.strip_prefix(FILE_PROTOCOL) {
+        tail
     } else {
         path
     };
-    let path = format!("file://{}", &urlencode::encode(&path));
-    Url::parse(&path).ok()
+    let path = path.replace('\\', "/");
+    let path = if path.starts_with('/') {
+        format!("{}{}", FILE_PROTOCOL, urlencode::encode(&path))
+    } else if is_window_path(&path) {
+        format!("{}/{}", FILE_PROTOCOL, urlencode::encode(&path))
+    } else {
+        let base = base.display().to_string().replace('\\', "/");
+        let full_path = if base.ends_with('/') {
+            format!("{}{}", base, path)
+        } else {
+            format!("{}/{}", base, path)
+        };
+        if is_window_path(&base) {
+            format!("{}/{}", FILE_PROTOCOL, urlencode::encode(&full_path))
+        } else {
+            format!("{}{}", FILE_PROTOCOL, urlencode::encode(&full_path))
+        }
+    };
+    path.parse().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    macro_rules! asset_to_file_url {
+        ($p:expr, $b:expr, $o:expr) => {
+            assert_eq!($o, to_file_url($p, Path::new($b)).unwrap().to_string());
+        };
+    }
+
+    #[test]
+    fn test_to_file_url() {
+        asset_to_file_url!("a/b", "c:\\dir1", "file:///c%3A/dir1/a/b");
+        asset_to_file_url!("a/b", "c:\\dir1\\", "file:///c%3A/dir1/a/b");
+        asset_to_file_url!("a\\b", "c:\\dir1\\", "file:///c%3A/dir1/a/b");
+        asset_to_file_url!("a/b", "/dir1", "file:///dir1/a/b");
+        asset_to_file_url!("a/b", "/dir1/", "file:///dir1/a/b");
+        asset_to_file_url!("a\\b", "/dir1/", "file:///dir1/a/b");
+        asset_to_file_url!("/a/b", "/dir1", "file:///a/b");
+        asset_to_file_url!("file:///a/b", "/dir1", "file:///a/b");
+        asset_to_file_url!("c:\\a\\b", "c:\\dir1", "file:///c%3A/a/b");
+    }
 }
 
 mod urlencode {

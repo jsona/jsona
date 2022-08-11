@@ -23,7 +23,7 @@ use lsp_types::Url;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::json;
-use std::{path::Path, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 pub type World<E> = Arc<WorldState<E>>;
 
@@ -223,12 +223,13 @@ impl<E: Environment> WorkspaceState<E> {
             return Ok(());
         }
 
-        let root_path = if cfg!(windows) && self.root == *DEFAULT_WORKSPACE_URL {
-            Path::new("C:\\").to_path_buf()
-        } else {
-            env.to_file_path(&self.root)
-                .ok_or_else(|| anyhow!("invalid root URL"))?
+        if self.root == *DEFAULT_WORKSPACE_URL {
+            return Ok(());
         };
+
+        let root_path = env
+            .to_file_path(&self.root)
+            .ok_or_else(|| anyhow!("invalid root URL"))?;
 
         if let Some(config_path) = env.find_config_file(&root_path).await {
             tracing::info!(path = ?config_path, "found config file");

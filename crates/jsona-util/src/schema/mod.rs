@@ -55,7 +55,7 @@ impl<E: Environment> Schemas<E> {
     pub fn set_cache_expiration_times(&self, mem: Duration, disk: Duration) {
         tracing::debug!("set cache expiration time, mem: {:?} disk: {:?}", mem, disk);
         self.cache_schema.set_expiration_times(mem, disk);
-        self.cache_schema.set_expiration_times(mem, disk);
+        self.cache_value.set_expiration_times(mem, disk);
     }
 
     pub fn env(&self) -> &E {
