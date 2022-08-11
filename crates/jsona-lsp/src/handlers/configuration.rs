@@ -51,10 +51,6 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
         })
         .collect();
 
-    for (url, _) in workspaces.iter() {
-        if *url == *DEFAULT_WORKSPACE_URL {}
-    }
-
     let res = context
         .clone()
         .write_request::<WorkspaceConfiguration, _>(Some(ConfigurationParams {
@@ -73,7 +69,10 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
         Ok(configs) => {
             for (i, config) in configs.into_iter().enumerate() {
                 if i == 0 && config.is_object() {
-                    for (_, ws) in workspaces.iter_mut() {
+                    for (_, ws) in workspaces
+                        .iter_mut()
+                        .filter(|(url, _)| **url == *DEFAULT_WORKSPACE_URL)
+                    {
                         if let Err(error) = ws.config.update_from_json(&config) {
                             tracing::error!(?error, "invalid configuration");
                         }
