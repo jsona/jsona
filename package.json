@@ -6,7 +6,7 @@
   "publisher": "sigoden",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.52.0"
+    "vscode": "^1.66.0"
   },
   "icon": "icon.png",
   "homepage": "https://github.com/jsona/vscode-jsona",
@@ -175,7 +175,7 @@
     "build": "rimraf dist && yarn build:node && yarn build:browser-extension && yarn build:browser-server"
   },
   "dependencies": {
-    "@jsona/lsp": "^0.1.0",
+    "@jsona/lsp": "^0.1.1",
     "@jsona/util-types": "^0.1.0",
     "esbuild": "^0.15.0",
     "fast-glob": "^3.2.11",

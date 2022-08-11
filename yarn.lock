@@ -7,10 +7,10 @@
   resolved "https://registry.yarnpkg.com/@esbuild/linux-loong64/-/linux-loong64-0.15.0.tgz#7ca859765361a92a60669a1794e9c1837d427d97"
   integrity sha512-7ChD3qsxRPIPp9bfjspZiM/x8B1UZL7IKwp0YdnC1kKsDCB5Q8/TexedeeEbkI9inlunu8Lll2lP2wnkiXTCLA==
 
-"@jsona/lsp@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@jsona/lsp/-/lsp-0.1.0.tgz#155c910e14ccd3544a5e51ef6485ca2d7add7bc3"
-  integrity sha512-DreVDJOfbKoULTxXjor51U99FXb0U5A5BNsuM4gX+BiY+hWo4DgftAG0N7DKaKR5TFeB9qJwuk9fDynKsGUjFA==
+"@jsona/lsp@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@jsona/lsp/-/lsp-0.1.1.tgz#f77826f16c7962de071bbb3ea219b72ea4b8e90a"
+  integrity sha512-QAxgwfp2DHDKwFeGmg7Lq6uwzNtwWdpuzFrE8846a/jLo6efWu3vJd73H7kdl/5E3tWU983g30NHyqYb5KlVmA==
   dependencies:
     "@jsona/util-types" "^0.1.0"
 
