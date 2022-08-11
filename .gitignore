@@ -1,6 +1,6 @@
 /target
 .vscode
 node_modules
-*.lock
+yarn.lock
 *.log
 js/**/dist
