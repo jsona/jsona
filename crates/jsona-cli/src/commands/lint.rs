@@ -127,7 +127,7 @@ impl<E: Environment> App<E> {
             return Err(anyhow!("semantic errors found"));
         }
 
-        let file_uri: Url = format!("file://{file_path}").parse().unwrap();
+        let file_uri: Url = to_file_url(file_path, &self.env.cwd().unwrap_or_default()).unwrap();
 
         self.schemas
             .associations()

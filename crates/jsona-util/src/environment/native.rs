@@ -1,4 +1,4 @@
-use std::{path::Path, time::Duration};
+use std::path::Path;
 
 use crate::config::CONFIG_FILE_NAMES;
 
@@ -93,7 +93,7 @@ impl Environment for NativeEnvironment {
     #[cfg(feature = "fetch")]
     async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(10))
             .build()
             .unwrap();
         let data = client

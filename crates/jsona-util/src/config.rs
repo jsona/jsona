@@ -71,9 +71,7 @@ impl Config {
         Ok(config)
     }
     /// Prepare the configuration for further use.
-    pub fn prepare(&mut self, e: &impl Environment, base: &Path) -> Result<(), anyhow::Error> {
-        self.make_absolute(e, base);
-
+    pub fn prepare(&mut self, _e: &impl Environment, base: &Path) -> Result<(), anyhow::Error> {
         let default_include = String::from("**/*.jsona");
 
         self.file_rule = Some(GlobRule::new(
@@ -113,16 +111,6 @@ impl Config {
             if let Some(opts) = schema_opts.formatting.clone() {
                 options.update(opts);
             }
-        }
-    }
-
-    /// Transform all relative glob patterns to have the given base path.
-    fn make_absolute(&mut self, e: &impl Environment, base: &Path) {
-        make_absolute_paths(&mut self.include, e, base);
-        make_absolute_paths(&mut self.exclude, e, base);
-        for schema_rule in &mut self.rules {
-            make_absolute_paths(&mut schema_rule.include, e, base);
-            make_absolute_paths(&mut schema_rule.exclude, e, base);
         }
     }
 }
@@ -211,18 +199,6 @@ impl SchemaRule {
         match &self.file_rule {
             Some(r) => r.is_match(path),
             None => true,
-        }
-    }
-}
-
-fn make_absolute_paths(paths: &mut Option<Vec<String>>, e: &impl Environment, base: &Path) {
-    if let Some(paths) = paths {
-        for p in paths {
-            if !e.is_absolute(Path::new(p)) {
-                if let Some(url) = to_file_url(p, base) {
-                    *p = url.to_string()
-                }
-            }
         }
     }
 }
