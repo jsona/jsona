@@ -1,9 +1,11 @@
 use super::{DomNode, Keys, Node};
 
+type VisitFn<'a, T> = Box<dyn Fn(&Keys, &Node, &T) -> VisitControl + 'a>;
+
 pub struct Visitor<'a, T> {
     node: &'a Node,
     state: &'a T,
-    f: Box<dyn Fn(&Keys, &Node, &T) -> VisitControl + 'a>,
+    f: VisitFn<'a, T>,
 }
 
 impl<'a, T> Visitor<'a, T> {
