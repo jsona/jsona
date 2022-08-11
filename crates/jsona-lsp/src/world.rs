@@ -209,7 +209,7 @@ impl<E: Environment> WorkspaceState<E> {
             }
         }
 
-        self.emit_associations(context).await;
+        self.emit_all_associations(context.clone()).await;
         Ok(())
     }
 
@@ -238,34 +238,41 @@ impl<E: Environment> WorkspaceState<E> {
         }
         Ok(())
     }
-
-    pub(crate) async fn emit_associations(&self, mut context: Context<World<E>>) {
+    pub(crate) async fn emit_all_associations(&self, context: Context<World<E>>) {
         for document_url in self.documents.keys() {
-            if let Some(assoc) = self.schemas.associations().association_for(document_url) {
-                if let Err(error) = context
-                    .write_notification::<DidChangeSchemaAssociation, _>(Some(
-                        DidChangeSchemaAssociationParams {
-                            document_uri: document_url.clone(),
-                            schema_uri: Some(assoc.url.clone()),
-                            meta: Some(assoc.meta.clone()),
-                        },
-                    ))
-                    .await
-                {
-                    tracing::error!(%error, "failed to write notification");
-                }
-            } else if let Err(error) = context
+            self.emit_association(context.clone(), document_url).await;
+        }
+    }
+
+    pub(crate) async fn emit_association(
+        &self,
+        mut context: Context<World<E>>,
+        document_url: &Url,
+    ) {
+        if let Some(assoc) = self.schemas.associations().association_for(document_url) {
+            if let Err(error) = context
                 .write_notification::<DidChangeSchemaAssociation, _>(Some(
                     DidChangeSchemaAssociationParams {
                         document_uri: document_url.clone(),
-                        schema_uri: None,
-                        meta: None,
+                        schema_uri: Some(assoc.url.clone()),
+                        meta: Some(assoc.meta.clone()),
                     },
                 ))
                 .await
             {
                 tracing::error!(%error, "failed to write notification");
             }
+        } else if let Err(error) = context
+            .write_notification::<DidChangeSchemaAssociation, _>(Some(
+                DidChangeSchemaAssociationParams {
+                    document_uri: document_url.clone(),
+                    schema_uri: None,
+                    meta: None,
+                },
+            ))
+            .await
+        {
+            tracing::error!(%error, "failed to write notification");
         }
     }
 
