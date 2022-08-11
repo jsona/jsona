@@ -27,7 +27,8 @@ pub(crate) async fn document_open<E: Environment>(
     let mapper = Mapper::new_utf16(&p.text_document.text, false);
 
     let mut workspaces = context.workspaces.write().await;
-    let ws = workspaces.by_document_mut(&p.text_document.uri);
+    let document_url = &p.text_document.uri.clone();
+    let ws = workspaces.by_document_mut(document_url);
 
     let dom = parse.clone().into_dom();
 
@@ -42,8 +43,8 @@ pub(crate) async fn document_open<E: Environment>(
             });
         ws.schemas
             .associations()
-            .add_from_document(&p.text_document.uri, &dom);
-        ws.emit_associations(context.clone()).await;
+            .add_from_document(document_url, &dom);
+        ws.emit_association(context.clone(), document_url).await;
     }
 
     ws.documents.insert(
@@ -76,7 +77,8 @@ pub(crate) async fn document_change<E: Environment>(
     let mapper = Mapper::new_utf16(&change.text, false);
 
     let mut workspaces = context.workspaces.write().await;
-    let ws = workspaces.by_document_mut(&p.text_document.uri);
+    let document_url = &p.text_document.uri.clone();
+    let ws = workspaces.by_document_mut(document_url);
 
     let dom = parse.clone().into_dom();
 
@@ -91,8 +93,8 @@ pub(crate) async fn document_change<E: Environment>(
             });
         ws.schemas
             .associations()
-            .add_from_document(&p.text_document.uri, &dom);
-        ws.emit_associations(context.clone()).await;
+            .add_from_document(document_url, &dom);
+        ws.emit_association(context.clone(), document_url).await;
     }
 
     ws.documents.insert(
