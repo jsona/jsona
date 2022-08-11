@@ -15,4 +15,4 @@ node_modules/
 out/
 *.vsix
 dist/
-server/
+.vscode-test-web

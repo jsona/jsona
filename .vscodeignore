@@ -1,10 +1,9 @@
 **
 !out
 !syntaxes
-!server
 !icon.png
 !jsona.configuration.json
 !LICENSE.md
 !package.json
-!server
 !README.md
+!dist

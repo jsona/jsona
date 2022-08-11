@@ -6,7 +6,7 @@
   "publisher": "sigoden",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.66.0"
+    "vscode": "^1.52.0"
   },
   "icon": "icon.png",
   "homepage": "https://github.com/jsona/vscode-jsona",
@@ -37,6 +37,12 @@
     "configuration": {
       "title": "JSONA",
       "properties": {
+        "jsona.executable.bundled": {
+          "description": "Use the bundled jsona language server. If set to `false`, the `jsona` executable must be found in PATH or must be set in `jsona.executable.path`.",
+          "type": "boolean",
+          "scope": "resource",
+          "default": true
+        },
         "jsona.executable.path": {
           "type": [
             "string",
@@ -158,20 +164,34 @@
       }
     ]
   },
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
+  "browser": "./dist/browser-extension.js",
   "scripts": {
-    "vscode:prepublish": "yarn build-base --minify",
-    "package": "vsce package -o jsona.vsix",
-    "build-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node"
+    "package": "npx vsce package",
+    "vscode:prepublish": "yarn build",
+    "build:browser-extension": "rollup -c rollup.config.browser-extension.js",
+    "build:browser-server": "rollup -c rollup.config.browser-server.js",
+    "build:node": "rollup -c rollup.config.js",
+    "build": "rimraf dist && yarn build:node && yarn build:browser-extension && yarn build:browser-server"
   },
   "dependencies": {
-    "esbuild": "^0.14.49",
+    "@jsona/lsp": "^0.1.0",
+    "@jsona/util-types": "^0.1.0",
+    "esbuild": "^0.15.0",
+    "fast-glob": "^3.2.11",
+    "node-fetch": "^3.2.10",
     "typescript": "^4.7.4",
     "vscode-languageclient": "^8.0.2",
     "which": "^2.0.2"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^22.0.2",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-replace": "^4.0.0",
     "@types/node": "^18.6.5",
-    "@types/vscode": "^1.44.0"
+    "@types/vscode": "^1.44.0",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.77.2",
+    "rollup-plugin-esbuild": "^4.9.1"
   }
 }
