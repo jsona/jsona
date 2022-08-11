@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 set -e
 
 PKGS=( \
@@ -8,7 +9,7 @@ PKGS=( \
 )
 
 # @cmd Build js
-# @arg name[core|util-types|lsp|all]
+# @arg name![core|util-types|lsp|all]
 build() {
     if [[ "$1" == "all" ]]; then
         for name in ${PKGS[@]}; do
