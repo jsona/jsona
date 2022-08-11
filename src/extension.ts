@@ -5,14 +5,55 @@ import { syncExtensionSchemas } from "./jsonaValidation";
 import { showMessage, getOutput } from "./util";
 
 export async function activate(context: vscode.ExtensionContext) {
+  const schemaIndicator = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    0
+  );
+
+  schemaIndicator.text = "no schema";
+  schemaIndicator.tooltip = "JSONA Schema";
+  schemaIndicator.command = "jsona.selectSchema";
+
   const c = await createClient(context);
   await c.start()
+
+  if (vscode.window.activeTextEditor?.document.languageId === "jsona") {
+    schemaIndicator.show();
+  }
   
   registerCommands(context, c);
   syncExtensionSchemas(context, c);
   vscode.commands.executeCommand("setContext", "jsona.extensionActive", true);
   context.subscriptions.push(
     getOutput(),
+    schemaIndicator,
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+      if (editor?.document.languageId === "jsona") {
+        schemaIndicator.show();
+      } else {
+        schemaIndicator.hide();
+      }
+    }),
+    c.onNotification(
+      "jsona/didChangeSchemaAssociation",
+      async (params: {
+        documentUri: string;
+        schemaUri?: string;
+        meta?: Record<string, any>;
+      }) => {
+        const currentDocumentUrl =
+          vscode.window.activeTextEditor?.document.uri.toString();
+
+        if (!currentDocumentUrl) {
+          return;
+        }
+
+        if (params.documentUri === currentDocumentUrl) {
+          schemaIndicator.text =
+            params.meta?.name ?? params.schemaUri ?? "no schema";
+        }
+      }
+    ),
     c.onNotification("jsona/messageWithOutput", async params =>
       showMessage(params, c)
     ),
