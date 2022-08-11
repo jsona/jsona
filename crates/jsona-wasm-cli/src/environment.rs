@@ -371,11 +371,13 @@ impl Environment for WasmEnvironment {
         let path_str = JsValue::from_str(&from.to_string_lossy());
         let this = JsValue::null();
         let res: JsValue = self.js_find_config_file.call1(&this, &path_str).unwrap();
+        let ret = JsFuture::from(Promise::from(res))
+            .await
+            .ok()?;
 
-        if res.is_undefined() {
+        if ret.is_undefined() {
             return None;
         }
-
-        res.as_string().map(Into::into)
+        ret.as_string().map(Into::into)
     }
 }

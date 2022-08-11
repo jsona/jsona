@@ -72,7 +72,7 @@ export interface Environment {
    *
    * - `.jsona`
    */
-  findConfigFile: (from: string) => string | undefined;
+  findConfigFile: (from: string) => Promise<string | undefined>;
   /**
    * The fetch function if it is not defined on the global Window.
    *
