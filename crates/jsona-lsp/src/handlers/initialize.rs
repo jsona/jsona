@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
 use super::update_configuration;
-use crate::config::InitConfig;
 use crate::world::WorkspaceState;
 use crate::World;
 use jsona_util::environment::Environment;
@@ -21,29 +18,12 @@ pub async fn initialize<E: Environment>(
 ) -> Result<InitializeResult, Error> {
     let p = params.required()?;
 
-    if let Some(init_opts) = p.initialization_options {
-        match serde_json::from_value::<InitConfig>(init_opts) {
-            Ok(c) => context.init_config.store(Arc::new(c)),
-            Err(error) => {
-                tracing::error!(%error, "invalid initialization options");
-            }
-        }
-    }
-
     if let Some(workspaces) = p.workspace_folders {
         let mut wss = context.workspaces.write().await;
-        let init_config = context.init_config.load();
 
         for workspace in workspaces {
-            let ws = wss
-                .entry(workspace.uri.clone())
+            wss.entry(workspace.uri.clone())
                 .or_insert(WorkspaceState::new(context.env.clone(), workspace.uri));
-
-            ws.schemas.set_cache_path(init_config.cache_path.clone());
-
-            if let Err(error) = ws.initialize(context.clone(), &context.env).await {
-                tracing::error!(?error, "failed to initialize workspace");
-            }
         }
     }
 

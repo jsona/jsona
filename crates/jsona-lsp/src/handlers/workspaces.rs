@@ -14,7 +14,6 @@ pub async fn workspace_change<E: Environment>(
     };
 
     let mut workspaces = context.workspaces.write().await;
-    let init_config = context.init_config.load();
 
     for removed in p.event.removed {
         workspaces.remove(&removed.uri);
@@ -24,8 +23,6 @@ pub async fn workspace_change<E: Environment>(
         let ws = workspaces
             .entry(added.uri.clone())
             .or_insert(WorkspaceState::new(context.env.clone(), added.uri));
-
-        ws.schemas.set_cache_path(init_config.cache_path.clone());
 
         if let Err(error) = ws.initialize(context.clone(), &context.env).await {
             tracing::error!(?error, "failed to initialize workspace");

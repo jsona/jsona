@@ -1,61 +1,42 @@
 use anyhow::{anyhow, bail};
 use jsona::dom::{Keys, Node};
 use parking_lot::Mutex;
-use serde_json::Value;
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::sync::Arc;
 use tokio::sync::Semaphore;
 use url::Url;
 
-use self::{associations::SchemaAssociations, cache::Cache};
-use crate::{environment::Environment, LruCache};
+use self::associations::SchemaAssociations;
+use crate::{environment::Environment, HashMap};
 
 pub use jsona_schema_validator::{
     JSONASchemaValidator, JSONASchemaValue, NodeValidationError, Schema,
 };
 
 pub mod associations;
-pub mod cache;
 
 #[derive(Clone)]
 pub struct Schemas<E: Environment> {
     env: E,
     associations: SchemaAssociations<E>,
     concurrent_requests: Arc<Semaphore>,
-    validators: Arc<Mutex<LruCache<Url, Arc<JSONASchemaValidator>>>>,
-    cache_schema: Cache<E, JSONASchemaValue>,
-    cache_value: Cache<E, Value>,
+    validators: Arc<Mutex<HashMap<Url, Arc<JSONASchemaValidator>>>>,
+    schemas: Arc<Mutex<HashMap<Url, Arc<JSONASchemaValue>>>>,
 }
 
 impl<E: Environment> Schemas<E> {
     pub fn new(env: E) -> Self {
-        let cache_schema = Cache::new(env.clone());
-        let cache_value = Cache::new(env.clone());
-
         Self {
-            associations: SchemaAssociations::new(env.clone(), cache_value.clone()),
-            cache_schema,
-            cache_value,
+            associations: SchemaAssociations::new(env.clone()),
             env,
             concurrent_requests: Arc::new(Semaphore::new(10)),
-            validators: Arc::new(Mutex::new(LruCache::new(3))),
+            validators: Arc::new(Mutex::new(HashMap::default())),
+            schemas: Arc::new(Mutex::new(HashMap::default())),
         }
     }
 
     /// Get a reference to the schemas's associations.
     pub fn associations(&self) -> &SchemaAssociations<E> {
         &self.associations
-    }
-
-    pub fn set_cache_path(&self, path: Option<PathBuf>) {
-        tracing::debug!("set cache path {:?}", path);
-        self.cache_schema.set_cache_path(path.clone());
-        self.cache_value.set_cache_path(path);
-    }
-
-    pub fn set_cache_expiration_times(&self, mem: Duration, disk: Duration) {
-        tracing::debug!("set cache expiration time, mem: {:?} disk: {:?}", mem, disk);
-        self.cache_schema.set_expiration_times(mem, disk);
-        self.cache_value.set_expiration_times(mem, disk);
     }
 
     pub fn env(&self) -> &E {
@@ -77,7 +58,7 @@ impl<E: Environment> Schemas<E> {
                     .load_schema(schema_url)
                     .await
                     .map_err(|err| anyhow!("failed to load schema {schema_url} {}", err))?;
-                self.add_schema(schema_url, schema.clone()).await;
+                self.add_schema(schema_url, schema.clone());
                 self.add_validator(schema_url.clone(), &schema)
                     .map_err(|err| anyhow!("load schema {schema_url} throw {}", err))?
             }
@@ -85,16 +66,15 @@ impl<E: Environment> Schemas<E> {
         Ok(validator.validate(value))
     }
 
-    pub async fn add_schema(&self, schema_url: &Url, schema: Arc<JSONASchemaValue>) {
-        drop(self.cache_schema.store(schema_url.clone(), schema).await);
+    pub fn add_schema(&self, schema_url: &Url, schema: Arc<JSONASchemaValue>) {
+        drop(self.schemas.lock().insert(schema_url.clone(), schema));
     }
 
-    #[tracing::instrument(skip_all, fields(%schema_url))]
     pub async fn load_schema(
         &self,
         schema_url: &Url,
     ) -> Result<Arc<JSONASchemaValue>, anyhow::Error> {
-        if let Ok(s) = self.cache_schema.load(schema_url, false).await {
+        if let Some(s) = self.schemas.lock().get(schema_url).cloned() {
             tracing::debug!(%schema_url, "schema was found in cache");
             return Ok(s);
         }
@@ -107,21 +87,13 @@ impl<E: Environment> Schemas<E> {
                 Ok(s) => Arc::new(s),
                 Err(error) => {
                     tracing::warn!(?error, "failed to fetch remote schema");
-                    if let Ok(s) = self.cache_schema.load(schema_url, true).await {
-                        tracing::debug!(%schema_url, "expired schema was found in cache");
-                        return Ok(s);
-                    }
                     return Err(error);
                 }
             };
 
-        if let Err(error) = self
-            .cache_schema
-            .store(schema_url.clone(), schema.clone())
-            .await
-        {
-            tracing::debug!(%error, "failed to cache schema");
-        }
+        self.schemas
+            .lock()
+            .insert(schema_url.clone(), schema.clone());
 
         Ok(schema)
     }
@@ -138,10 +110,6 @@ impl<E: Environment> Schemas<E> {
     }
 
     fn get_validator(&self, schema_url: &Url) -> Option<Arc<JSONASchemaValidator>> {
-        if self.cache_schema.lru_expired() {
-            self.validators.lock().clear();
-        }
-
         self.validators.lock().get(schema_url).cloned()
     }
 
@@ -151,7 +119,7 @@ impl<E: Environment> Schemas<E> {
         schema: &JSONASchemaValue,
     ) -> Result<Arc<JSONASchemaValidator>, anyhow::Error> {
         let v = Arc::new(JSONASchemaValidator::new(schema)?);
-        self.validators.lock().put(schema_url, v.clone());
+        self.validators.lock().insert(schema_url, v.clone());
         Ok(v)
     }
 
