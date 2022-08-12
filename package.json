@@ -106,21 +106,6 @@
           "scope": "resource",
           "default": {}
         },
-        "jsona.schema.cache.memoryExpiration": {
-          "description": "The amount of seconds after which schemas will be invalidated from memory.",
-          "markdownDescription": "The amount of seconds after which schemas will be invalidated from memory. \n**NOTE**: setting too low values will cause performance issues and validation of some schemas will fail.",
-          "type": "integer",
-          "scope": "resource",
-          "minimum": 0,
-          "default": 60
-        },
-        "jsona.schema.cache.diskExpiration": {
-          "description": "The amount of seconds after which cached catalogs and schemas expire and will be attempted to be fetched again.",
-          "type": "integer",
-          "scope": "resource",
-          "minimum": 0,
-          "default": 600
-        },
         "jsona.formatter.indentString": {
           "scope": "resource",
           "type": "string",

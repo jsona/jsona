@@ -100,18 +100,12 @@ async function createNodeClient(context: vscode.ExtensionContext) {
     };
   }
 
-  await vscode.workspace.fs.createDirectory(context.globalStorageUri);
-
   return new node.LanguageClient(
     "JSONA",
     "JSONA Language Server",
     serverOpts,
     {
       documentSelector: [{ language: "jsona" }],
-      initializationOptions: {
-        configuration: vscode.workspace.getConfiguration().get("jsona"),
-        cachePath: context.globalStorageUri.fsPath,
-      },
     }
   );
 }
