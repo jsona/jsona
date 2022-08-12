@@ -44,7 +44,8 @@ const options = {
     replace({
       preventAssignment: true,
       "import.meta.env.BROWSER": true,
-      "import.meta.env.RUST_LOG": `"${process.env.RUST_LOG || "info"}"`,
+      "import.meta.env.RUST_LOG": JSON.stringify(process.env.RUST_LOG || "info"),
+      "import.meta.env.LOG_TOPICS": JSON.stringify(process.env.LOG_TOPICS || ""),
     }),
     esbuild({ minify: true, logLevel: "error" }),
     commonjs({

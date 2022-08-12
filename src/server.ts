@@ -50,10 +50,11 @@ process.on("message", async (message: RpcMessage) => {
           }
         },
         fetchFile: async (url: string) => {
+          log("fetchFile", url);
           const controller = new AbortController();
           const timeout = setTimeout(() => {
             controller.abort();
-          }, 10000);
+          }, 30000);
           try {
             const res = await fetch(url, { signal: controller.signal });
             const buf = await res.arrayBuffer();
@@ -73,14 +74,14 @@ process.on("message", async (message: RpcMessage) => {
       },
       {
         onMessage(message) {
-          debugLog('lsp2host', message);
+          log('lsp2host', message);
           process.send(message);
         },
       }
     );
   }
 
-  debugLog('host2lsp', message);
+  log('host2lsp', message);
   jsona.send(message);
 });
 
@@ -89,8 +90,12 @@ process.on("unhandledRejection", up => {
   throw up;
 });
 
-function debugLog(topic: string, message: any) {
-  if (import.meta.env.RUST_LOG === "debug" || import.meta.env.RUST_LOG == "verbose") {
-    console.log(topic, JSON.stringify(message));
+function log(topic: "lsp2host" | "host2lsp" | "fetchFile", message: any) {
+  if((import.meta.env.LOG_TOPICS).indexOf(topic) > -1) {
+    if (typeof message === "object") {
+      console.log(topic, JSON.stringify(message));
+    } else {
+      console.log(topic, message);
+    }
   }
 }
