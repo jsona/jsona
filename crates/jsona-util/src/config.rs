@@ -1,13 +1,14 @@
 use std::path::Path;
 use std::{fmt::Debug, path::PathBuf};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use jsona::dom::Node;
 use jsona::formatter;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::util::{get_parent_path, to_file_url, GlobRule};
+use crate::environment::Environment;
+use crate::util::{get_parent_path, join_path, to_file_url, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
 
@@ -69,6 +70,34 @@ impl Config {
             .map_err(|err| anyhow!("failed to deserialize config, {}", err))?;
         Ok(config)
     }
+    /// Find config file from entry dir, if found, load conffig; if not found, find parent dir until root dir.
+    pub async fn find_and_load(
+        entry: &Path,
+        env: &impl Environment,
+    ) -> Result<(PathBuf, Self), anyhow::Error> {
+        if entry.display().to_string().len() < 2 {
+            bail!("not found");
+        }
+        let mut p = entry.to_path_buf();
+        loop {
+            for name in CONFIG_FILE_NAMES {
+                let config_path = join_path(&p, name);
+                if let Ok(data) = env.read_file(&config_path).await {
+                    let source = std::str::from_utf8(&data)
+                        .map_err(|e| anyhow!("at {} throw {}", config_path.display(), e))?;
+                    let config = Self::from_jsona(source)
+                        .map_err(|e| anyhow!("at {} throw {}", config_path.display(), e))?;
+                    return Ok((config_path, config));
+                }
+            }
+            match get_parent_path(&p) {
+                Some(parent) => p = parent,
+                None => {
+                    bail!("not found");
+                }
+            }
+        }
+    }
     /// Prepare the configuration for further use.
     pub fn prepare(&mut self, config_path: Option<PathBuf>) -> Result<(), anyhow::Error> {
         let default_include = String::from("**/*.jsona");
@@ -87,7 +116,6 @@ impl Config {
         Ok(())
     }
 
-    #[must_use]
     pub fn is_included(&self, path: &Path) -> bool {
         match &self.file_rule {
             Some(r) => r.is_match(path),

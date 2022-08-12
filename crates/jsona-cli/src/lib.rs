@@ -35,14 +35,15 @@ impl<E: Environment> App<E> {
 
         let mut config_path = general.config.clone();
 
+        let mut config = Config::default();
         if config_path.is_none() && !general.no_auto_config {
             if let Some(cwd) = self.env.cwd() {
-                config_path = self.env.find_config_file(&cwd).await
+                if let Ok((path, c)) = Config::find_and_load(&cwd, &self.env).await {
+                    config_path = Some(path);
+                    config = c;
+                }
             }
-        }
-
-        let mut config = Config::default();
-        if let Some(config_path) = config_path.clone() {
+        } else if let Some(config_path) = config_path.clone() {
             tracing::info!(path = ?config_path, "found configuration file");
             match self.env.read_file(&config_path).await {
                 Ok(source) => {

@@ -42,16 +42,36 @@ pub fn get_parent_path(path: &Path) -> Option<PathBuf> {
     if cfg!(target_family = "wasm") {
         let raw_path = path.display().to_string();
         if let Some(':') = raw_path.chars().nth(1) {
+            // windows
+            if raw_path.len() < 3 {
+                return None;
+            }
             let parts: Vec<&str> = raw_path.split('\\').collect();
             let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
             Some(Path::new(&parts.join("\\")).to_path_buf())
         } else {
+            if raw_path.len() < 2 {
+                return None;
+            }
             let parts: Vec<&str> = raw_path.split('/').collect();
             let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
             Some(Path::new(&parts.join("/")).to_path_buf())
         }
     } else {
         path.parent().map(|v| v.to_path_buf())
+    }
+}
+
+pub fn join_path(path: &Path, name: &str) -> PathBuf {
+    if cfg!(target_family = "wasm") {
+        let raw_path = path.display().to_string();
+        if let Some(':') = raw_path.chars().nth(1) {
+            Path::new(&format!("{}{}{}", raw_path, "\\", name)).to_path_buf()
+        } else {
+            Path::new(&format!("{}{}{}", raw_path, "/", name)).to_path_buf()
+        }
+    } else {
+        path.join(name)
     }
 }
 

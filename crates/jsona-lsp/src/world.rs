@@ -225,15 +225,18 @@ impl<E: Environment> WorkspaceState<E> {
             .to_file_path(&self.root)
             .ok_or_else(|| anyhow!("invalid root URL"))?;
 
-        let config_path = env.find_config_file(&root_path).await;
+        let mut config_path = None;
 
-        if let Some(config_path) = config_path.clone() {
-            tracing::info!(path = ?config_path, "found config file");
-            let source = env.read_file(&config_path).await?;
-            let source = std::str::from_utf8(&source)?;
-            self.jsona_config = Config::from_jsona(source)?;
-
-            tracing::debug!("using config: {:#?}", self.jsona_config);
+        match Config::find_and_load(&root_path, env).await {
+            Ok((path, config)) => {
+                tracing::info!(path = ?path, "found config file");
+                self.jsona_config = config;
+                config_path = Some(path);
+                tracing::debug!("using config: {:#?}", self.jsona_config);
+            }
+            Err(err) => {
+                tracing::error!("failed to load config {}", err);
+            }
         }
 
         self.jsona_config.prepare(config_path)?;
