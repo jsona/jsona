@@ -7,7 +7,7 @@ use jsona::formatter;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::util::{to_file_url, get_parent_path, GlobRule};
+use crate::util::{get_parent_path, to_file_url, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
 
