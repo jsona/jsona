@@ -617,7 +617,7 @@ dependencies = [
 [[package]]
 name = "jsona"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#aec0c2d5a5bcba4affd3f1a3dbd6fc0c8ae60859"
+source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
 dependencies = [
  "arc-swap",
  "indexmap",
@@ -632,7 +632,7 @@ dependencies = [
 [[package]]
 name = "jsona-cli"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#aec0c2d5a5bcba4affd3f1a3dbd6fc0c8ae60859"
+source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
 dependencies = [
  "anyhow",
  "async-ctrlc",
@@ -654,7 +654,7 @@ dependencies = [
 [[package]]
 name = "jsona-lsp"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#aec0c2d5a5bcba4affd3f1a3dbd6fc0c8ae60859"
+source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -682,7 +682,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#aec0c2d5a5bcba4affd3f1a3dbd6fc0c8ae60859"
+source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
 dependencies = [
  "either",
  "fancy-regex 0.10.0",
@@ -696,7 +696,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema-validator"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#aec0c2d5a5bcba4affd3f1a3dbd6fc0c8ae60859"
+source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
 dependencies = [
  "indexmap",
  "jsona",
@@ -710,7 +710,7 @@ dependencies = [
 [[package]]
 name = "jsona-util"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#aec0c2d5a5bcba4affd3f1a3dbd6fc0c8ae60859"
+source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
 dependencies = [
  "ahash",
  "anyhow",
