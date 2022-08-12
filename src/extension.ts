@@ -1,3 +1,4 @@
+import type { Lsp } from "@jsona/lsp";
 import * as vscode from "vscode";
 import { createClient } from "./client";
 import { registerCommands } from "./commands";
@@ -14,6 +15,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const c = await createClient(context);
   await c.start()
 
+
   if (vscode.window.activeTextEditor?.document.languageId === "jsona") {
     schemaIndicator.show();
   }
@@ -24,13 +26,19 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     getOutput(),
     schemaIndicator,
-    vscode.window.onDidChangeActiveTextEditor(editor => {
+    vscode.window.onDidChangeActiveTextEditor(async editor => {
       if (editor?.document.languageId === "jsona") {
         let docUri = editor?.document.uri;
         if (docUri) {
-          c.sendRequest("jsona/associatedSchema", {
+          const res = await c.sendRequest("jsona/associatedSchema", {
             documentUri: docUri.toString(),
-          });
+          }) as Lsp.Client.RequestResponse<"jsona/associatedSchema">;
+          if (res?.schema?.url) {
+            let schema = res.schema;
+            schemaIndicator.text =
+              schema.meta?.name ?? schema.url?.split("/").slice(-1)[0] ?? "no schema";
+            schemaIndicator.tooltip = `JSONA Schema: ${schema.url}`;
+          }
         }
         schemaIndicator.show();
       } else {
@@ -39,11 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     c.onNotification(
       "jsona/didChangeSchemaAssociation",
-      async (params: {
-        documentUri: string;
-        schemaUri?: string;
-        meta?: Record<string, any>;
-      }) => {
+      async (params: Lsp.Server.NotificationParams<"jsona/didChangeSchemaAssociation">) => {
           const currentDocumentUrl =
             vscode.window.activeTextEditor?.document.uri.toString();
 
