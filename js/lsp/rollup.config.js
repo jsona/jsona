@@ -19,6 +19,7 @@ export default {
   plugins: [
     typescript(),
     rust({
+      debug: process.env.WASM_DEBUG === "true",
       inlineWasm: true,
       cargoArgs: ["-F", "lsp"],
     }),

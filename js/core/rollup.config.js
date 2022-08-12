@@ -20,6 +20,7 @@ export default {
     typescript(),
     rust({
       inlineWasm: true,
+      debug: process.env.WASM_DEBUG === "true",
     }),
     commonjs(),
     resolve({
