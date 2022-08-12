@@ -1,34 +1,36 @@
-use anyhow::{anyhow, bail};
+pub mod associations;
+pub mod fetcher;
+
+use anyhow::anyhow;
 use jsona::dom::{Keys, Node};
 use parking_lot::Mutex;
-use std::sync::Arc;
-use tokio::sync::Semaphore;
+use std::{path::PathBuf, sync::Arc};
 use url::Url;
 
 use self::associations::SchemaAssociations;
+use self::fetcher::Fetcher;
 use crate::{environment::Environment, HashMap};
 
 pub use jsona_schema_validator::{
     JSONASchemaValidator, JSONASchemaValue, NodeValidationError, Schema,
 };
 
-pub mod associations;
-
 #[derive(Clone)]
 pub struct Schemas<E: Environment> {
     env: E,
     associations: SchemaAssociations<E>,
-    concurrent_requests: Arc<Semaphore>,
+    fetcher: Fetcher<E>,
     validators: Arc<Mutex<HashMap<Url, Arc<JSONASchemaValidator>>>>,
     schemas: Arc<Mutex<HashMap<Url, Arc<JSONASchemaValue>>>>,
 }
 
 impl<E: Environment> Schemas<E> {
     pub fn new(env: E) -> Self {
+        let fetcher = Fetcher::new(env.clone());
         Self {
-            associations: SchemaAssociations::new(env.clone()),
+            associations: SchemaAssociations::new(env.clone(), fetcher.clone()),
+            fetcher,
             env,
-            concurrent_requests: Arc::new(Semaphore::new(10)),
             validators: Arc::new(Mutex::new(HashMap::default())),
             schemas: Arc::new(Mutex::new(HashMap::default())),
         }
@@ -41,6 +43,11 @@ impl<E: Environment> Schemas<E> {
 
     pub fn env(&self) -> &E {
         &self.env
+    }
+
+    pub fn set_cache_path(&self, path: Option<PathBuf>) {
+        tracing::debug!("set cache path {:?}", path);
+        self.fetcher.set_cache_path(path);
     }
 }
 
@@ -78,8 +85,9 @@ impl<E: Environment> Schemas<E> {
             tracing::debug!(%schema_url, "schema was found in cache");
             return Ok(s);
         }
+
         let schema: Arc<JSONASchemaValue> =
-            match self.fetch_external(schema_url).await.and_then(|v| {
+            match self.fetcher.fetch(schema_url).await.and_then(|v| {
                 std::str::from_utf8(&v)
                     .map_err(|v| anyhow!("{}", v))
                     .and_then(|v| v.parse().map_err(|err| anyhow!("{}", err)))
@@ -121,24 +129,5 @@ impl<E: Environment> Schemas<E> {
         let v = Arc::new(JSONASchemaValidator::new(schema)?);
         self.validators.lock().insert(schema_url, v.clone());
         Ok(v)
-    }
-
-    async fn fetch_external(&self, index_url: &Url) -> Result<Vec<u8>, anyhow::Error> {
-        let _permit = self.concurrent_requests.acquire().await?;
-        let data: Vec<u8> = match index_url.scheme() {
-            "http" | "https" => self.env.fetch_file(index_url).await?,
-            "file" => {
-                self.env
-                    .read_file(
-                        self.env
-                            .to_file_path(index_url)
-                            .ok_or_else(|| anyhow!("invalid file path"))?
-                            .as_ref(),
-                    )
-                    .await?
-            }
-            scheme => bail!("the scheme `{scheme}` is not supported"),
-        };
-        Ok(data)
     }
 }

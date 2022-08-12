@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use super::update_configuration;
+use crate::config::InitializationOptions;
 use crate::world::WorkspaceState;
 use crate::World;
 use jsona_util::environment::Environment;
@@ -18,12 +21,25 @@ pub async fn initialize<E: Environment>(
 ) -> Result<InitializeResult, Error> {
     let p = params.required()?;
 
+    if let Some(init_opts) = p.initialization_options {
+        match serde_json::from_value::<InitializationOptions>(init_opts) {
+            Ok(c) => context.initialization_options.store(Arc::new(c)),
+            Err(error) => {
+                tracing::error!(%error, "invalid initialization options");
+            }
+        }
+    }
+
     if let Some(workspaces) = p.workspace_folders {
         let mut wss = context.workspaces.write().await;
+        let init_opts = context.initialization_options.load();
 
         for workspace in workspaces {
-            wss.entry(workspace.uri.clone())
+            let ws = wss
+                .entry(workspace.uri.clone())
                 .or_insert(WorkspaceState::new(context.env.clone(), workspace.uri));
+
+            ws.schemas.set_cache_path(init_opts.cache_path.clone());
         }
     }
 
