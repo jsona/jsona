@@ -7,7 +7,7 @@ use jsona::formatter;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::util::{to_file_url, GlobRule};
+use crate::util::{get_parent_path, to_file_url, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
 
@@ -72,8 +72,7 @@ impl Config {
     /// Prepare the configuration for further use.
     pub fn prepare(&mut self, config_path: &Path) -> Result<(), anyhow::Error> {
         let default_include = String::from("**/*.jsona");
-        let config_dir = config_path
-            .parent()
+        let config_dir = get_parent_path(config_path)
             .ok_or_else(|| anyhow!("invalid config_path {}", config_path.display()))?;
 
         self.file_rule = Some(GlobRule::new(
@@ -84,7 +83,7 @@ impl Config {
         )?);
 
         for schema_rule in &mut self.rules {
-            schema_rule.prepare(config_dir)?;
+            schema_rule.prepare(&config_dir)?;
         }
         Ok(())
     }
