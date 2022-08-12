@@ -235,6 +235,8 @@ impl<E: Environment> WorkspaceState<E> {
                         tracing::error!("failed to read config {}", err);
                     }
                 }
+            } else {
+                config_path = None;
             }
         }
         if config_path.is_none() {
