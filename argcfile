@@ -18,9 +18,11 @@ build() {
     if [[ "$1" == "all" ]]; then
         for name in ${PKGS[@]}; do
             yarn --cwd js workspace @jsona/$name build
+            ls -alh js/$name/dist
         done
     else
         yarn --cwd js workspace @jsona/$1 build
+        ls -alh js/$1/dist
     fi
 }
 
