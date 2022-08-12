@@ -221,21 +221,33 @@ impl<E: Environment> WorkspaceState<E> {
             return Ok(());
         };
 
-        let root_path = env
-            .to_file_path(&self.root)
-            .ok_or_else(|| anyhow!("invalid root URL"))?;
-
-        let mut config_path = None;
-
-        match Config::find_and_load(&root_path, env).await {
-            Ok((path, config)) => {
-                tracing::info!(path = ?path, "found config file");
-                self.jsona_config = config;
-                config_path = Some(path);
-                tracing::debug!("using config: {:#?}", self.jsona_config);
+        let mut config_path = self.config.config_file.path.clone();
+        if let Some(path) = config_path.as_ref() {
+            match Config::from_file(path, env).await {
+                Ok(config) => {
+                    tracing::info!(path = ?path, "found config file");
+                    self.jsona_config = config;
+                    tracing::debug!("using config: {:#?}", self.jsona_config);
+                }
+                Err(err) => {
+                    tracing::error!("failed to load config {}", err);
+                }
             }
-            Err(err) => {
-                tracing::error!("failed to load config {}", err);
+        } else {
+            let root_path = env
+                .to_file_path(&self.root)
+                .ok_or_else(|| anyhow!("invalid root URL"))?;
+
+            match Config::find_and_load(&root_path, env).await {
+                Ok((path, config)) => {
+                    tracing::info!(path = ?path, "found config file");
+                    self.jsona_config = config;
+                    config_path = Some(path);
+                    tracing::debug!("using config: {:#?}", self.jsona_config);
+                }
+                Err(err) => {
+                    tracing::error!("failed to load config {}", err);
+                }
             }
         }
 

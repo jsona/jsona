@@ -43,21 +43,15 @@ impl<E: Environment> App<E> {
                     config = c;
                 }
             }
-        } else if let Some(config_path) = config_path.clone() {
+        } else if let Some(config_path) = config_path.as_mut() {
+            if !config_path.is_absolute() {
+                let cwd = self.env.cwd().ok_or_else(|| anyhow!("failed to get cwd"))?;
+                *config_path = cwd.join(&config_path);
+            }
             tracing::info!(path = ?config_path, "found configuration file");
-            match self.env.read_file(&config_path).await {
-                Ok(source) => {
-                    match std::str::from_utf8(&source)
-                        .map_err(|_| anyhow!("invalid utf8"))
-                        .and_then(Config::from_jsona)
-                    {
-                        Ok(c) => {
-                            config = c;
-                        }
-                        Err(error) => {
-                            tracing::warn!(%error, "invalid configuration file");
-                        }
-                    }
+            match Config::from_file(config_path, &self.env).await {
+                Ok(c) => {
+                    config = c;
                 }
                 Err(error) => {
                     tracing::warn!(%error, "failed to read configuration file");
