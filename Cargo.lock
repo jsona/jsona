@@ -125,15 +125,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
-name = "block-buffer"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bf7fe51849ea569fd452f37822f606a5cabb684dc918707a0193fd4664ff324"
-dependencies = [
- "generic-array",
-]
-
-[[package]]
 name = "bstr"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -238,25 +229,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7704b5fdd17b18ae31c4c1da5a2e0305a2bf17b5249300a9ee9ed7b72114c636"
 
 [[package]]
-name = "cpufeatures"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59a6001667ab124aebae2a495118e11d30984c3a653e99d86d58971708cf5e4b"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "crypto-common"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
-dependencies = [
- "generic-array",
- "typenum",
-]
-
-[[package]]
 name = "ctrlc"
 version = "3.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -264,16 +236,6 @@ checksum = "b37feaa84e6861e00a1f5e5aa8da3ee56d605c9992d33e082786754828e20865"
 dependencies = [
  "nix",
  "winapi",
-]
-
-[[package]]
-name = "digest"
-version = "0.10.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2fb860ca6fafa5552fb6d0e816a69c8e49f0908bf524e30a90d97c85892d506"
-dependencies = [
- "block-buffer",
- "crypto-common",
 ]
 
 [[package]]
@@ -443,16 +405,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "generic-array"
-version = "0.14.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bff49e947297f3312447abdca79f45f4738097cc82b06e72054d2223f601f1b9"
-dependencies = [
- "typenum",
- "version_check",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -514,9 +466,6 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-dependencies = [
- "ahash",
-]
 
 [[package]]
 name = "heck"
@@ -532,12 +481,6 @@ checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "hex"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "http"
@@ -674,7 +617,7 @@ dependencies = [
 [[package]]
 name = "jsona"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#1af0d858a66fb345a89f2d50f1d4195a8ac25b95"
+source = "git+https://github.com/jsona/jsona.git#62bc69e4fdf791067bbaff293b08bbec781e5812"
 dependencies = [
  "arc-swap",
  "indexmap",
@@ -689,7 +632,7 @@ dependencies = [
 [[package]]
 name = "jsona-cli"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#1af0d858a66fb345a89f2d50f1d4195a8ac25b95"
+source = "git+https://github.com/jsona/jsona.git#62bc69e4fdf791067bbaff293b08bbec781e5812"
 dependencies = [
  "anyhow",
  "async-ctrlc",
@@ -711,7 +654,7 @@ dependencies = [
 [[package]]
 name = "jsona-lsp"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#1af0d858a66fb345a89f2d50f1d4195a8ac25b95"
+source = "git+https://github.com/jsona/jsona.git#62bc69e4fdf791067bbaff293b08bbec781e5812"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -739,7 +682,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#1af0d858a66fb345a89f2d50f1d4195a8ac25b95"
+source = "git+https://github.com/jsona/jsona.git#62bc69e4fdf791067bbaff293b08bbec781e5812"
 dependencies = [
  "either",
  "fancy-regex 0.10.0",
@@ -753,7 +696,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema-validator"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#1af0d858a66fb345a89f2d50f1d4195a8ac25b95"
+source = "git+https://github.com/jsona/jsona.git#62bc69e4fdf791067bbaff293b08bbec781e5812"
 dependencies = [
  "indexmap",
  "jsona",
@@ -767,7 +710,7 @@ dependencies = [
 [[package]]
 name = "jsona-util"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#1af0d858a66fb345a89f2d50f1d4195a8ac25b95"
+source = "git+https://github.com/jsona/jsona.git#62bc69e4fdf791067bbaff293b08bbec781e5812"
 dependencies = [
  "ahash",
  "anyhow",
@@ -777,18 +720,16 @@ dependencies = [
  "futures",
  "glob",
  "globset",
- "hex",
  "indexmap",
  "jsona",
  "jsona-schema-validator",
  "jsonschema",
- "lru",
+ "md5",
  "parking_lot",
  "regex",
  "reqwest",
  "serde",
  "serde_json",
- "sha1",
  "tap",
  "time",
  "tokio",
@@ -824,7 +765,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-wasm-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "jsona",
  "wasm-bindgen",
@@ -866,9 +807,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.129"
+version = "0.2.131"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64de3cc433455c14174d42e554d4027ee631c4d046d43e3ecc6efc4636cdc7a7"
+checksum = "04c3b4822ccebfa39c02fc03d1534441b22ead323fa0f48bb7ddd8e6ba076a40"
 
 [[package]]
 name = "lock_api"
@@ -910,15 +851,6 @@ dependencies = [
  "quote",
  "regex-syntax",
  "syn",
-]
-
-[[package]]
-name = "lru"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e999beba7b6e8345721bd280141ed958096a2e4abdf74f67ff4ce49b4b54e47a"
-dependencies = [
- "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -966,6 +898,12 @@ name = "matches"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
+
+[[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "memchr"
@@ -1431,17 +1369,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha1"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c77f4e7f65455545c2153c1253d25056825e77ee2533f0e41deb65a93a34852f"
-dependencies = [
- "cfg-if",
- "cpufeatures",
- "digest",
-]
-
-[[package]]
 name = "sharded-slab"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1717,12 +1644,6 @@ name = "try-lock"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
-
-[[package]]
-name = "typenum"
-version = "1.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
 name = "uncased"
