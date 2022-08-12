@@ -38,6 +38,23 @@ impl GlobRule {
     }
 }
 
+pub fn get_parent_path(path: &Path) -> Option<PathBuf> {
+    if cfg!(target_family = "wasm") {
+        let raw_path = path.display().to_string();
+        if let Some(':') = raw_path.chars().nth(1) {
+            let parts: Vec<&str> = raw_path.split('\\').collect();
+            let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
+            Some(Path::new(&parts.join("\\")).to_path_buf())
+        } else {
+            let parts: Vec<&str> = raw_path.split('/').collect();
+            let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
+            Some(Path::new(&parts.join("/")).to_path_buf())
+        }
+    } else {
+        path.parent().map(|v| v.to_path_buf())
+    }
+}
+
 pub const FILE_PROTOCOL: &str = "file://";
 
 /// Convert path to file url
