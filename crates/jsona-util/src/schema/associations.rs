@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use jsona::dom::{KeyOrIndex, Node};
 use parking_lot::{RwLock, RwLockReadGuard};
 use regex::Regex;
@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tap::Tap;
-use tokio::sync::Semaphore;
 use url::Url;
 
 use crate::{
     config::Config,
     environment::Environment,
+    schema::Fetcher,
     util::{to_file_url, GlobRule},
 };
 
@@ -38,16 +38,16 @@ pub mod source {
 
 #[derive(Clone)]
 pub struct SchemaAssociations<E: Environment> {
-    concurrent_requests: Arc<Semaphore>,
-    associations: Arc<RwLock<Vec<(AssociationRule, SchemaAssociation)>>>,
     env: E,
+    fetcher: Fetcher<E>,
+    associations: Arc<RwLock<Vec<(AssociationRule, SchemaAssociation)>>>,
 }
 
 impl<E: Environment> SchemaAssociations<E> {
-    pub(crate) fn new(env: E) -> Self {
+    pub(crate) fn new(env: E, fetcher: Fetcher<E>) -> Self {
         Self {
-            concurrent_requests: Arc::new(Semaphore::new(10)),
             env,
+            fetcher,
             associations: Default::default(),
         }
     }
@@ -171,7 +171,8 @@ impl<E: Environment> SchemaAssociations<E> {
 
     async fn load_schemastore(&self, index_url: &Url) -> Result<SchemaStore, anyhow::Error> {
         let schemastore = match self
-            .fetch_external(index_url)
+            .fetcher
+            .fetch(index_url)
             .await
             .and_then(|v| serde_json::from_slice(&v).map_err(|e| anyhow!("{}", e)))
         {
@@ -183,25 +184,6 @@ impl<E: Environment> SchemaAssociations<E> {
         };
 
         Ok(schemastore)
-    }
-
-    async fn fetch_external(&self, file_url: &Url) -> Result<Vec<u8>, anyhow::Error> {
-        let _permit = self.concurrent_requests.acquire().await?;
-        let data: Vec<u8> = match file_url.scheme() {
-            "http" | "https" => self.env.fetch_file(file_url).await?,
-            "file" => {
-                self.env
-                    .read_file(
-                        self.env
-                            .to_file_path(file_url)
-                            .ok_or_else(|| anyhow!("invalid file path"))?
-                            .as_ref(),
-                    )
-                    .await?
-            }
-            scheme => bail!("the scheme `{scheme}` is not supported"),
-        };
-        Ok(data)
     }
 }
 

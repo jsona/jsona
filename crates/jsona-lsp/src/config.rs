@@ -4,7 +4,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 use url::Url;
+
 pub const DEFAULT_CONFIGURATION_SECTION: &str = "jsona";
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct InitializationOptions {
+    pub cache_path: Option<PathBuf>,
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

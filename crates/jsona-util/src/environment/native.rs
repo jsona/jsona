@@ -92,7 +92,6 @@ impl Environment for NativeEnvironment {
 
     #[cfg(feature = "fetch")]
     async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
-        tracing::info!("fetch file {}", url);
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()

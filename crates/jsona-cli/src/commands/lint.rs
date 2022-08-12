@@ -16,6 +16,7 @@ use url::Url;
 
 impl<E: Environment> App<E> {
     pub async fn execute_lint(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
+        self.schemas.set_cache_path(cmd.general.cache_path.clone());
         let config = self.load_config(&cmd.general).await?;
 
         if !cmd.no_schema {

@@ -1,5 +1,5 @@
 use crate::{
-    config::LspConfig,
+    config::{InitializationOptions, LspConfig},
     lsp_ext::notification::{DidChangeSchemaAssociation, DidChangeSchemaAssociationParams},
 };
 use anyhow::anyhow;
@@ -80,6 +80,7 @@ impl<E: Environment> Workspaces<E> {
 pub struct WorldState<E: Environment> {
     pub(crate) env: E,
     pub(crate) workspaces: AsyncRwLock<Workspaces<E>>,
+    pub(crate) initialization_options: ArcSwap<InitializationOptions>,
     pub(crate) default_config: ArcSwap<Config>,
 }
 
@@ -96,6 +97,7 @@ impl<E: Environment> WorldState<E> {
                 );
                 AsyncRwLock::new(Workspaces(m))
             },
+            initialization_options: Default::default(),
             default_config: Default::default(),
             env,
         }
