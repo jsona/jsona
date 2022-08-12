@@ -1,6 +1,5 @@
 use environment::WasmEnvironment;
 use serde::Serialize;
-use std::path::Path;
 use jsona::{formatter, parser::parse};
 use jsona_util::{config::Config, schema::Schemas};
 use url::Url;
@@ -35,8 +34,8 @@ pub fn initialize() {
 
 #[wasm_bindgen]
 pub fn format(
-    env: JsValue,
-    toml: &str,
+    _env: JsValue,
+    jsona: &str,
     options: JsValue,
     config: JsValue,
 ) -> Result<String, JsError> {
@@ -46,9 +45,9 @@ pub fn format(
         config.into_serde()?
     };
 
-    let env = WasmEnvironment::from(env);
+    // let env = WasmEnvironment::from(env);
     config
-        .prepare(&env, Path::new("/"))
+        .prepare(None)
         .map_err(|err| JsError::new(&err.to_string()))?;
 
     let camel_opts: formatter::OptionsIncompleteCamel = options.into_serde()?;
@@ -58,7 +57,7 @@ pub fn format(
     }
     options.update_camel(camel_opts);
 
-    let syntax = parse(toml);
+    let syntax = parse(jsona);
 
     Ok(formatter::format_syntax(
         syntax.into_syntax(),
@@ -67,7 +66,7 @@ pub fn format(
 }
 
 #[wasm_bindgen]
-pub async fn lint(env: JsValue, toml: String, config: JsValue) -> Result<JsValue, JsError> {
+pub async fn lint(env: JsValue, jsona: String, config: JsValue) -> Result<JsValue, JsError> {
     let mut config = if config.is_undefined() {
         Config::default()
     } else {
@@ -75,10 +74,10 @@ pub async fn lint(env: JsValue, toml: String, config: JsValue) -> Result<JsValue
     };
     let env = WasmEnvironment::from(env);
     config
-        .prepare(&env, Path::new("/"))
+        .prepare(None)
         .map_err(|err| JsError::new(&err.to_string()))?;
 
-    let syntax = parse(&toml);
+    let syntax = parse(&jsona);
 
     if !syntax.errors.is_empty() {
         return Ok(JsValue::from_serde(&LintResult {
@@ -115,7 +114,7 @@ pub async fn lint(env: JsValue, toml: String, config: JsValue) -> Result<JsValue
 
     if let Some(schema) = schemas
         .associations()
-        .association_for(&Url::parse("file:///__.toml").unwrap())
+        .association_for(&Url::parse("file:///__.jsona").unwrap())
     {
         let schema_errors = schemas
             .validate(&schema.url, &dom)
