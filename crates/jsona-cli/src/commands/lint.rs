@@ -28,7 +28,7 @@ impl<E: Environment> App<E> {
                         let cwd = self.env.cwd().ok_or_else(|| {
                             anyhow!("could not figure the current working directory")
                         })?;
-                        to_file_url(&schema_url, &cwd)
+                        to_file_url(&schema_url, Some(cwd))
                             .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_url))?
                     }
                 };
@@ -127,7 +127,7 @@ impl<E: Environment> App<E> {
             return Err(anyhow!("semantic errors found"));
         }
 
-        let file_uri: Url = to_file_url(file_path, &self.env.cwd().unwrap_or_default()).unwrap();
+        let file_uri: Url = to_file_url(file_path, self.env.cwd()).unwrap();
 
         self.schemas
             .associations()

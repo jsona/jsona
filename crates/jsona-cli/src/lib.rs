@@ -42,15 +42,20 @@ impl<E: Environment> App<E> {
         }
 
         let mut config = Config::default();
-        if let Some(c) = config_path {
-            tracing::info!(path = ?c, "found configuration file");
-            match self.env.read_file(&c).await {
+        if let Some(config_path) = config_path {
+            tracing::info!(path = ?config_path, "found configuration file");
+            match self.env.read_file(&config_path).await {
                 Ok(source) => {
                     match std::str::from_utf8(&source)
                         .map_err(|_| anyhow!("invalid utf8"))
                         .and_then(Config::from_jsona)
                     {
-                        Ok(c) => config = c,
+                        Ok(c) => {
+                            config = c;
+                            config
+                                .prepare(&config_path)
+                                .context("invalid configuration")?;
+                        }
                         Err(error) => {
                             tracing::warn!(%error, "invalid configuration file");
                         }
@@ -61,16 +66,6 @@ impl<E: Environment> App<E> {
                 }
             }
         }
-
-        config
-            .prepare(
-                &self.env,
-                &self
-                    .env
-                    .cwd()
-                    .ok_or_else(|| anyhow!("working directory is required"))?,
-            )
-            .context("invalid configuration")?;
 
         let c = Arc::new(config);
 

@@ -1,5 +1,5 @@
 use globset::{Glob, GlobSetBuilder};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use url::Url;
 
 #[derive(Debug, Clone)]
@@ -41,13 +41,19 @@ impl GlobRule {
 pub const FILE_PROTOCOL: &str = "file://";
 
 /// Convert path to file url
-pub fn to_file_url(path: &str, base: &Path) -> Option<Url> {
+pub fn to_file_url(path: &str, base: Option<PathBuf>) -> Option<Url> {
     fn is_window_path(path: &str) -> bool {
         let mut chars = path.chars();
         matches!(
             (chars.next().map(|v| v.is_ascii_alphabetic()), chars.next()),
             (Some(true), Some(':'))
         )
+    }
+    fn fix_window_path(path: String) -> String {
+        path.chars()
+            .enumerate()
+            .map(|(i, v)| if i == 0 { v.to_ascii_lowercase() } else { v })
+            .collect()
     }
     let path = if let Some(tail) = path.strip_prefix(FILE_PROTOCOL) {
         tail
@@ -58,16 +64,27 @@ pub fn to_file_url(path: &str, base: &Path) -> Option<Url> {
     let path = if path.starts_with('/') {
         format!("{}{}", FILE_PROTOCOL, urlencode::encode(&path))
     } else if is_window_path(&path) {
-        format!("{}/{}", FILE_PROTOCOL, urlencode::encode(&path))
+        format!(
+            "{}/{}",
+            FILE_PROTOCOL,
+            urlencode::encode(&fix_window_path(path))
+        )
     } else {
-        let base = base.display().to_string().replace('\\', "/");
+        let base = match base {
+            None => String::new(),
+            Some(base) => base.display().to_string().replace('\\', "/"),
+        };
         let full_path = if base.ends_with('/') {
             format!("{}{}", base, path)
         } else {
             format!("{}/{}", base, path)
         };
         if is_window_path(&base) {
-            format!("{}/{}", FILE_PROTOCOL, urlencode::encode(&full_path))
+            format!(
+                "{}/{}",
+                FILE_PROTOCOL,
+                urlencode::encode(&fix_window_path(full_path))
+            )
         } else {
             format!("{}{}", FILE_PROTOCOL, urlencode::encode(&full_path))
         }
@@ -79,22 +96,31 @@ pub fn to_file_url(path: &str, base: &Path) -> Option<Url> {
 mod tests {
     use super::*;
     macro_rules! asset_to_file_url {
-        ($p:expr, $b:expr, $o:expr) => {
-            assert_eq!($o, to_file_url($p, Path::new($b)).unwrap().to_string());
+        ($o:expr, $p:expr) => {
+            assert_eq!($o, to_file_url($p, None).unwrap().to_string());
+        };
+        ($o:expr, $p:expr, $b:expr) => {
+            assert_eq!(
+                $o,
+                to_file_url($p, Some(Path::new($b).to_path_buf()))
+                    .unwrap()
+                    .to_string()
+            );
         };
     }
 
     #[test]
     fn test_to_file_url() {
-        asset_to_file_url!("a/b", "c:\\dir1", "file:///c%3A/dir1/a/b");
-        asset_to_file_url!("a/b", "c:\\dir1\\", "file:///c%3A/dir1/a/b");
-        asset_to_file_url!("a\\b", "c:\\dir1\\", "file:///c%3A/dir1/a/b");
-        asset_to_file_url!("a/b", "/dir1", "file:///dir1/a/b");
-        asset_to_file_url!("a/b", "/dir1/", "file:///dir1/a/b");
-        asset_to_file_url!("a\\b", "/dir1/", "file:///dir1/a/b");
-        asset_to_file_url!("/a/b", "/dir1", "file:///a/b");
-        asset_to_file_url!("file:///a/b", "/dir1", "file:///a/b");
-        asset_to_file_url!("c:\\a\\b", "c:\\dir1", "file:///c%3A/a/b");
+        asset_to_file_url!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1");
+        asset_to_file_url!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1\\");
+        asset_to_file_url!("file:///c%3A/dir1/a/b", "a\\b", "C:\\dir1\\");
+        asset_to_file_url!("file:///dir1/a/b", "a/b", "/dir1");
+        asset_to_file_url!("file:///dir1/a/b", "a/b", "/dir1/");
+        asset_to_file_url!("file:///dir1/a/b", "a\\b", "/dir1/");
+        asset_to_file_url!("file:///a/b", "/a/b", "/dir1");
+        asset_to_file_url!("file:///a/b", "/a/b");
+        asset_to_file_url!("file:///a/b", "file:///a/b", "/dir1");
+        asset_to_file_url!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
     }
 }
 

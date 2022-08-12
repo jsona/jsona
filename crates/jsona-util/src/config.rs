@@ -7,7 +7,6 @@ use jsona::formatter;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::environment::Environment;
 use crate::util::{to_file_url, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
@@ -71,8 +70,11 @@ impl Config {
         Ok(config)
     }
     /// Prepare the configuration for further use.
-    pub fn prepare(&mut self, _e: &impl Environment, base: &Path) -> Result<(), anyhow::Error> {
+    pub fn prepare(&mut self, config_path: &Path) -> Result<(), anyhow::Error> {
         let default_include = String::from("**/*.jsona");
+        let config_dir = config_path
+            .parent()
+            .ok_or_else(|| anyhow!("invalid config_path {}", config_path.display()))?;
 
         self.file_rule = Some(GlobRule::new(
             self.include
@@ -82,7 +84,7 @@ impl Config {
         )?);
 
         for schema_rule in &mut self.rules {
-            schema_rule.prepare(base)?;
+            schema_rule.prepare(config_dir)?;
         }
         Ok(())
     }
@@ -183,9 +185,10 @@ impl SchemaRule {
             self.exclude.as_deref().unwrap_or(&[] as &[String]),
         )?);
         let url = match self.path.take() {
-            Some(p) => {
-                Some(to_file_url(&p, base).ok_or_else(|| anyhow!("invalid schema path `{}`", p))?)
-            }
+            Some(p) => Some(
+                to_file_url(&p, Some(base.to_path_buf()))
+                    .ok_or_else(|| anyhow!("invalid schema path `{}`", p))?,
+            ),
             None => self.url.take(),
         };
 
