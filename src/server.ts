@@ -18,13 +18,17 @@ process.on("message", async (message: RpcMessage) => {
         cwd: () => process.cwd(),
         envVar: name => process.env[name],
         findConfigFile: async from => {
-          const fileNames = [".jsona"];
-          for (const name of fileNames) {
+          while (true) {
             try {
-              const fullPath = path.join(from, name);
+              const fullPath = path.join(from, ".jsona");
               await fsPromise.access(fullPath);
               return fullPath;
             } catch {}
+            let from_ = path.resolve(from, "..");
+            if (from_ === from) {
+              return;
+            }
+            from = from_
           }
         },
         glob: p => glob.sync(p),
