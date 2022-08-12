@@ -56,6 +56,7 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       },
     };
 
+    out.appendLine("Use bundled lsp");
     serverOpts = {
       run,
       debug: run,
@@ -92,6 +93,7 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       },
     };
 
+    out.appendLine(`Use lsp at ${jsonaPath}`);
     serverOpts = {
       run,
       debug: run,

@@ -1,4 +1,3 @@
-import fs from "fs";
 import fsPromise from "fs/promises";
 import path from "path";
 import { exit } from "process";
@@ -8,8 +7,8 @@ import glob from "fast-glob";
 
 let jsona: JsonaLsp;
 
-process.on("message", async (d: RpcMessage) => {
-  if (d.method === "exit") {
+process.on("message", async (message: RpcMessage) => {
+  if (message.method === "exit") {
     exit(0);
   }
 
@@ -18,13 +17,12 @@ process.on("message", async (d: RpcMessage) => {
       {
         cwd: () => process.cwd(),
         envVar: name => process.env[name],
-        findConfigFile: from => {
+        findConfigFile: async from => {
           const fileNames = [".jsona"];
-
           for (const name of fileNames) {
             try {
               const fullPath = path.join(from, name);
-              fs.accessSync(fullPath);
+              await fsPromise.access(fullPath);
               return fullPath;
             } catch {}
           }
@@ -39,11 +37,13 @@ process.on("message", async (d: RpcMessage) => {
         stdin: process.stdin,
         stdout: process.stdout,
         urlToFilePath: (url: string) => {
-          let value = decodeURI(url).slice("file://".length);
+          url = decodeURIComponent(url);
           if (path.sep == "\\") {
+            let value = url.slice("file:///".length);
             return value.replace(/\//g, "\\");
+          } else {
+            return url.slice("file://".length)
           }
-          return value;
         },
         fetchFile: async (url: string) => {
           const controller = new AbortController();
@@ -69,16 +69,24 @@ process.on("message", async (d: RpcMessage) => {
       },
       {
         onMessage(message) {
+          debugLog('lsp2host', message);
           process.send(message);
         },
       }
     );
   }
 
-  jsona.send(d);
+  debugLog('host2lsp', message);
+  jsona.send(message);
 });
 
 // These are panics from Rust.
 process.on("unhandledRejection", up => {
   throw up;
 });
+
+function debugLog(topic: string, message: any) {
+  if (import.meta.env.RUST_LOG === "debug" || import.meta.env.RUST_LOG == "verbose") {
+    console.log(topic, JSON.stringify(message));
+  }
+}

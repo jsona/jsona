@@ -9,10 +9,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.StatusBarAlignment.Right,
     0
   );
-
-  schemaIndicator.text = "no schema";
-  schemaIndicator.tooltip = "JSONA Schema";
-  schemaIndicator.command = "jsona.selectSchema";
+  resetSchemaIndicator(schemaIndicator);
 
   const c = await createClient(context);
   await c.start()
@@ -29,6 +26,7 @@ export async function activate(context: vscode.ExtensionContext) {
     schemaIndicator,
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor?.document.languageId === "jsona") {
+        resetSchemaIndicator(schemaIndicator);
         schemaIndicator.show();
       } else {
         schemaIndicator.hide();
@@ -41,17 +39,18 @@ export async function activate(context: vscode.ExtensionContext) {
         schemaUri?: string;
         meta?: Record<string, any>;
       }) => {
-        const currentDocumentUrl =
-          vscode.window.activeTextEditor?.document.uri.toString();
+          const currentDocumentUrl =
+            vscode.window.activeTextEditor?.document.uri.toString();
 
-        if (!currentDocumentUrl) {
-          return;
-        }
+          if (!currentDocumentUrl) {
+            return;
+          }
 
-        if (params.documentUri === currentDocumentUrl) {
-          schemaIndicator.text =
-            params.meta?.name ?? params.schemaUri ?? "no schema";
-        }
+          if (params.documentUri === currentDocumentUrl) {
+            schemaIndicator.text =
+              params.meta?.name ?? params.schemaUri?.split("/").slice(-1)[0] ?? "no schema";
+            schemaIndicator.tooltip = `JSONA Schema: ${params.schemaUri}`;
+          }
       }
     ),
     c.onNotification("jsona/messageWithOutput", async params =>
@@ -67,4 +66,10 @@ export async function activate(context: vscode.ExtensionContext) {
       },
     }
   );
+}
+
+function resetSchemaIndicator(schemaIndicator: vscode.StatusBarItem) {
+  schemaIndicator.text = "No JSONA Schema";
+  schemaIndicator.tooltip = "Select JSONA Schema";
+  schemaIndicator.command = "jsona.selectSchema";
 }

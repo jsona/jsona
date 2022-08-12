@@ -17,8 +17,15 @@ reader.listen(async message => {
     jsona = await JsonaLsp.init(
       {
         cwd: () => "/",
-        envVar: () => "",
-        findConfigFile: () => undefined,
+        envVar: (name) => {
+          if (name === "RUST_LOG") {
+            return import.meta.env.RUST_LOG;
+          }
+          return "";
+        },
+        findConfigFile: async (_from) => {
+          return undefined
+        },
         glob: () => [],
         isAbsolute: () => true,
         now: () => new Date(),
@@ -53,11 +60,19 @@ reader.listen(async message => {
       },
       {
         onMessage(message) {
+          debugLog('lsp2host', message);
           writer.write(message);
         },
       }
     );
   }
 
+  debugLog('host2lsp', message);
   jsona.send(message as RpcMessage);
 });
+
+function debugLog(topic: string, message: any) {
+  if (import.meta.env.RUST_LOG === "debug" || import.meta.env.RUST_LOG == "verbose") {
+    console.log(topic, message);
+  }
+}

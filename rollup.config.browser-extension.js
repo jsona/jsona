@@ -43,7 +43,8 @@ const options = {
   plugins: [
     replace({
       preventAssignment: true,
-      "import.meta.env.BROWSER": "true",
+      "import.meta.env.BROWSER": true,
+      "import.meta.env.RUST_LOG": `"${process.env.RUST_LOG || "info"}"`,
     }),
     esbuild({ minify: true }),
     commonjs(),
