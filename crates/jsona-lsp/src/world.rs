@@ -223,17 +223,21 @@ impl<E: Environment> WorkspaceState<E> {
 
         let mut config_path = self.config.config_file.path.clone();
         if let Some(path) = config_path.as_ref() {
-            match Config::from_file(path, env).await {
-                Ok(config) => {
-                    tracing::info!(path = ?path, "found config file");
-                    self.jsona_config = config;
-                    tracing::debug!("using config: {:#?}", self.jsona_config);
-                }
-                Err(err) => {
-                    tracing::error!("failed to load config {}", err);
+            if !path.as_os_str().is_empty() {
+                tracing::info!(path = ?path, "read config file");
+                match Config::from_file(path, env).await {
+                    Ok(config) => {
+                        self.jsona_config = config;
+                        tracing::debug!("using config: {:#?}", self.jsona_config);
+                    }
+                    Err(err) => {
+                        config_path = None;
+                        tracing::error!("failed to read config {}", err);
+                    }
                 }
             }
-        } else {
+        }
+        if config_path.is_none() {
             let root_path = env
                 .to_file_path(&self.root)
                 .ok_or_else(|| anyhow!("invalid root URL"))?;

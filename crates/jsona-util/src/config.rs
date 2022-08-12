@@ -97,7 +97,7 @@ impl Config {
         entry: &Path,
         env: &impl Environment,
     ) -> Result<(PathBuf, Self), anyhow::Error> {
-        if entry.display().to_string().len() < 2 {
+        if entry.as_os_str().is_empty() {
             bail!("not found");
         }
         let mut p = entry.to_path_buf();
