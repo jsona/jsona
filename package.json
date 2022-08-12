@@ -2,7 +2,7 @@
   "name": "vscode-jsona",
   "displayName": "JSONA",
   "description": "Fully-featured JSONA support",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "sigoden",
   "license": "MIT",
   "engines": {
@@ -160,8 +160,8 @@
     "build": "rimraf dist && yarn build:node && yarn build:browser-extension && yarn build:browser-server"
   },
   "dependencies": {
-    "@jsona/lsp": "^0.1.1",
-    "@jsona/util-types": "^0.1.0",
+    "@jsona/lsp": "^0.1.5",
+    "@jsona/util-types": "^0.1.1",
     "esbuild": "^0.15.0",
     "fast-glob": "^3.2.11",
     "node-fetch": "^3.2.10",
