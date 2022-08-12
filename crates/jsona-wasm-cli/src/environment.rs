@@ -178,7 +178,6 @@ pub(crate) struct WasmEnvironment {
     js_to_file_path: Function,
     js_is_absolute: Function,
     js_cwd: Function,
-    js_find_config_file: Function,
 }
 
 impl From<JsValue> for WasmEnvironment {
@@ -223,12 +222,6 @@ impl From<JsValue> for WasmEnvironment {
             js_cwd: js_sys::Reflect::get(&val, &JsValue::from_str("js_cwd"))
                 .unwrap()
                 .into(),
-            js_find_config_file: js_sys::Reflect::get(
-                &val,
-                &JsValue::from_str("js_find_config_file"),
-            )
-            .unwrap()
-            .into(),
         }
     }
 }
@@ -365,17 +358,5 @@ impl Environment for WasmEnvironment {
         let res: JsValue = self.js_cwd.call0(&this).unwrap();
 
         res.as_string().map(Into::into)
-    }
-
-    async fn find_config_file(&self, from: &Path) -> Option<std::path::PathBuf> {
-        let path_str = JsValue::from_str(&from.to_string_lossy());
-        let this = JsValue::null();
-        let res: JsValue = self.js_find_config_file.call1(&this, &path_str).unwrap();
-        let ret = JsFuture::from(Promise::from(res)).await.ok()?;
-
-        if ret.is_undefined() {
-            return None;
-        }
-        ret.as_string().map(Into::into)
     }
 }

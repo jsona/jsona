@@ -1,7 +1,7 @@
 import type { Readable, Writable } from "node:stream";
 
 /**
- * Environment required for several Jsona functions.
+ * Environment required for several functions.
  *
  * This is required because WebAssembly is not self-contained and is sand-boxed.
  */
@@ -65,15 +65,6 @@ export interface Environment {
    */
   cwd: () => string;
   /**
-   * Find the Jsona config file from the given directory
-   * and return the path if found.
-   *
-   * The following files should be searched in order from the given root:
-   *
-   * - `.jsona`
-   */
-  findConfigFile: (from: string) => Promise<string | undefined>;
-  /**
    * The fetch function if it is not defined on the global Window.
    *
    * This is required for environments like NodeJs where the fetch API is not available,
@@ -131,7 +122,6 @@ export function convertEnv(env: Environment): any {
     js_fetch_file: env.fetchFile,
     js_is_absolute: env.isAbsolute,
     js_cwd: env.cwd,
-    js_find_config_file: env.findConfigFile,
   };
 }
 
