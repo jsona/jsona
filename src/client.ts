@@ -5,6 +5,7 @@ import which from "which";
 import { getOutput } from "./util";
 import { BaseLanguageClient } from "vscode-languageclient";
 
+
 export async function createClient(
   context: vscode.ExtensionContext
 ): Promise<BaseLanguageClient> {
@@ -99,6 +100,9 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       debug: run,
     };
   }
+  let cachePath = vscode.Uri.joinPath(context.globalStorageUri, "schema_cache");
+  await vscode.workspace.fs.createDirectory(cachePath);
+  out.appendLine(`Use cache at ${cachePath.fsPath}`);
 
   return new node.LanguageClient(
     "JSONA",
@@ -106,6 +110,9 @@ async function createNodeClient(context: vscode.ExtensionContext) {
     serverOpts,
     {
       documentSelector: [{ language: "jsona" }],
+      initializationOptions: {
+        cachePath: cachePath.fsPath,
+      },
     }
   );
 }
