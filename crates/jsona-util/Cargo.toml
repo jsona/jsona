@@ -23,10 +23,7 @@ jsona-schema-validator = { path = "../jsona-schema-validator", version = "0.1"}
 globset = "0.4"
 arc-swap = "1.5"
 parking_lot = "0.12"
-sha1 = "0.10"
 ahash = { version = "0.7", features = ["serde"] }
-lru = "0.7"
-hex = "0.4"
 indexmap = { version = "~1.6", features = ["serde"] }
 regex = "1.6"
 tap = "1.0"

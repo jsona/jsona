@@ -1,4 +1,7 @@
-use crate::world::{World, DEFAULT_WORKSPACE_URL};
+use crate::{
+    config::DEFAULT_CONFIGURATION_SECTION,
+    world::{World, DEFAULT_WORKSPACE_URL},
+};
 use anyhow::Context as AnyhowContext;
 use jsona_util::environment::Environment;
 use lsp_async_stub::{Context, Params, RequestWriter};
@@ -33,8 +36,6 @@ pub async fn configuration_change<E: Environment>(
 
 #[tracing::instrument(skip_all)]
 pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
-    let init_config = context.init_config.load();
-
     let mut workspaces = context.workspaces.write().await;
 
     let config_items: Vec<_> = workspaces
@@ -45,7 +46,7 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
             } else {
                 Some(ConfigurationItem {
                     scope_uri: Some(url.clone()),
-                    section: Some(init_config.configuration_section.clone()),
+                    section: Some(DEFAULT_CONFIGURATION_SECTION.to_string()),
                 })
             }
         })
@@ -56,7 +57,7 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
         .write_request::<WorkspaceConfiguration, _>(Some(ConfigurationParams {
             items: once(ConfigurationItem {
                 scope_uri: None,
-                section: Some(init_config.configuration_section.clone()),
+                section: Some(DEFAULT_CONFIGURATION_SECTION.to_string()),
             })
             .chain(config_items.iter().cloned())
             .collect::<Vec<_>>(),

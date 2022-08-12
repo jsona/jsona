@@ -1,33 +1,10 @@
 use figment::{providers::Serialized, Figment};
-use jsona_util::{
-    schema::{associations::DEFAULT_SCHEMASTORES, cache::DEFAULT_LRU_CACHE_EXPIRATION_TIME},
-    HashMap,
-};
+use jsona_util::{schema::associations::DEFAULT_SCHEMASTORES, HashMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 use url::Url;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct InitConfig {
-    pub cache_path: Option<PathBuf>,
-    #[serde(default = "default_configuration_section")]
-    pub configuration_section: String,
-}
-
-impl Default for InitConfig {
-    fn default() -> Self {
-        Self {
-            cache_path: Default::default(),
-            configuration_section: default_configuration_section(),
-        }
-    }
-}
-
-fn default_configuration_section() -> String {
-    String::from("jsona")
-}
+pub const DEFAULT_CONFIGURATION_SECTION: &str = "jsona";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -54,7 +31,6 @@ pub struct SchemaConfig {
     pub associations: HashMap<String, String>,
     pub stores: Vec<Url>,
     pub links: bool,
-    pub cache: SchemaCacheConfig,
 }
 
 impl Default for SchemaConfig {
@@ -67,27 +43,9 @@ impl Default for SchemaConfig {
                 .map(|c| c.parse().unwrap())
                 .collect(),
             links: false,
-            cache: Default::default(),
         }
     }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaCacheConfig {
-    pub memory_expiration: u64,
-    pub disk_expiration: u64,
-}
-
-impl Default for SchemaCacheConfig {
-    fn default() -> Self {
-        Self {
-            memory_expiration: DEFAULT_LRU_CACHE_EXPIRATION_TIME.as_secs(),
-            disk_expiration: DEFAULT_LRU_CACHE_EXPIRATION_TIME.as_secs(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigFileConfig {
     pub path: Option<PathBuf>,

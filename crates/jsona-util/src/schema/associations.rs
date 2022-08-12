@@ -15,8 +15,6 @@ use crate::{
     util::{to_file_url, GlobRule},
 };
 
-use super::cache::Cache;
-
 pub const DEFAULT_SCHEMASTORES: &[&str] =
     &["https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json"];
 
@@ -43,14 +41,12 @@ pub struct SchemaAssociations<E: Environment> {
     concurrent_requests: Arc<Semaphore>,
     associations: Arc<RwLock<Vec<(AssociationRule, SchemaAssociation)>>>,
     env: E,
-    cache: Cache<E, Value>,
 }
 
 impl<E: Environment> SchemaAssociations<E> {
-    pub(crate) fn new(env: E, cache: Cache<E, Value>) -> Self {
+    pub(crate) fn new(env: E) -> Self {
         Self {
             concurrent_requests: Arc::new(Semaphore::new(10)),
-            cache,
             env,
             associations: Default::default(),
         }
@@ -174,10 +170,6 @@ impl<E: Environment> SchemaAssociations<E> {
     }
 
     async fn load_schemastore(&self, index_url: &Url) -> Result<SchemaStore, anyhow::Error> {
-        if let Ok(s) = self.cache.load(index_url, false).await {
-            return Ok(serde_json::from_value((*s).clone())?);
-        }
-
         let schemastore = match self
             .fetch_external(index_url)
             .await
@@ -186,25 +178,9 @@ impl<E: Environment> SchemaAssociations<E> {
             Ok(idx) => idx,
             Err(error) => {
                 tracing::warn!(?error, "failed to load schemastore");
-                if let Ok(s) = self.cache.load(index_url, true).await {
-                    return Ok(serde_json::from_value((*s).clone())?);
-                }
                 return Err(error);
             }
         };
-
-        if self.cache.is_cache_path_set() {
-            if let Err(error) = self
-                .cache
-                .save(
-                    index_url.clone(),
-                    Arc::new(serde_json::to_value(&schemastore)?),
-                )
-                .await
-            {
-                tracing::warn!(%error, "failed to cache schemastore");
-            }
-        }
 
         Ok(schemastore)
     }

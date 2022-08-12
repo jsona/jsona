@@ -74,10 +74,6 @@ pub struct GeneralArgs {
     #[clap(long, short)]
     pub config: Option<PathBuf>,
 
-    /// Set a cache path.
-    #[clap(long)]
-    pub cache_path: Option<PathBuf>,
-
     /// Do not search for a configuration file.
     #[clap(long)]
     pub no_auto_config: bool,

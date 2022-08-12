@@ -1,5 +1,5 @@
 use crate::{
-    config::{InitConfig, LspConfig},
+    config::LspConfig,
     lsp_ext::notification::{DidChangeSchemaAssociation, DidChangeSchemaAssociationParams},
 };
 use anyhow::anyhow;
@@ -23,7 +23,7 @@ use lsp_types::Url;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::json;
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 pub type World<E> = Arc<WorldState<E>>;
 
@@ -45,7 +45,6 @@ impl<E: Environment> std::ops::DerefMut for Workspaces<E> {
 }
 
 impl<E: Environment> Workspaces<E> {
-    #[must_use]
     pub fn by_document(&self, url: &Url) -> &WorkspaceState<E> {
         self.0
             .iter()
@@ -79,7 +78,6 @@ impl<E: Environment> Workspaces<E> {
 }
 
 pub struct WorldState<E: Environment> {
-    pub(crate) init_config: ArcSwap<InitConfig>,
     pub(crate) env: E,
     pub(crate) workspaces: AsyncRwLock<Workspaces<E>>,
     pub(crate) default_config: ArcSwap<Config>,
@@ -90,7 +88,6 @@ pub static DEFAULT_WORKSPACE_URL: Lazy<Url> = Lazy::new(|| Url::parse("root:///"
 impl<E: Environment> WorldState<E> {
     pub fn new(env: E) -> Self {
         Self {
-            init_config: Default::default(),
             workspaces: {
                 let mut m = IndexMap::default();
                 m.insert(
@@ -153,11 +150,6 @@ impl<E: Environment> WorkspaceState<E> {
         if !self.config.schema.enabled {
             return Ok(());
         }
-
-        self.schemas.set_cache_expiration_times(
-            Duration::from_secs(self.config.schema.cache.memory_expiration),
-            Duration::from_secs(self.config.schema.cache.disk_expiration),
-        );
 
         self.schemas
             .associations()
