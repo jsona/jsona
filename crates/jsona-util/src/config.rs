@@ -70,6 +70,28 @@ impl Config {
             .map_err(|err| anyhow!("failed to deserialize config, {}", err))?;
         Ok(config)
     }
+    /// Load config from file
+    pub async fn from_file(
+        config_path: &Path,
+        env: &impl Environment,
+    ) -> Result<Self, anyhow::Error> {
+        match env.read_file(config_path).await {
+            Ok(source) => {
+                match std::str::from_utf8(&source)
+                    .map_err(|_| anyhow!("invalid utf8"))
+                    .and_then(Config::from_jsona)
+                {
+                    Ok(config) => Ok(config),
+                    Err(error) => {
+                        bail!("{}", error);
+                    }
+                }
+            }
+            Err(error) => {
+                bail!("{}", error);
+            }
+        }
+    }
     /// Find config file from entry dir, if found, load conffig; if not found, find parent dir until root dir.
     pub async fn find_and_load(
         entry: &Path,
@@ -83,9 +105,9 @@ impl Config {
             for name in CONFIG_FILE_NAMES {
                 let config_path = join_path(&p, name);
                 if let Ok(data) = env.read_file(&config_path).await {
-                    let source = std::str::from_utf8(&data)
-                        .map_err(|e| anyhow!("at {} throw {}", config_path.display(), e))?;
-                    let config = Self::from_jsona(source)
+                    let config = std::str::from_utf8(&data)
+                        .map_err(|_| anyhow!("invalid utf8"))
+                        .and_then(Config::from_jsona)
                         .map_err(|e| anyhow!("at {} throw {}", config_path.display(), e))?;
                     return Ok((config_path, config));
                 }
