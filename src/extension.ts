@@ -9,7 +9,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.StatusBarAlignment.Right,
     0
   );
-  let schemaIndicatorParams: DidChangeSchemaAssociationParams;
   resetSchemaIndicator(schemaIndicator);
 
   const c = await createClient(context);
@@ -26,10 +25,13 @@ export async function activate(context: vscode.ExtensionContext) {
     getOutput(),
     schemaIndicator,
     vscode.window.onDidChangeActiveTextEditor(editor => {
-      if (editor?.document.languageId === "jsona" && editor?.document.uri) {
-        const doc_url = editor?.document.uri.toString();
-        updateSchemaIndicator(schemaIndicator, schemaIndicatorParams, doc_url)
-        schemaIndicatorParams = null;
+      if (editor?.document.languageId === "jsona") {
+        let docUri = editor?.document.uri;
+        if (docUri) {
+          c.sendRequest("jsona/associatedSchema", {
+            documentUri: docUri.toString(),
+          });
+        }
         schemaIndicator.show();
       } else {
         schemaIndicator.hide();
@@ -37,14 +39,23 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     c.onNotification(
       "jsona/didChangeSchemaAssociation",
-      async (params: DidChangeSchemaAssociationParams) => {
-        schemaIndicatorParams = null;
-          const doc_url = vscode.window.activeTextEditor?.document.uri.toString();
-          if (!doc_url) {
-            schemaIndicatorParams = params
+      async (params: {
+        documentUri: string;
+        schemaUri?: string;
+        meta?: Record<string, any>;
+      }) => {
+          const currentDocumentUrl =
+            vscode.window.activeTextEditor?.document.uri.toString();
+
+          if (!currentDocumentUrl) {
             return;
           }
-          updateSchemaIndicator(schemaIndicator, params, doc_url);
+
+          if (params.documentUri === currentDocumentUrl) {
+            schemaIndicator.text =
+              params.meta?.name ?? params.schemaUri?.split("/").slice(-1)[0] ?? "no schema";
+            schemaIndicator.tooltip = `JSONA Schema: ${params.schemaUri}`;
+          }
       }
     ),
     c.onNotification("jsona/messageWithOutput", async params =>
@@ -66,19 +77,4 @@ function resetSchemaIndicator(schemaIndicator: vscode.StatusBarItem) {
   schemaIndicator.text = "No JSONA Schema";
   schemaIndicator.tooltip = "Select JSONA Schema";
   schemaIndicator.command = "jsona.selectSchema";
-}
-
-function updateSchemaIndicator(schemaIndicator: vscode.StatusBarItem, params: DidChangeSchemaAssociationParams, doc_url: string) {
-  resetSchemaIndicator(schemaIndicator);
-  if (params?.documentUri === doc_url) {
-    schemaIndicator.text =
-      params.meta?.name ?? params.schemaUri?.split("/").slice(-1)[0] ?? "No JSONA Schema";
-    schemaIndicator.tooltip = `JSONA Schema: ${params.schemaUri}`;
-  }
-}
-
-interface DidChangeSchemaAssociationParams {
-  documentUri: string;
-  schemaUri?: string;
-  meta?: Record<string, any>;
 }
