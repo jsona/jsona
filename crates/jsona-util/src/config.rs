@@ -1,5 +1,5 @@
-use std::fmt::Debug;
 use std::path::Path;
+use std::{fmt::Debug, path::PathBuf};
 
 use anyhow::anyhow;
 use jsona::dom::Node;
@@ -70,10 +70,9 @@ impl Config {
         Ok(config)
     }
     /// Prepare the configuration for further use.
-    pub fn prepare(&mut self, config_path: &Path) -> Result<(), anyhow::Error> {
+    pub fn prepare(&mut self, config_path: Option<PathBuf>) -> Result<(), anyhow::Error> {
         let default_include = String::from("**/*.jsona");
-        let config_dir = get_parent_path(config_path)
-            .ok_or_else(|| anyhow!("invalid config_path {}", config_path.display()))?;
+        let config_dir = config_path.and_then(|v| get_parent_path(&v));
 
         self.file_rule = Some(GlobRule::new(
             self.include
@@ -83,7 +82,7 @@ impl Config {
         )?);
 
         for schema_rule in &mut self.rules {
-            schema_rule.prepare(&config_dir)?;
+            schema_rule.prepare(config_dir.clone())?;
         }
         Ok(())
     }
@@ -175,7 +174,7 @@ impl Debug for SchemaRule {
 }
 
 impl SchemaRule {
-    fn prepare(&mut self, base: &Path) -> Result<(), anyhow::Error> {
+    fn prepare(&mut self, base: Option<PathBuf>) -> Result<(), anyhow::Error> {
         let default_include = String::from("**");
         self.file_rule = Some(GlobRule::new(
             self.include
@@ -184,10 +183,9 @@ impl SchemaRule {
             self.exclude.as_deref().unwrap_or(&[] as &[String]),
         )?);
         let url = match self.path.take() {
-            Some(p) => Some(
-                to_file_url(&p, Some(base.to_path_buf()))
-                    .ok_or_else(|| anyhow!("invalid schema path `{}`", p))?,
-            ),
+            Some(p) => {
+                Some(to_file_url(&p, base).ok_or_else(|| anyhow!("invalid schema path `{}`", p))?)
+            }
             None => self.url.take(),
         };
 

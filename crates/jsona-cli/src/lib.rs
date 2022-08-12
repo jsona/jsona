@@ -42,7 +42,7 @@ impl<E: Environment> App<E> {
         }
 
         let mut config = Config::default();
-        if let Some(config_path) = config_path {
+        if let Some(config_path) = config_path.clone() {
             tracing::info!(path = ?config_path, "found configuration file");
             match self.env.read_file(&config_path).await {
                 Ok(source) => {
@@ -52,9 +52,6 @@ impl<E: Environment> App<E> {
                     {
                         Ok(c) => {
                             config = c;
-                            config
-                                .prepare(&config_path)
-                                .context("invalid configuration")?;
                         }
                         Err(error) => {
                             tracing::warn!(%error, "invalid configuration file");
@@ -66,6 +63,9 @@ impl<E: Environment> App<E> {
                 }
             }
         }
+        config
+            .prepare(config_path)
+            .context("invalid configuration")?;
 
         let c = Arc::new(config);
 

@@ -231,16 +231,19 @@ impl<E: Environment> WorkspaceState<E> {
             .to_file_path(&self.root)
             .ok_or_else(|| anyhow!("invalid root URL"))?;
 
-        if let Some(config_path) = env.find_config_file(&root_path).await {
+        let config_path = env.find_config_file(&root_path).await;
+
+        if let Some(config_path) = config_path.clone() {
             tracing::info!(path = ?config_path, "found config file");
             let source = env.read_file(&config_path).await?;
             let source = std::str::from_utf8(&source)?;
             self.jsona_config = Config::from_jsona(source)?;
 
-            self.jsona_config.prepare(&config_path)?;
-
             tracing::debug!("using config: {:#?}", self.jsona_config);
         }
+
+        self.jsona_config.prepare(config_path)?;
+
         Ok(())
     }
     pub(crate) async fn emit_all_associations(&self, context: Context<World<E>>) {
