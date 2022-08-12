@@ -1,7 +1,7 @@
 use environment::WasmEnvironment;
-use serde::Serialize;
 use jsona::{formatter, parser::parse};
 use jsona_util::{config::Config, schema::Schemas};
+use serde::Serialize;
 use url::Url;
 use wasm_bindgen::prelude::*;
 
@@ -59,10 +59,7 @@ pub fn format(
 
     let syntax = parse(jsona);
 
-    Ok(formatter::format_syntax(
-        syntax.into_syntax(),
-        options,
-    ))
+    Ok(formatter::format_syntax(syntax.into_syntax(), options))
 }
 
 #[wasm_bindgen]
@@ -140,7 +137,7 @@ pub async fn lint(env: JsValue, jsona: String, config: JsValue) -> Result<JsValu
 pub async fn run_cli(env: JsValue, args: JsValue) -> Result<(), JsError> {
     use clap::Parser;
     use environment::WasmEnvironment;
-    use jsona_cli::{AppArgs, App, Colors};
+    use jsona_cli::{App, AppArgs, Colors};
     use jsona_util::{environment::Environment, log::setup_stderr_logging};
     use tokio::io::AsyncWriteExt;
     use tracing::Instrument;

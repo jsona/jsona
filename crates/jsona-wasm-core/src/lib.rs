@@ -13,7 +13,9 @@ pub fn parse_ast(jsona: &str) -> Result<JsValue, JsValue> {
 
 #[wasm_bindgen]
 pub fn stringify_ast(data: JsValue) -> Result<String, JsError> {
-    let ast: Ast = data.into_serde().map_err(|_| JsError::new("invalid jsona ast"))?;
+    let ast: Ast = data
+        .into_serde()
+        .map_err(|_| JsError::new("invalid jsona ast"))?;
     let node: Node = ast.into();
     Ok(format!("{}", node))
 }
@@ -21,6 +23,10 @@ pub fn stringify_ast(data: JsValue) -> Result<String, JsError> {
 #[wasm_bindgen]
 pub fn format(jsona: &str, format_options: JsValue) -> Result<String, JsError> {
     let mut options: Options = Options::default();
-    options.update(format_options.into_serde().map_err(|_| JsError::new("invalid format options"))?);
+    options.update(
+        format_options
+            .into_serde()
+            .map_err(|_| JsError::new("invalid format options"))?,
+    );
     Ok(formatter::format(jsona, options))
 }

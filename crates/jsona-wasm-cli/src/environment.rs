@@ -1,13 +1,13 @@
 use anyhow::anyhow;
 use futures::FutureExt;
 use js_sys::{Function, Promise, Uint8Array};
+use jsona_util::environment::Environment;
 use std::{
     io,
     path::Path,
     pin::Pin,
     task::{self, Poll},
 };
-use jsona_util::environment::Environment;
 use time::OffsetDateTime;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use url::Url;
@@ -333,7 +333,7 @@ impl Environment for WasmEnvironment {
     }
 
     async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
-        let url_str = JsValue::from_str(&url.to_string());
+        let url_str = JsValue::from_str(url.as_str());
         let this = JsValue::null();
         let res: JsValue = self.js_fetch_file.call1(&this, &url_str).unwrap();
 
@@ -371,9 +371,7 @@ impl Environment for WasmEnvironment {
         let path_str = JsValue::from_str(&from.to_string_lossy());
         let this = JsValue::null();
         let res: JsValue = self.js_find_config_file.call1(&this, &path_str).unwrap();
-        let ret = JsFuture::from(Promise::from(res))
-            .await
-            .ok()?;
+        let ret = JsFuture::from(Promise::from(res)).await.ok()?;
 
         if ret.is_undefined() {
             return None;
