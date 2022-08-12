@@ -17,20 +17,6 @@ process.on("message", async (message: RpcMessage) => {
       {
         cwd: () => process.cwd(),
         envVar: name => process.env[name],
-        findConfigFile: async from => {
-          while (true) {
-            try {
-              const fullPath = path.join(from, ".jsona");
-              await fsPromise.access(fullPath);
-              return fullPath;
-            } catch {}
-            let from_ = path.resolve(from, "..");
-            if (from_ === from) {
-              return;
-            }
-            from = from_
-          }
-        },
         glob: p => glob.sync(p),
         isAbsolute: p => path.isAbsolute(p),
         now: () => new Date(),

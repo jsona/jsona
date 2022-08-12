@@ -23,20 +23,17 @@ reader.listen(async message => {
           }
           return "";
         },
-        findConfigFile: async (_from) => {
-          return undefined
-        },
         glob: () => [],
         isAbsolute: () => true,
         now: () => new Date(),
-        readFile: () => Promise.reject("not implemented"),
-        writeFile: () => Promise.reject("not implemented"),
+        readFile: () => Promise.reject("not implemented read_file "),
+        writeFile: () => Promise.reject("not implemented write_file"),
         stderr: async (bytes: Uint8Array) => {
           console.log(new TextDecoder().decode(bytes));
           return bytes.length;
         },
         stdErrAtty: () => false,
-        stdin: () => Promise.reject("not implemented"),
+        stdin: () => Promise.reject("not implemented stdin"),
         stdout: async (bytes: Uint8Array) => {
           console.log(new TextDecoder().decode(bytes));
           return bytes.length;
