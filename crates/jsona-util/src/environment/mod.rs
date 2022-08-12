@@ -49,6 +49,4 @@ pub trait Environment: Clone + Send + Sync + 'static {
 
     /// Absolute current working dir.
     fn cwd(&self) -> Option<PathBuf>;
-
-    async fn find_config_file(&self, from: &Path) -> Option<PathBuf>;
 }

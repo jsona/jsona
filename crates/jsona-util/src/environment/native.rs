@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use crate::config::CONFIG_FILE_NAMES;
-
 use super::Environment;
 use async_trait::async_trait;
 use time::OffsetDateTime;
@@ -121,29 +119,5 @@ impl Environment for NativeEnvironment {
 
     fn cwd(&self) -> Option<std::path::PathBuf> {
         std::env::current_dir().ok()
-    }
-
-    async fn find_config_file(&self, from: &Path) -> Option<std::path::PathBuf> {
-        let mut p = from;
-
-        loop {
-            if let Ok(mut dir) = tokio::fs::read_dir(p).await {
-                while let Ok(Some(entry)) = dir.next_entry().await {
-                    for name in CONFIG_FILE_NAMES {
-                        if entry.file_name() == *name {
-                            let path = entry.path();
-                            return Some(path);
-                        }
-                    }
-                }
-            }
-
-            match p.parent() {
-                Some(parent) => p = parent,
-                None => {
-                    return None;
-                }
-            }
-        }
     }
 }
