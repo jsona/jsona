@@ -237,7 +237,7 @@ impl<E: Environment> WorkspaceState<E> {
             let source = std::str::from_utf8(&source)?;
             self.jsona_config = Config::from_jsona(source)?;
 
-            self.jsona_config.prepare(env, &root_path)?;
+            self.jsona_config.prepare(&config_path)?;
 
             tracing::debug!("using config: {:#?}", self.jsona_config);
         }
