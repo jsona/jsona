@@ -59,14 +59,14 @@ pub mod path_utils {
                 }
                 let parts: Vec<&str> = raw_path.split('\\').collect();
                 let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
-                Some(Path::new(&parts.join("\\")).to_path_buf())
+                Some(PathBuf::from(parts.join("\\")))
             } else {
                 if raw_path.len() < 2 {
                     return None;
                 }
                 let parts: Vec<&str> = raw_path.split('/').collect();
                 let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
-                Some(Path::new(&parts.join("/")).to_path_buf())
+                Some(PathBuf::from(parts.join("/")))
             }
         } else {
             path.parent().map(|v| v.to_path_buf())
@@ -156,7 +156,7 @@ pub fn to_file_url(path: &str, base: &Option<PathBuf>) -> Option<Url> {
         } else {
             let base = match base {
                 Some(v) => v.clone(),
-                None => Path::new("/").to_path_buf(),
+                None => PathBuf::from("/"),
             };
             path_utils::join_path(path, &base)
         };
@@ -167,8 +167,7 @@ pub fn to_file_url(path: &str, base: &Option<PathBuf>) -> Option<Url> {
 
 /// Convert url to file path
 pub fn to_file_path(url: &Url) -> Option<String> {
-    let path = url.to_string();
-    let path = path.strip_prefix(FILE_PROTOCOL)?;
+    let path = url.path();
     let mut chars = path.chars();
     let mut driver = None;
     let check_driver = |v: char, driver: &mut Option<char>| {
@@ -211,7 +210,7 @@ mod tests {
         };
         ($o:expr, $p:expr, $b:expr) => {
             assert_eq!(
-                to_file_url($p, &Some(Path::new($b).to_path_buf()))
+                to_file_url($p, &Some(PathBuf::from($b)))
                     .unwrap()
                     .to_string(),
                 $o

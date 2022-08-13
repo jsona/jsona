@@ -113,7 +113,7 @@ impl Config {
                         .map_err(|_| anyhow!("invalid utf8"))
                         .and_then(Config::from_jsona)
                         .map_err(|e| anyhow!("at {}, {}", config_path, e))?;
-                    return Ok((Path::new(&config_path).to_path_buf(), config));
+                    return Ok((PathBuf::from(config_path), config));
                 }
             }
             match path_utils::get_parent_path(&p) {
@@ -265,7 +265,7 @@ impl SchemaRule {
 fn make_absolute_impl(paths: &mut Option<Vec<String>>, base: &Option<PathBuf>) {
     let base = match base {
         Some(v) => v.clone(),
-        None => Path::new("/").to_path_buf(),
+        None => PathBuf::from("/"),
     };
     if let Some(paths) = paths {
         for path in paths {

@@ -16,6 +16,7 @@ use jsona_util::{
         associations::{priority, source, AssociationRule, SchemaAssociation},
         Schemas,
     },
+    util::to_file_path,
     AsyncRwLock, HashMap, IndexMap,
 };
 use lsp_async_stub::{rpc, util::Mapper, Context, RequestWriter};
@@ -23,7 +24,7 @@ use lsp_types::Url;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::json;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 pub type World<E> = Arc<WorldState<E>>;
 
@@ -240,9 +241,8 @@ impl<E: Environment> WorkspaceState<E> {
                 }
             }
         } else {
-            let root_path = env
-                .to_file_path(&self.root)
-                .ok_or_else(|| anyhow!("invalid root URL"))?;
+            let root_path =
+                PathBuf::from(to_file_path(&self.root).ok_or_else(|| anyhow!("invalid root URL"))?);
 
             match Config::find_and_load(&root_path, env).await {
                 Ok((path, config)) => {
