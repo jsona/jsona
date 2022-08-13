@@ -113,10 +113,6 @@ impl Environment for NativeEnvironment {
         url.to_file_path().ok()
     }
 
-    fn is_absolute(&self, base: &std::path::Path) -> bool {
-        base.is_absolute()
-    }
-
     fn cwd(&self) -> Option<std::path::PathBuf> {
         std::env::current_dir().ok()
     }

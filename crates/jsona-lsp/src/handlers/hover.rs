@@ -21,16 +21,21 @@ pub(crate) async fn hover<E: Environment>(
 ) -> Result<Option<Hover>, Error> {
     let p = params.required()?;
 
-    let document_uri = p.text_document_position_params.text_document.uri;
-
     let workspaces = context.workspaces.read().await;
-    let ws = workspaces.by_document(&document_uri);
+    let document_uri = &p.text_document_position_params.text_document.uri;
+    let ws = workspaces.by_document(document_uri);
 
     if !ws.config.schema.enabled {
         return Ok(None);
     }
 
-    let doc = ws.document(&document_uri)?;
+    let doc = match ws.document(document_uri) {
+        Ok(d) => d,
+        Err(error) => {
+            tracing::debug!(%error, "failed to get document from workspace");
+            return Ok(None);
+        }
+    };
 
     let position = p.text_document_position_params.position;
     let offset = match doc.mapper.offset(Position::from_lsp(position)) {
@@ -51,20 +56,18 @@ pub(crate) async fn hover<E: Environment>(
         None => return Ok(None),
     };
 
-    let schemas = match ws.schemas_at_path(&document_uri, &keys).await {
+    let schemas = match ws.schemas_at_path(document_uri, &keys).await {
         Some(v) => v,
         None => return Ok(None),
     };
 
     if let Some(key) = query.key.as_ref() {
-        tracing::debug!(?query, "hover on keys={}", keys);
         let content = schemas
             .iter()
             .flat_map(|schema| schema.description.clone())
             .join("\n\n");
         return Ok(Some(create_hover(doc, content, key.text_range())));
     } else if let Some(node) = query.value.as_ref() {
-        tracing::debug!(?query, "hover on keys={} value={}", keys, node.to_string());
         let content = schemas
             .iter()
             .flat_map(|schema| schema.description.clone())

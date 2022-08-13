@@ -1,6 +1,11 @@
 use globset::{Glob, GlobSetBuilder};
-use std::path::{Path, PathBuf};
+use std::{
+    borrow::Cow,
+    path::{Path, PathBuf},
+};
 use url::Url;
+
+use self::path_utils::encode_url;
 
 #[derive(Debug, Clone)]
 pub struct GlobRule {
@@ -38,95 +43,163 @@ impl GlobRule {
     }
 }
 
-pub fn get_parent_path(path: &Path) -> Option<PathBuf> {
-    if cfg!(target_family = "wasm") {
-        let raw_path = path.display().to_string();
-        if let Some(':') = raw_path.chars().nth(1) {
-            // windows
-            if raw_path.len() < 3 {
-                return None;
-            }
-            let parts: Vec<&str> = raw_path.split('\\').collect();
-            let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
-            Some(Path::new(&parts.join("\\")).to_path_buf())
-        } else {
-            if raw_path.len() < 2 {
-                return None;
-            }
-            let parts: Vec<&str> = raw_path.split('/').collect();
-            let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
-            Some(Path::new(&parts.join("/")).to_path_buf())
-        }
-    } else {
-        path.parent().map(|v| v.to_path_buf())
-    }
-}
+/// Path utils works on wasm
+pub mod path_utils {
+    use std::{
+        borrow::Cow,
+        path::{Path, PathBuf},
+    };
 
-pub fn join_path(path: &Path, name: &str) -> PathBuf {
-    if cfg!(target_family = "wasm") {
-        let raw_path = path.display().to_string();
-        if let Some(':') = raw_path.chars().nth(1) {
-            Path::new(&format!("{}{}{}", raw_path, "\\", name)).to_path_buf()
+    pub fn get_parent_path(path: &Path) -> Option<PathBuf> {
+        if cfg!(target_family = "wasm") {
+            let raw_path = path.display().to_string();
+            if is_window(&raw_path) {
+                if raw_path.len() < 3 {
+                    return None;
+                }
+                let parts: Vec<&str> = raw_path.split('\\').collect();
+                let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
+                Some(Path::new(&parts.join("\\")).to_path_buf())
+            } else {
+                if raw_path.len() < 2 {
+                    return None;
+                }
+                let parts: Vec<&str> = raw_path.split('/').collect();
+                let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
+                Some(Path::new(&parts.join("/")).to_path_buf())
+            }
         } else {
-            Path::new(&format!("{}{}{}", raw_path, "/", name)).to_path_buf()
+            path.parent().map(|v| v.to_path_buf())
         }
-    } else {
-        path.join(name)
+    }
+
+    pub fn join_path<T: AsRef<str>>(path: T, base: &Path) -> String {
+        let path: &str = path.as_ref();
+        if is_absolute(path) {
+            return path.to_string();
+        }
+        let base = remove_tail_slash(base.display().to_string());
+        if is_window(&base) {
+            let (driver, base_path) = base.split_at(2);
+            let path = path.replace('/', "\\");
+            format!(
+                "{}{}{}{}",
+                driver.to_ascii_uppercase(),
+                base_path,
+                "\\",
+                path
+            )
+        } else {
+            let path = path.replace('\\', "/");
+            format!("{}{}{}", base, "/", path)
+        }
+    }
+
+    pub fn is_window<T: AsRef<str>>(path: T) -> bool {
+        let mut chars = path.as_ref().chars();
+        matches!(
+            (chars.next().map(|v| v.is_ascii_alphabetic()), chars.next()),
+            (Some(true), Some(':'))
+        )
+    }
+
+    pub fn is_absolute<T: AsRef<str>>(path: T) -> bool {
+        let path = path.as_ref();
+        if is_window(&path) {
+            true
+        } else {
+            path.starts_with('/')
+        }
+    }
+
+    pub fn to_unix<T: AsRef<str>>(path: T) -> String {
+        path.as_ref().replace('\\', "/")
+    }
+
+    pub fn encode_url<T: AsRef<str>>(path: T) -> String {
+        let path = if is_window(&path) {
+            let (driver, tail) = path.as_ref().split_at(1);
+            format!(
+                "/{}{}",
+                driver.to_ascii_lowercase(),
+                tail.replace('\\', "/")
+            )
+        } else {
+            path.as_ref().to_string()
+        };
+        to_unix(path)
+            .split('/')
+            .map(urlencoding::encode)
+            .collect::<Vec<Cow<str>>>()
+            .join("/")
+    }
+
+    pub fn remove_tail_slash<T: AsRef<str>>(path: T) -> String {
+        path.as_ref()
+            .trim_end_matches(|v| v == '/' || v == '\\')
+            .to_string()
     }
 }
 
 pub const FILE_PROTOCOL: &str = "file://";
 
 /// Convert path to file url
-pub fn to_file_url(path: &str, base: Option<PathBuf>) -> Option<Url> {
-    fn is_window_path(path: &str) -> bool {
-        let mut chars = path.chars();
-        matches!(
-            (chars.next().map(|v| v.is_ascii_alphabetic()), chars.next()),
-            (Some(true), Some(':'))
-        )
+pub fn to_file_url(path: &str, base: &Option<PathBuf>) -> Option<Url> {
+    if path.starts_with(FILE_PROTOCOL) {
+        return path.parse().ok();
     }
-    fn fix_window_path(path: String) -> String {
-        path.chars()
-            .enumerate()
-            .map(|(i, v)| if i == 0 { v.to_ascii_lowercase() } else { v })
-            .collect()
-    }
-    let path = if let Some(tail) = path.strip_prefix(FILE_PROTOCOL) {
-        tail
+    let url = if path_utils::is_window(path) {
+        format!("{}/{}", FILE_PROTOCOL, encode_url(path))
     } else {
-        path
+        let full_path = if path_utils::is_absolute(path) {
+            path.to_string()
+        } else {
+            let base = match base {
+                Some(v) => v.clone(),
+                None => Path::new("/").to_path_buf(),
+            };
+            path_utils::join_path(path, &base)
+        };
+        format!("{}{}", FILE_PROTOCOL, encode_url(full_path))
     };
-    let path = path.replace('\\', "/");
-    let path = if path.starts_with('/') {
-        format!("{}{}", FILE_PROTOCOL, urlencode::encode(&path))
-    } else if is_window_path(&path) {
-        format!(
-            "{}/{}",
-            FILE_PROTOCOL,
-            urlencode::encode(&fix_window_path(path))
-        )
-    } else {
-        let base = match base {
-            None => String::new(),
-            Some(base) => base.display().to_string().replace('\\', "/"),
-        };
-        let full_path = if base.ends_with('/') {
-            format!("{}{}", base, path)
+    url.parse().ok()
+}
+
+/// Convert url to file path
+pub fn to_file_path(url: &Url) -> Option<String> {
+    let path = url.to_string();
+    let path = path.strip_prefix(FILE_PROTOCOL)?;
+    let mut chars = path.chars();
+    let mut driver = None;
+    let check_driver = |v: char, driver: &mut Option<char>| {
+        if v.is_ascii_alphabetic() {
+            *driver = Some(v);
+            true
         } else {
-            format!("{}/{}", base, path)
-        };
-        if is_window_path(&base) {
-            format!(
-                "{}/{}",
-                FILE_PROTOCOL,
-                urlencode::encode(&fix_window_path(full_path))
-            )
-        } else {
-            format!("{}{}", FILE_PROTOCOL, urlencode::encode(&full_path))
+            false
         }
     };
-    path.parse().ok()
+    if matches!(
+        (
+            chars.next(),
+            chars.next().map(|v| check_driver(v, &mut driver)),
+            chars.next(),
+            chars.next(),
+            chars.next()
+        ),
+        (Some('/'), Some(true), Some('%'), Some('3'), Some('A'))
+    ) {
+        // windows driver `/c%3A` => `/C:`
+        let (_, path) = path.split_at(5);
+        let path = path
+            .split('/')
+            .map(|v| urlencoding::decode(v).ok())
+            .collect::<Option<Vec<Cow<str>>>>()?
+            .join("\\");
+        Some(format!("{}:{}", driver.unwrap().to_ascii_uppercase(), path))
+    } else {
+        Some(path.to_string())
+    }
 }
 
 #[cfg(test)]
@@ -134,15 +207,20 @@ mod tests {
     use super::*;
     macro_rules! asset_to_file_url {
         ($o:expr, $p:expr) => {
-            assert_eq!($o, to_file_url($p, None).unwrap().to_string());
+            assert_eq!(to_file_url($p, &None).unwrap().to_string(), $o);
         };
         ($o:expr, $p:expr, $b:expr) => {
             assert_eq!(
-                $o,
-                to_file_url($p, Some(Path::new($b).to_path_buf()))
+                to_file_url($p, &Some(Path::new($b).to_path_buf()))
                     .unwrap()
-                    .to_string()
+                    .to_string(),
+                $o
             );
+        };
+    }
+    macro_rules! assert_to_file_path {
+        ($i:expr, $o:expr) => {
+            assert_eq!(to_file_path(&$i.parse().unwrap()).unwrap(), $o.to_string());
         };
     }
 
@@ -159,87 +237,11 @@ mod tests {
         asset_to_file_url!("file:///a/b", "file:///a/b", "/dir1");
         asset_to_file_url!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
     }
-}
 
-mod urlencode {
-    use std::borrow::Cow;
-    use std::str;
-
-    /// Percent-encodes every byte except alphanumerics and `-`, `_`, `.`, `~`, '/'. Assumes UTF-8 encoding.
-    ///
-    /// Call `.into_owned()` if you need a `String`
-    #[inline(always)]
-    pub fn encode(data: &str) -> Cow<str> {
-        encode_binary(data.as_bytes())
-    }
-
-    /// Percent-encodes every byte except alphanumerics and `-`, `_`, `.`, `~`, '/'.
-    #[inline]
-    pub fn encode_binary(data: &[u8]) -> Cow<str> {
-        // add maybe extra capacity, but try not to exceed allocator's bucket size
-        let mut escaped = String::with_capacity(data.len() | 15);
-        let unmodified = append_string(data, &mut escaped, true);
-        if unmodified {
-            return Cow::Borrowed(unsafe {
-                // encode_into has checked it's ASCII
-                str::from_utf8_unchecked(data)
-            });
-        }
-        Cow::Owned(escaped)
-    }
-
-    fn append_string(data: &[u8], escaped: &mut String, may_skip: bool) -> bool {
-        encode_into(data, may_skip, |s| {
-            escaped.push_str(s);
-            Ok::<_, std::convert::Infallible>(())
-        })
-        .unwrap()
-    }
-
-    fn encode_into<E>(
-        mut data: &[u8],
-        may_skip_write: bool,
-        mut push_str: impl FnMut(&str) -> Result<(), E>,
-    ) -> Result<bool, E> {
-        let mut pushed = false;
-        loop {
-            // Fast path to skip over safe chars at the beginning of the remaining string
-            let ascii_len = data.iter()
-				.take_while(|&&c| matches!(c, b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z' |  b'-' | b'.' | b'_' | b'~' | b'/')).count();
-
-            let (safe, rest) = if ascii_len >= data.len() {
-                if !pushed && may_skip_write {
-                    return Ok(true);
-                }
-                (data, &[][..]) // redundatnt to optimize out a panic in split_at
-            } else {
-                data.split_at(ascii_len)
-            };
-            pushed = true;
-            if !safe.is_empty() {
-                push_str(unsafe { str::from_utf8_unchecked(safe) })?;
-            }
-            if rest.is_empty() {
-                break;
-            }
-
-            match rest.split_first() {
-                Some((byte, rest)) => {
-                    let enc = &[b'%', to_hex_digit(byte >> 4), to_hex_digit(byte & 15)];
-                    push_str(unsafe { str::from_utf8_unchecked(enc) })?;
-                    data = rest;
-                }
-                None => break,
-            };
-        }
-        Ok(false)
-    }
-
-    #[inline]
-    fn to_hex_digit(digit: u8) -> u8 {
-        match digit {
-            0..=9 => b'0' + digit,
-            10..=255 => b'A' - 10 + digit,
-        }
+    #[test]
+    fn test_to_file_path() {
+        assert_to_file_path!("file:///c%3A/a/b", "C:\\a\\b");
+        assert_to_file_path!("file:///C%3A/a/b", "C:\\a\\b");
+        assert_to_file_path!("file:///dir1/a/b", "/dir1/a/b");
     }
 }

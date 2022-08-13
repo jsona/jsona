@@ -12,7 +12,7 @@ use crate::{
     config::Config,
     environment::Environment,
     schema::Fetcher,
-    util::{to_file_url, GlobRule},
+    util::{path_utils::to_unix, to_file_path, to_file_url, GlobRule},
 };
 
 pub const DEFAULT_SCHEMASTORES: &[&str] =
@@ -111,7 +111,7 @@ impl<E: Environment> SchemaAssociations<E> {
             .get(&KeyOrIndex::annotation(SCHEMA_KEY))
             .and_then(|v| v.as_string().cloned())
         {
-            if let Some(url) = to_file_url(url.value(), self.env.to_file_path(doc_url)) {
+            if let Some(url) = to_file_url(url.value(), &self.env.to_file_path(doc_url)) {
                 self.associations.write().push((
                     AssociationRule::Url(doc_url.clone()),
                     SchemaAssociation {
@@ -150,7 +150,7 @@ impl<E: Environment> SchemaAssociations<E> {
             .read()
             .iter()
             .filter_map(|(rule, assoc)| {
-                if rule.is_match(file.as_str()) {
+                if rule.is_match(file) {
                     Some(assoc.clone())
                 } else {
                     None
@@ -218,11 +218,13 @@ impl From<GlobRule> for AssociationRule {
 
 impl AssociationRule {
     #[must_use]
-    pub fn is_match(&self, text: &str) -> bool {
+    pub fn is_match(&self, url: &Url) -> bool {
         match self {
-            AssociationRule::Glob(g) => g.is_match(text),
-            AssociationRule::Regex(r) => r.is_match(text),
-            AssociationRule::Url(u) => u.as_str() == text,
+            AssociationRule::Glob(g) => to_file_path(url)
+                .map(|v| g.is_match(to_unix(v)))
+                .unwrap_or_default(),
+            AssociationRule::Regex(r) => r.is_match(url.as_str()),
+            AssociationRule::Url(u) => u == url,
         }
     }
 }

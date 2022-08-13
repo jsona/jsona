@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Context};
-use jsona_util::{config::Config, environment::Environment, schema::Schemas};
+use anyhow::Context;
+use jsona_util::{config::Config, environment::Environment, schema::Schemas, util::path_utils};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -38,16 +38,23 @@ impl<E: Environment> App<E> {
         let mut config = Config::default();
         if config_path.is_none() && !general.no_auto_config {
             if let Some(cwd) = self.env.cwd() {
-                if let Ok((path, c)) = Config::find_and_load(&cwd, &self.env).await {
-                    config_path = Some(path);
-                    config = c;
+                match Config::find_and_load(&cwd, &self.env).await {
+                    Ok((path, c)) => {
+                        tracing::info!(path = ?config_path, "found configuration file");
+                        config_path = Some(path);
+                        config = c;
+                    }
+                    Err(error) => {
+                        tracing::warn!(%error, "failed to load configuration file");
+                    }
                 }
             }
         } else if let Some(config_path) = config_path.as_mut() {
-            if !config_path.is_absolute() {
-                let cwd = self.env.cwd().ok_or_else(|| anyhow!("failed to get cwd"))?;
-                *config_path = cwd.join(&config_path);
-            }
+            *config_path = Path::new(&path_utils::join_path(
+                config_path.display().to_string(),
+                &self.env.cwd_or_root(),
+            ))
+            .to_path_buf();
             tracing::info!(path = ?config_path, "found configuration file");
             match Config::from_file(config_path, &self.env).await {
                 Ok(c) => {
@@ -62,6 +69,8 @@ impl<E: Environment> App<E> {
             .prepare(config_path)
             .context("invalid configuration")?;
 
+        tracing::debug!("using config: {:#?}", config);
+
         let c = Arc::new(config);
 
         self.config = Some(c.clone());
@@ -73,13 +82,13 @@ impl<E: Environment> App<E> {
     async fn collect_files(
         &self,
         cwd: &Path,
-        _config: &Config,
+        config: &Config,
         arg_patterns: impl Iterator<Item = String>,
     ) -> Result<Vec<PathBuf>, anyhow::Error> {
         let mut patterns: Vec<String> = arg_patterns
             .map(|pat| {
-                if !self.env.is_absolute(Path::new(&pat)) {
-                    cwd.join(&pat).to_string_lossy().into_owned()
+                if !path_utils::is_absolute(&pat) {
+                    path_utils::join_path(&pat, cwd)
                 } else {
                     pat
                 }
@@ -87,7 +96,10 @@ impl<E: Environment> App<E> {
             .collect();
 
         if patterns.is_empty() {
-            patterns = Vec::from([cwd.join("**/*.jsona").to_string_lossy().into_owned()])
+            patterns = vec![path_utils::to_unix(path_utils::join_path(
+                "**/*.jsona",
+                cwd,
+            ))];
         };
 
         let files = patterns
@@ -100,6 +112,11 @@ impl<E: Environment> App<E> {
             .collect::<Vec<_>>();
 
         let total = files.len();
+
+        let files = files
+            .into_iter()
+            .filter(|path| config.is_included(path.display().to_string()))
+            .collect::<Vec<_>>();
 
         let excluded = total - files.len();
 
