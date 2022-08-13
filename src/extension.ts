@@ -67,6 +67,14 @@ export async function activate(context: vscode.ExtensionContext) {
     c.onNotification("jsona/messageWithOutput", async params =>
       showMessage(params, c)
     ),
+    c.onRequest("fs/readFile", ({ fsPath }) => {
+      const folderUri = vscode.workspace.workspaceFolders[0].uri;
+      let fileUri = vscode.Uri.file(fsPath);
+      if (folderUri.scheme !== "file") {
+        fileUri = vscode.Uri.joinPath(folderUri, fsPath);
+      }
+      return vscode.workspace.fs.readFile(fileUri);
+    }),
     {
       dispose: () => {
         vscode.commands.executeCommand(
