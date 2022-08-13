@@ -50,11 +50,10 @@ impl<E: Environment> App<E> {
                 }
             }
         } else if let Some(config_path) = config_path.as_mut() {
-            *config_path = Path::new(&path_utils::join_path(
+            *config_path = PathBuf::from(path_utils::join_path(
                 config_path.display().to_string(),
-                &self.env.cwd_or_root(),
-            ))
-            .to_path_buf();
+                &self.env.cwd().unwrap_or_else(|| PathBuf::from("/")),
+            ));
             tracing::info!(path = ?config_path, "found configuration file");
             match Config::from_file(config_path, &self.env).await {
                 Ok(c) => {

@@ -109,10 +109,6 @@ impl Environment for NativeEnvironment {
         anyhow::bail!("failed to fetch `{url}`, fetch is not supported")
     }
 
-    fn to_file_path(&self, url: &url::Url) -> Option<std::path::PathBuf> {
-        url.to_file_path().ok()
-    }
-
     fn cwd(&self) -> Option<std::path::PathBuf> {
         std::env::current_dir().ok()
     }

@@ -1,10 +1,13 @@
 use anyhow::{anyhow, bail};
 use arc_swap::ArcSwap;
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::sync::Semaphore;
 use url::Url;
 
-use crate::environment::Environment;
+use crate::{environment::Environment, util::to_file_path};
 
 #[derive(Clone)]
 pub struct Fetcher<E: Environment> {
@@ -38,12 +41,9 @@ impl<E: Environment> Fetcher<E> {
 
     async fn read_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error> {
         self.env
-            .read_file(
-                self.env
-                    .to_file_path(url)
-                    .ok_or_else(|| anyhow!("invalid url `{url}`"))?
-                    .as_ref(),
-            )
+            .read_file(Path::new(
+                &to_file_path(url).ok_or_else(|| anyhow!("invalid url `{url}`"))?,
+            ))
             .await
     }
 

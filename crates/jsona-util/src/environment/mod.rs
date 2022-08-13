@@ -43,15 +43,6 @@ pub trait Environment: Clone + Send + Sync + 'static {
 
     async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error>;
 
-    fn to_file_path(&self, url: &Url) -> Option<PathBuf>;
-
     /// Absolute current working dir.
     fn cwd(&self) -> Option<PathBuf>;
-
-    fn cwd_or_root(&self) -> PathBuf {
-        match self.cwd() {
-            Some(v) => v,
-            None => Path::new("/").to_path_buf(),
-        }
-    }
 }
