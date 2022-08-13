@@ -38,14 +38,16 @@ pub async fn configuration_change<E: Environment>(
 pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
     let mut workspaces = context.workspaces.write().await;
 
+    let init_opts = context.initialization_options.load();
+
     let config_items: Vec<_> = workspaces
         .iter()
-        .filter_map(|(url, _)| {
-            if *url == *DEFAULT_WORKSPACE_URL {
+        .filter_map(|(uri, _)| {
+            if *uri == *DEFAULT_WORKSPACE_URL {
                 None
             } else {
                 Some(ConfigurationItem {
-                    scope_uri: Some(url.clone()),
+                    scope_uri: Some(uri.clone()),
                     section: Some(DEFAULT_CONFIGURATION_SECTION.to_string()),
                 })
             }
@@ -69,11 +71,25 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
     match res {
         Ok(configs) => {
             for (i, config) in configs.into_iter().enumerate() {
-                if i == 0 && config.is_object() {
-                    for (_, ws) in workspaces
-                        .iter_mut()
-                        .filter(|(url, _)| **url == *DEFAULT_WORKSPACE_URL)
-                    {
+                if config.is_object() {
+                    if i == 0 {
+                        for (_, ws) in workspaces
+                            .iter_mut()
+                            .filter(|(url, _)| **url == *DEFAULT_WORKSPACE_URL)
+                        {
+                            ws.schemas.set_cache_path(init_opts.cache_path.clone());
+                            if let Err(error) = ws.config.update_from_json(&config) {
+                                tracing::error!(?error, "invalid configuration");
+                            }
+
+                            if let Err(error) = ws.initialize(context.clone(), &context.env).await {
+                                tracing::error!(%error, "failed to update workspace");
+                            }
+                        }
+                    } else {
+                        let ws_url = config_items.get(i - 1).unwrap().scope_uri.as_ref().unwrap();
+                        let ws = workspaces.get_mut(ws_url).unwrap();
+                        ws.schemas.set_cache_path(init_opts.cache_path.clone());
                         if let Err(error) = ws.config.update_from_json(&config) {
                             tracing::error!(?error, "invalid configuration");
                         }
@@ -81,16 +97,6 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
                         if let Err(error) = ws.initialize(context.clone(), &context.env).await {
                             tracing::error!(%error, "failed to update workspace");
                         }
-                    }
-                } else if config.is_object() {
-                    let ws_url = config_items.get(i - 1).unwrap().scope_uri.as_ref().unwrap();
-                    let ws = workspaces.get_mut(ws_url).unwrap();
-                    if let Err(error) = ws.config.update_from_json(&config) {
-                        tracing::error!(?error, "invalid configuration");
-                    }
-
-                    if let Err(error) = ws.initialize(context.clone(), &context.env).await {
-                        tracing::error!(%error, "failed to update workspace");
                     }
                 }
             }

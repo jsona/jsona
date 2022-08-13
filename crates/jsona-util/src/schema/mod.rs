@@ -46,7 +46,6 @@ impl<E: Environment> Schemas<E> {
     }
 
     pub fn set_cache_path(&self, path: Option<PathBuf>) {
-        tracing::debug!("set cache path {:?}", path);
         self.fetcher.set_cache_path(path);
     }
 }

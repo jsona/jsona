@@ -32,14 +32,9 @@ pub async fn initialize<E: Environment>(
 
     if let Some(workspaces) = p.workspace_folders {
         let mut wss = context.workspaces.write().await;
-        let init_opts = context.initialization_options.load();
-
         for workspace in workspaces {
-            let ws = wss
-                .entry(workspace.uri.clone())
+            wss.entry(workspace.uri.clone())
                 .or_insert(WorkspaceState::new(context.env.clone(), workspace.uri));
-
-            ws.schemas.set_cache_path(init_opts.cache_path.clone());
         }
     }
 

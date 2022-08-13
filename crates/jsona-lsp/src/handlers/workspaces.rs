@@ -14,22 +14,15 @@ pub async fn workspace_change<E: Environment>(
     };
 
     let mut workspaces = context.workspaces.write().await;
-    let init_opts = context.initialization_options.load();
 
     for removed in p.event.removed {
         workspaces.remove(&removed.uri);
     }
 
     for added in p.event.added {
-        let ws = workspaces
+        workspaces
             .entry(added.uri.clone())
             .or_insert(WorkspaceState::new(context.env.clone(), added.uri));
-
-        ws.schemas.set_cache_path(init_opts.cache_path.clone());
-
-        if let Err(error) = ws.initialize(context.clone(), &context.env).await {
-            tracing::error!(?error, "failed to initialize workspace");
-        }
     }
 
     drop(workspaces);
