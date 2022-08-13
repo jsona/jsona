@@ -6,7 +6,7 @@ use codespan_reporting::files::SimpleFile;
 use jsona::parser;
 use jsona_util::{
     environment::Environment,
-    schema::associations::{AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORES},
+    schema::associations::{AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORE},
     util::to_file_url,
 };
 use serde_json::json;
@@ -42,7 +42,7 @@ impl<E: Environment> App<E> {
             } else {
                 self.schemas.associations().add_from_config(&config);
 
-                for store in &cmd.schemastore {
+                if let Some(store) = &cmd.schemastore {
                     self.schemas
                         .associations()
                         .add_from_schemastore(store)
@@ -51,13 +51,11 @@ impl<E: Environment> App<E> {
                 }
 
                 if cmd.default_schemastore {
-                    for store in DEFAULT_SCHEMASTORES {
-                        self.schemas
-                            .associations()
-                            .add_from_schemastore(&Url::parse(store).unwrap())
-                            .await
-                            .with_context(|| "failed to load schema store")?;
-                    }
+                    self.schemas
+                        .associations()
+                        .add_from_schemastore(&DEFAULT_SCHEMASTORE.parse().unwrap())
+                        .await
+                        .with_context(|| "failed to load schema store")?;
                 }
             }
         }
@@ -168,7 +166,7 @@ pub struct LintCommand {
     ///
     /// Can be specified multiple times.
     #[clap(long)]
-    pub schemastore: Vec<Url>,
+    pub schemastore: Option<Url>,
 
     /// Use the default online catalogs for schemas.
     #[clap(long)]

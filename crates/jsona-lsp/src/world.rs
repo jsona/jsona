@@ -192,16 +192,15 @@ impl<E: Environment> WorkspaceState<E> {
                 },
             );
         }
+        let store_url = &self.config.schema.schemastore;
 
-        for store in &self.config.schema.stores {
-            if let Err(error) = self
-                .schemas
-                .associations()
-                .add_from_schemastore(store)
-                .await
-            {
-                tracing::error!(%error, url=%store, "failed to add schemas from store");
-            }
+        if let Err(error) = self
+            .schemas
+            .associations()
+            .add_from_schemastore(store_url)
+            .await
+        {
+            tracing::error!(%error, url=%store_url, "failed to set schemastore");
         }
 
         self.emit_all_associations(context.clone()).await;

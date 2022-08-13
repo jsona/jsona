@@ -15,8 +15,8 @@ use crate::{
     util::{path_utils::to_unix, to_file_path, to_file_url, GlobRule},
 };
 
-pub const DEFAULT_SCHEMASTORES: &[&str] =
-    &["https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json"];
+pub const DEFAULT_SCHEMASTORE: &str =
+    "https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json";
 
 pub const SCHEMA_KEY: &str = "@jsonaschema";
 

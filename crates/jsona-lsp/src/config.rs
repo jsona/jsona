@@ -1,5 +1,5 @@
 use figment::{providers::Serialized, Figment};
-use jsona_util::{schema::associations::DEFAULT_SCHEMASTORES, HashMap};
+use jsona_util::{schema::associations::DEFAULT_SCHEMASTORE, HashMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
@@ -36,8 +36,7 @@ impl LspConfig {
 pub struct SchemaConfig {
     pub enabled: bool,
     pub associations: HashMap<String, String>,
-    pub stores: Vec<Url>,
-    pub links: bool,
+    pub schemastore: Url,
 }
 
 impl Default for SchemaConfig {
@@ -45,11 +44,7 @@ impl Default for SchemaConfig {
         Self {
             enabled: true,
             associations: Default::default(),
-            stores: DEFAULT_SCHEMASTORES
-                .iter()
-                .map(|c| c.parse().unwrap())
-                .collect(),
-            links: false,
+            schemastore: DEFAULT_SCHEMASTORE.parse().unwrap(),
         }
     }
 }
