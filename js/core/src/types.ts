@@ -6,11 +6,14 @@ export interface FormatOptions {
   /// but technically could be anything.
   indent_string?: string,
 
-  /// Put trailing commas for multiline arrays/objects
+  /// Put trailing commas for multiline arrays/objects.
   trailing_comma?: boolean,
 
   /// Add trailing newline to the source.
   trailing_newline?: boolean,
+
+  /// Remove unnecessary quote or choose better quote for property.
+  format_key?: boolean,
 }
 
 
