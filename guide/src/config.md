@@ -40,6 +40,16 @@ The `formatting` table contains optional [formatting options](#formatting-option
 }
 ```
 
+### `@jsonaschema` Directive
+
+It is possible to override the schema for a specific document by using the `@jsonaschema`. A URL can be provided.
+
+```jsona
+{ @jsonaschema("https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona")
+
+}
+```
+
 ### Rules
 
 The `rule` array of tables consist of rules that overwrite the above configuration based on some conditions.
