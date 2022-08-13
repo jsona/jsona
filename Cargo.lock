@@ -617,7 +617,7 @@ dependencies = [
 [[package]]
 name = "jsona"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
+source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
 dependencies = [
  "arc-swap",
  "indexmap",
@@ -632,7 +632,7 @@ dependencies = [
 [[package]]
 name = "jsona-cli"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
+source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
 dependencies = [
  "anyhow",
  "async-ctrlc",
@@ -654,7 +654,7 @@ dependencies = [
 [[package]]
 name = "jsona-lsp"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
+source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -682,7 +682,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
+source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
 dependencies = [
  "either",
  "fancy-regex 0.10.0",
@@ -696,7 +696,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema-validator"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
+source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
 dependencies = [
  "indexmap",
  "jsona",
@@ -710,7 +710,7 @@ dependencies = [
 [[package]]
 name = "jsona-util"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#bef4fc44e027e1ef32661234219bb03e8b824981"
+source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
 dependencies = [
  "ahash",
  "anyhow",
@@ -736,6 +736,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "urlencoding",
 ]
 
 [[package]]
@@ -1699,6 +1700,12 @@ dependencies = [
  "percent-encoding",
  "serde",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68b90931029ab9b034b300b797048cf23723400aa757e8a2bfb9d748102f9821"
 
 [[package]]
 name = "uuid"
