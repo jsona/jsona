@@ -443,17 +443,18 @@ the matched files are included in the operations by the tools unless explicitly 
 <blockquote>
 <p>If <code>include</code> is present but empty, <strong>no files will be included</strong>.</p>
 </blockquote>
-<pre><code class="language-toml">include = [&quot;api.jsona&quot;, &quot;some_directory/**/*.jsona&quot;]
+<pre><code class="language-jsona">include = [&quot;api.jsona&quot;, &quot;some_directory/**/*.jsona&quot;]
 </code></pre>
 <h3 id="exclude"><a class="header" href="#exclude">Exclude</a></h3>
 <p>The <code>exclude</code> property has the same semantics as <code>include</code> and takes precedence over it.</p>
-<p>The following will exclude <code>mixin.jsona</code> from the includes written above, so files matching <code>some_directory/**/*.toml</code> will be included only.</p>
-<pre><code class="language-toml">exclude = [&quot;mixin.jsona&quot;]
+<p>The following will exclude <code>mixin.jsona</code> from the includes written above, so files matching <code>some_directory/**/*.jsona</code> will be included only.</p>
+<pre><code class="language-jsona">exclude = [&quot;mixin.jsona&quot;]
 </code></pre>
 <h3 id="formatting-options"><a class="header" href="#formatting-options">Formatting Options</a></h3>
 <p>The <code>formatting</code> table contains optional <a href="config.html#formatting-options">formatting options</a> for the formatter:</p>
-<pre><code class="language-toml">[formatting]
-tailing_comma = false
+<pre><code class="language-jsona">{
+  tailing_comma: false,
+}
 </code></pre>
 <h3 id="rules"><a class="header" href="#rules">Rules</a></h3>
 <p>The <code>rule</code> array of tables consist of rules that overwrite the above configuration based on some conditions.
@@ -462,16 +463,18 @@ Thus it has the same <code>formatting</code> and <code>schema</code> settings, a
 <p>In case of overlapping rules, the last defined rule always takes precedence.</p>
 </blockquote>
 <p>Let's say we want to sort our <code>Cargo</code> dependencies, but nothing else, here is how we would do that:</p>
-<pre><code class="language-toml">[formatting]
-tailing_comma = false
-
-[[rule]]
-name = &quot;openapi&quot;
-include = [&quot;**/api*.jsona&quot;]
-path = &quot;./schemastore/openapi.schema.jsona&quot;
-
-[rule.formatting]
-tailing_comma = true
+<pre><code class="language-jsona">{
+  formatting: {
+    tailing_comma: false,
+  },
+  rules: [
+    {
+      name: &quot;openapi&quot;,
+      include: [&quot;api*.jsona&quot;],
+      path: &quot;schemastore/openapi.schema.jsona&quot;,
+    },
+  ],
+}
 </code></pre>
 <h2 id="formatter-options"><a class="header" href="#formatter-options">Formatter Options</a></h2>
 <p>This page contains a list of formatting options the formatter accepts.</p>
@@ -479,9 +482,10 @@ tailing_comma = true
 <p>In some environments (e.g. in Visual Studio Code and JavaScript) the option keys are <em>camelCase</em> to better fit the conventions. For example <code>tailing_comma</code> becomes <code>tailingComma</code>.</p>
 </blockquote>
 <div class="table-wrapper"><table><thead><tr><th style="text-align: left">option</th><th style="text-align: left">description</th><th style="text-align: left">default</th></tr></thead><tbody>
-<tr><td style="text-align: left">indent_string</td><td style="text-align: left">Indentation to use, should be tabs or spaces but technically could be anything</td><td style="text-align: left">2 spaces (&quot;  &quot;)</td></tr>
+<tr><td style="text-align: left">indent_string</td><td style="text-align: left">Indentation to use, should be tabs or spaces but technically could be anything</td><td style="text-align: left">2 spaces</td></tr>
 <tr><td style="text-align: left">trailing_comma</td><td style="text-align: left">Put trailing commas for multiline arrays/objects</td><td style="text-align: left">true</td></tr>
 <tr><td style="text-align: left">trailing_newline</td><td style="text-align: left">Add trailing newline to the source</td><td style="text-align: left">true</td></tr>
+<tr><td style="text-align: left">format_key</td><td style="text-align: left">Remove unnecessary quote or choose better quote for property.</td><td style="text-align: left">false</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="jsona-schema"><a class="header" href="#jsona-schema">Jsona Schema</a></h1>
 <p>A jsonaschmea is mainly used for: </p>
@@ -506,8 +510,8 @@ tailing_comma = true
   &quot;contributes&quot;: {
     &quot;jsonaValidation&quot;: [
       {
-        &quot;regexMatch&quot;: &quot;^.*foo.jsona$&quot;,
-        &quot;url&quot;: &quot;https://json.schemastore.org/foo.json&quot;
+        &quot;regexMatch&quot;: &quot;^.*api.jsona$&quot;,
+        &quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona&quot;
       }
     ]
   }
