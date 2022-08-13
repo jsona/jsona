@@ -29,8 +29,8 @@ Other than `fileMatch`, it is also possible to specify `regexMatch` that is matc
   "contributes": {
     "jsonaValidation": [
       {
-        "regexMatch": "^.*foo.jsona$",
-        "url": "https://json.schemastore.org/foo.json"
+        "regexMatch": "^.*api.jsona$",
+        "url": "https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona"
       }
     ]
   }

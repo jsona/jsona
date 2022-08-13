@@ -16,7 +16,7 @@ If this property is omitted, `JSONA` files will be searched in the entire child 
 
 > If `include` is present but empty, **no files will be included**.
 
-```toml
+```jsona
 include = ["api.jsona", "some_directory/**/*.jsona"]
 ```
 
@@ -24,9 +24,9 @@ include = ["api.jsona", "some_directory/**/*.jsona"]
 
 The `exclude` property has the same semantics as `include` and takes precedence over it.
 
-The following will exclude `mixin.jsona` from the includes written above, so files matching `some_directory/**/*.toml` will be included only.
+The following will exclude `mixin.jsona` from the includes written above, so files matching `some_directory/**/*.jsona` will be included only.
 
-```toml
+```jsona
 exclude = ["mixin.jsona"]
 ```
 
@@ -34,9 +34,10 @@ exclude = ["mixin.jsona"]
 
 The `formatting` table contains optional [formatting options](#formatting-options) for the formatter:
 
-```toml
-[formatting]
-tailing_comma = false
+```jsona
+{
+  tailing_comma: false,
+}
 ```
 
 ### Rules
@@ -48,17 +49,19 @@ Thus it has the same `formatting` and `schema` settings, and the `include` and `
 
 Let's say we want to sort our `Cargo` dependencies, but nothing else, here is how we would do that:
 
-```toml
-[formatting]
-tailing_comma = false
-
-[[rule]]
-name = "openapi"
-include = ["**/api*.jsona"]
-path = "./schemastore/openapi.schema.jsona"
-
-[rule.formatting]
-tailing_comma = true
+```jsona
+{
+  formatting: {
+    tailing_comma: false,
+  },
+  rules: [
+    {
+      name: "openapi",
+      include: ["api*.jsona"],
+      path: "schemastore/openapi.schema.jsona",
+    },
+  ],
+}
 ```
 
 ## Formatter Options
@@ -68,8 +71,9 @@ This page contains a list of formatting options the formatter accepts.
 
 > In some environments (e.g. in Visual Studio Code and JavaScript) the option keys are *camelCase* to better fit the conventions. For example `tailing_comma` becomes `tailingComma`.
 
-| option           | description                                                                    | default         |
-| :--------------- | :----------------------------------------------------------------------------- | :-------------- |
-| indent_string    | Indentation to use, should be tabs or spaces but technically could be anything | 2 spaces ("  ") |
-| trailing_comma   | Put trailing commas for multiline arrays/objects                               | true            |
-| trailing_newline | Add trailing newline to the source                                             | true            |
+| option           | description                                                                    | default  |
+| :--------------- | :----------------------------------------------------------------------------- | :------- |
+| indent_string    | Indentation to use, should be tabs or spaces but technically could be anything | 2 spaces |
+| trailing_comma   | Put trailing commas for multiline arrays/objects                               | true     |
+| trailing_newline | Add trailing newline to the source                                             | true     |
+| format_key       | Remove unnecessary quote or choose better quote for property.                  | false    |
