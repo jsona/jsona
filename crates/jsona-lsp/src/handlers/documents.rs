@@ -30,14 +30,8 @@ pub(crate) async fn document_open<E: Environment>(
     let mapper = Mapper::new_utf16(&p.text_document.text, false);
 
     let mut workspaces = context.workspaces.write().await;
-    let document_url = &p.text_document.uri.clone();
-    let ws = workspaces.by_document_mut(document_url);
-    if ws.is_excluded_file(document_url) {
-        drop(workspaces);
-        hint_excluded(context, document_url).await;
-        return;
-    }
-
+    let document_uri = &p.text_document.uri;
+    let ws = workspaces.by_document_mut(document_uri);
     let dom = parse.clone().into_dom();
 
     if ws.config.schema.enabled {
@@ -45,24 +39,22 @@ pub(crate) async fn document_open<E: Environment>(
             .associations()
             .retain(|(rule, assoc)| match rule {
                 AssociationRule::Url(u) => {
-                    !(u == &p.text_document.uri && assoc.meta["source"] != source::SCHEMA_FIELD)
+                    !(u == document_uri && assoc.meta["source"] != source::SCHEMA_FIELD)
                 }
                 _ => true,
             });
         ws.schemas
             .associations()
-            .add_from_document(document_url, &dom);
-        ws.emit_association(context.clone(), document_url).await;
+            .add_from_document(document_uri, &dom);
+        ws.emit_association(context.clone(), document_uri).await;
     }
 
-    ws.documents.insert(
-        p.text_document.uri.clone(),
-        DocumentState { parse, dom, mapper },
-    );
+    ws.documents
+        .insert(document_uri.clone(), DocumentState { parse, dom, mapper });
 
     let ws_root = ws.root.clone();
     drop(workspaces);
-    diagnostics::publish_diagnostics(context.clone(), ws_root, p.text_document.uri).await;
+    diagnostics::publish_diagnostics(context.clone(), ws_root, document_uri.clone()).await;
 }
 
 #[tracing::instrument(skip_all)]
@@ -85,13 +77,8 @@ pub(crate) async fn document_change<E: Environment>(
     let mapper = Mapper::new_utf16(&change.text, false);
 
     let mut workspaces = context.workspaces.write().await;
-    let document_url = &p.text_document.uri.clone();
-    let ws = workspaces.by_document_mut(document_url);
-    if ws.is_excluded_file(document_url) {
-        drop(workspaces);
-        hint_excluded(context, document_url).await;
-        return;
-    }
+    let document_uri = &p.text_document.uri;
+    let ws = workspaces.by_document_mut(document_uri);
     let dom = parse.clone().into_dom();
 
     if ws.config.schema.enabled {
@@ -99,24 +86,22 @@ pub(crate) async fn document_change<E: Environment>(
             .associations()
             .retain(|(rule, assoc)| match rule {
                 AssociationRule::Url(u) => {
-                    !(u == &p.text_document.uri && assoc.meta["source"] != source::SCHEMA_FIELD)
+                    !(u == document_uri && assoc.meta["source"] != source::SCHEMA_FIELD)
                 }
                 _ => true,
             });
         ws.schemas
             .associations()
-            .add_from_document(document_url, &dom);
-        ws.emit_association(context.clone(), document_url).await;
+            .add_from_document(document_uri, &dom);
+        ws.emit_association(context.clone(), document_uri).await;
     }
 
-    ws.documents.insert(
-        p.text_document.uri.clone(),
-        DocumentState { parse, dom, mapper },
-    );
+    ws.documents
+        .insert(document_uri.clone(), DocumentState { parse, dom, mapper });
 
     let ws_root = ws.root.clone();
     drop(workspaces);
-    diagnostics::publish_diagnostics(context.clone(), ws_root, p.text_document.uri).await;
+    diagnostics::publish_diagnostics(context.clone(), ws_root, document_uri.clone()).await;
 }
 
 #[tracing::instrument(skip_all)]
@@ -138,21 +123,23 @@ pub(crate) async fn document_close<E: Environment>(
     };
 
     let mut workspaces = context.workspaces.write().await;
-    let ws = workspaces.by_document_mut(&p.text_document.uri);
+    let document_uri = &p.text_document.uri;
+    let ws = workspaces.by_document_mut(document_uri);
 
-    ws.documents.remove(&p.text_document.uri);
+    ws.documents.remove(document_uri);
     drop(workspaces);
 
     context.env.spawn_local(diagnostics::clear_diagnostics(
         context.clone(),
-        p.text_document.uri,
+        document_uri.clone(),
     ));
 }
 
-async fn hint_excluded<E: Environment>(mut context: Context<World<E>>, doc_url: &Url) {
+#[tracing::instrument(skip_all, fields(%file))]
+async fn hint_excluded<E: Environment>(mut context: Context<World<E>>, file: &Url) {
     context
         .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: doc_url.clone(),
+            uri: file.clone(),
             diagnostics: vec![Diagnostic {
                 range: Default::default(),
                 severity: Some(DiagnosticSeverity::HINT),

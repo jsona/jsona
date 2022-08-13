@@ -30,16 +30,20 @@ pub async fn completion<E: Environment>(
 ) -> Result<Option<CompletionResponse>, Error> {
     let p = params.required()?;
 
-    let document_uri = p.text_document_position.text_document.uri;
-
     let workspaces = context.workspaces.read().await;
+    let document_uri = p.text_document_position.text_document.uri;
     let ws = workspaces.by_document(&document_uri);
-
     if !ws.config.schema.enabled {
         return Ok(None);
     }
 
-    let doc = ws.document(&document_uri)?;
+    let doc = match ws.document(&document_uri) {
+        Ok(d) => d,
+        Err(error) => {
+            tracing::debug!(%error, "failed to get document from workspace");
+            return Ok(None);
+        }
+    };
 
     let position = p.text_document_position.position;
     let offset = match doc.mapper.offset(Position::from_lsp(position)) {

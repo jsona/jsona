@@ -21,8 +21,15 @@ pub(crate) async fn folding_ranges<E: Environment>(
     let p = params.required()?;
 
     let workspaces = context.workspaces.read().await;
-    let ws = workspaces.by_document(&p.text_document.uri);
-    let doc = ws.document(&p.text_document.uri)?;
+    let document_uri = &p.text_document.uri;
+    let ws = workspaces.by_document(document_uri);
+    let doc = match ws.document(document_uri) {
+        Ok(d) => d,
+        Err(error) => {
+            tracing::debug!(%error, "failed to get document from workspace");
+            return Ok(None);
+        }
+    };
 
     let syntax = doc.parse.clone().into_syntax();
 

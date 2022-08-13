@@ -16,7 +16,6 @@ use jsona_util::{
         associations::{priority, source, AssociationRule, SchemaAssociation},
         Schemas,
     },
-    util::to_file_path,
     AsyncRwLock, HashMap, IndexMap,
 };
 use lsp_async_stub::{rpc, util::Mapper, Context, RequestWriter};
@@ -315,11 +314,6 @@ impl<E: Environment> WorkspaceState<E> {
                 None
             }
         }
-    }
-    pub(crate) fn is_excluded_file(&self, file: &Url) -> bool {
-        to_file_path(file)
-            .map(|v| !self.jsona_config.is_included(v))
-            .unwrap_or_default()
     }
 }
 

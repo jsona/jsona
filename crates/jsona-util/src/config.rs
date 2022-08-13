@@ -144,7 +144,6 @@ impl Config {
 
     pub fn is_included<T: AsRef<str>>(&self, path: T) -> bool {
         let path = to_unix(path);
-        let path = Path::new(&path);
         self.file_rule
             .as_ref()
             .map(|r| r.is_match(path))
