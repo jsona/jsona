@@ -49,17 +49,9 @@ export interface Environment {
    */
   writeFile: (path: string, bytes: Uint8Array) => Promise<void>;
   /**
-   * Turn an URL into a file path.
-   */
-  urlToFilePath: (url: string) => string;
-  /**
    * Fetch file by url
    */
   fetchFile: (url: string) => Promise<Uint8Array>;
-  /**
-   * Return whether a path is absolute.
-   */
-  isAbsolute: (path: string) => boolean;
   /**
    * Return the path to the current working directory.
    */
@@ -118,9 +110,7 @@ export function convertEnv(env: Environment): any {
     js_glob_files: env.glob,
     js_read_file: env.readFile,
     js_write_file: env.writeFile,
-    js_to_file_path: env.urlToFilePath,
     js_fetch_file: env.fetchFile,
-    js_is_absolute: env.isAbsolute,
     js_cwd: env.cwd,
   };
 }

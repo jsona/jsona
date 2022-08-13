@@ -10,7 +10,6 @@ use std::{
 };
 use time::OffsetDateTime;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
-use url::Url;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 
@@ -175,8 +174,6 @@ pub(crate) struct WasmEnvironment {
     js_read_file: Function,
     js_write_file: Function,
     js_fetch_file: Function,
-    js_to_file_path: Function,
-    js_is_absolute: Function,
     js_cwd: Function,
 }
 
@@ -211,12 +208,6 @@ impl From<JsValue> for WasmEnvironment {
                 .unwrap()
                 .into(),
             js_fetch_file: js_sys::Reflect::get(&val, &JsValue::from_str("js_fetch_file"))
-                .unwrap()
-                .into(),
-            js_to_file_path: js_sys::Reflect::get(&val, &JsValue::from_str("js_to_file_path"))
-                .unwrap()
-                .into(),
-            js_is_absolute: js_sys::Reflect::get(&val, &JsValue::from_str("js_is_absolute"))
                 .unwrap()
                 .into(),
             js_cwd: js_sys::Reflect::get(&val, &JsValue::from_str("js_cwd"))
@@ -335,22 +326,6 @@ impl Environment for WasmEnvironment {
             .map_err(|err| anyhow!("{:?}", err))?;
 
         Ok(Uint8Array::from(ret).to_vec())
-    }
-
-    fn to_file_path(&self, url: &Url) -> Option<std::path::PathBuf> {
-        let url_str = JsValue::from_str(url.as_str());
-        let this = JsValue::null();
-        let res: JsValue = self.js_to_file_path.call1(&this, &url_str).unwrap();
-
-        res.as_string().map(Into::into)
-    }
-
-    fn is_absolute(&self, path: &Path) -> bool {
-        let path_str = JsValue::from_str(&path.to_string_lossy());
-        let this = JsValue::null();
-        let res: JsValue = self.js_is_absolute.call1(&this, &path_str).unwrap();
-
-        res.is_truthy()
     }
 
     fn cwd(&self) -> Option<std::path::PathBuf> {

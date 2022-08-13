@@ -10,12 +10,12 @@ PKGS=( \
 
 # @cmd Build js
 # @flag --debug
-# @arg name![core|util-types|lsp|all]
+# @arg name![core|util-types|lsp]
 build() {
     if [[ -n $argc_debug ]]; then
         export WASM_DEBUG=true
     fi
-    if [[ "$1" == "all" ]]; then
+    if [[ -z "$1" ]]; then
         for name in ${PKGS[@]}; do
             yarn --cwd js workspace @jsona/$name build
             ls -alh js/$name/dist
@@ -42,5 +42,18 @@ publish() {
     done
 }
 
+# @cmd Patch jsona* crates path to use loca
+patch-path() {
+    sed -i \
+        -e 's|jsona = { git = "https://github.com/jsona/jsona.git" }|jsona = { path = "../../../jsona/crates/jsona" }|' \
+        -e 's|jsona-util = { git = "https://github.com/jsona/jsona.git" }|jsona-util = { path = "../../../jsona/crates/jsona-util" }|' \
+        -e 's|jsona-cli = { git = "https://github.com/jsona/jsona.git", optional = true }|jsona-cli = { path = "../../../jsona/crates/jsona-cli", optional = true }|' \
+        -e 's|jsona-lsp = { git = "https://github.com/jsona/jsona.git", optional = true }|jsona-lsp = { path = "../../../jsona/crates/jsona-lsp", optional = true }|' \
+        crates/jsona-wasm-cli/Cargo.toml
+
+    sed -i \
+        -e 's|jsona = { git = "https://github.com/jsona/jsona.git" }|jsona = { path = "../../../jsona/crates/jsona" }|' \
+        crates/jsona-wasm-core/Cargo.toml
+}
 
 eval "$(argc --argc-eval $0 "$@")"
