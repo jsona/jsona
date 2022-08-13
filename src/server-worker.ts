@@ -24,7 +24,6 @@ reader.listen(async message => {
           return "";
         },
         glob: () => [],
-        isAbsolute: () => true,
         now: () => new Date(),
         readFile: () => Promise.reject("not implemented read_file "),
         writeFile: () => Promise.reject("not implemented write_file"),
@@ -54,7 +53,6 @@ reader.listen(async message => {
             clearTimeout(timeout);
           }
         },
-        urlToFilePath: (url: string) => url.slice("file://".length),
       },
       {
         onMessage(message) {

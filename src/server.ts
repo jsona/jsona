@@ -18,7 +18,6 @@ process.on("message", async (message: RpcMessage) => {
         cwd: () => process.cwd(),
         envVar: name => process.env[name],
         glob: p => glob.sync(p),
-        isAbsolute: p => path.isAbsolute(p),
         now: () => new Date(),
         readFile: path => fsPromise.readFile(path),
         writeFile: (path, content) => fsPromise.writeFile(path, content),
@@ -26,15 +25,6 @@ process.on("message", async (message: RpcMessage) => {
         stdErrAtty: () => process.stderr.isTTY,
         stdin: process.stdin,
         stdout: process.stdout,
-        urlToFilePath: (url: string) => {
-          url = decodeURIComponent(url);
-          if (path.sep == "\\") {
-            let value = url.slice("file:///".length);
-            return value.replace(/\//g, "\\");
-          } else {
-            return url.slice("file://".length)
-          }
-        },
         fetchFile: async (url: string) => {
           log("fetchFile", url);
           const controller = new AbortController();
