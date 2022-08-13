@@ -28,16 +28,18 @@ export async function activate(context: vscode.ExtensionContext) {
     schemaIndicator,
     vscode.window.onDidChangeActiveTextEditor(async editor => {
       if (editor?.document.languageId === "jsona") {
-        let docUri = editor?.document.uri;
-        if (docUri) {
+        let documentUrl = editor?.document.uri;
+        if (documentUrl) {
           const res = await c.sendRequest("jsona/associatedSchema", {
-            documentUri: docUri.toString(),
+            documentUri: documentUrl.toString(),
           }) as Lsp.Client.RequestResponse<"jsona/associatedSchema">;
           if (res?.schema?.url) {
             let schema = res.schema;
             schemaIndicator.text =
               schema.meta?.name ?? schema.url?.split("/").slice(-1)[0] ?? "no schema";
             schemaIndicator.tooltip = `JSONA Schema: ${schema.url}`;
+          } else {
+            resetSchemaIndicator(schemaIndicator);
           }
         }
         schemaIndicator.show();
