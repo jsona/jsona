@@ -23,7 +23,7 @@ use lsp_async_stub::{rpc, util::Mapper, Context, RequestWriter};
 use lsp_types::Url;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::{path::PathBuf, sync::Arc};
 
 pub type World<E> = Arc<WorldState<E>>;
@@ -141,9 +141,16 @@ impl<E: Environment> WorkspaceState<E> {
     pub(crate) async fn initialize(
         &mut self,
         context: Context<World<E>>,
-        env: &impl Environment,
+        config: &Value,
     ) -> Result<(), anyhow::Error> {
-        self.load_config(env, &*context.world().default_config.load())
+        self.schemas
+            .set_cache_path(context.initialization_options.load().cache_path.clone());
+
+        if let Err(error) = self.config.update_from_json(config) {
+            tracing::error!(?error, "invalid configuration");
+        }
+
+        self.load_config(&context.env, &*context.world().default_config.load())
             .await?;
 
         self.schemas

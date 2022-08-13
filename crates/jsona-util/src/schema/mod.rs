@@ -105,7 +105,7 @@ impl<E: Environment> Schemas<E> {
         Ok(schema)
     }
 
-    #[tracing::instrument(skip_all, fields(%schema_url, %path))]
+    #[tracing::instrument(skip_all)]
     pub async fn schemas_at_path(
         &self,
         schema_url: &Url,
