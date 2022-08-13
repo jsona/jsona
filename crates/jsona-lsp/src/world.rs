@@ -16,6 +16,7 @@ use jsona_util::{
         associations::{priority, source, AssociationRule, SchemaAssociation},
         Schemas,
     },
+    util::to_file_path,
     AsyncRwLock, HashMap, IndexMap,
 };
 use lsp_async_stub::{rpc, util::Mapper, Context, RequestWriter};
@@ -199,7 +200,7 @@ impl<E: Environment> WorkspaceState<E> {
                 .add_from_schemastore(store)
                 .await
             {
-                tracing::error!(%error, "failed to add schemas from store");
+                tracing::error!(%error, url=%store, "failed to add schemas from store");
             }
         }
 
@@ -223,23 +224,23 @@ impl<E: Environment> WorkspaceState<E> {
 
         let mut config_path = self.config.config_file.path.clone();
         if let Some(path) = config_path.as_ref() {
-            if !path.as_os_str().is_empty() {
-                tracing::info!(path = ?path, "read config file");
-                match Config::from_file(path, env).await {
-                    Ok(config) => {
-                        self.jsona_config = config;
-                        tracing::debug!("using config: {:#?}", self.jsona_config);
-                    }
-                    Err(err) => {
-                        config_path = None;
-                        tracing::error!("failed to read config {}", err);
-                    }
-                }
-            } else {
+            if path.as_os_str().is_empty() {
                 config_path = None;
             }
         }
-        if config_path.is_none() {
+
+        if let Some(path) = config_path.as_ref() {
+            tracing::info!(path = ?path, "read config file");
+            match Config::from_file(path, env).await {
+                Ok(config) => {
+                    self.jsona_config = config;
+                }
+                Err(err) => {
+                    config_path = None;
+                    tracing::error!("failed to read config {}", err);
+                }
+            }
+        } else {
             let root_path = env
                 .to_file_path(&self.root)
                 .ok_or_else(|| anyhow!("invalid root URL"))?;
@@ -249,7 +250,6 @@ impl<E: Environment> WorkspaceState<E> {
                     tracing::info!(path = ?path, "found config file");
                     self.jsona_config = config;
                     config_path = Some(path);
-                    tracing::debug!("using config: {:#?}", self.jsona_config);
                 }
                 Err(err) => {
                     tracing::error!("failed to load config {}", err);
@@ -258,9 +258,11 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         self.jsona_config.prepare(config_path)?;
+        tracing::debug!("using config: {:#?}", self.jsona_config);
 
         Ok(())
     }
+
     pub(crate) async fn emit_all_associations(&self, context: Context<World<E>>) {
         for document_url in self.documents.keys() {
             self.emit_association(context.clone(), document_url).await;
@@ -313,6 +315,11 @@ impl<E: Environment> WorkspaceState<E> {
                 None
             }
         }
+    }
+    pub(crate) fn is_excluded_file(&self, file: &Url) -> bool {
+        to_file_path(file)
+            .map(|v| !self.jsona_config.is_included(v))
+            .unwrap_or_default()
     }
 }
 

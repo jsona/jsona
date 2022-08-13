@@ -2,15 +2,18 @@ use jsona_util::{
     environment::Environment,
     schema::associations::{source, AssociationRule},
 };
-use lsp_async_stub::{util::Mapper, Context, Params};
+use lsp_async_stub::{util::Mapper, Context, Params, RequestWriter};
 use lsp_types::{
-    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DidSaveTextDocumentParams,
+    notification, Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams,
+    DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
+    PublishDiagnosticsParams,
 };
+use url::Url;
 
 use crate::{
     diagnostics,
     world::{DocumentState, World},
+    NAME,
 };
 
 #[tracing::instrument(skip_all)]
@@ -29,6 +32,11 @@ pub(crate) async fn document_open<E: Environment>(
     let mut workspaces = context.workspaces.write().await;
     let document_url = &p.text_document.uri.clone();
     let ws = workspaces.by_document_mut(document_url);
+    if ws.is_excluded_file(document_url) {
+        drop(workspaces);
+        hint_excluded(context, document_url).await;
+        return;
+    }
 
     let dom = parse.clone().into_dom();
 
@@ -79,7 +87,11 @@ pub(crate) async fn document_change<E: Environment>(
     let mut workspaces = context.workspaces.write().await;
     let document_url = &p.text_document.uri.clone();
     let ws = workspaces.by_document_mut(document_url);
-
+    if ws.is_excluded_file(document_url) {
+        drop(workspaces);
+        hint_excluded(context, document_url).await;
+        return;
+    }
     let dom = parse.clone().into_dom();
 
     if ws.config.schema.enabled {
@@ -135,4 +147,25 @@ pub(crate) async fn document_close<E: Environment>(
         context.clone(),
         p.text_document.uri,
     ));
+}
+
+async fn hint_excluded<E: Environment>(mut context: Context<World<E>>, doc_url: &Url) {
+    context
+        .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
+            uri: doc_url.clone(),
+            diagnostics: vec![Diagnostic {
+                range: Default::default(),
+                severity: Some(DiagnosticSeverity::HINT),
+                code: None,
+                code_description: None,
+                source: Some(NAME.into()),
+                message: "this document has been excluded".into(),
+                related_information: None,
+                tags: None,
+                data: None,
+            }],
+            version: None,
+        }))
+        .await
+        .unwrap_or_else(|err| tracing::error!("{err}"));
 }

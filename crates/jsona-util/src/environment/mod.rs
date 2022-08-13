@@ -45,8 +45,13 @@ pub trait Environment: Clone + Send + Sync + 'static {
 
     fn to_file_path(&self, url: &Url) -> Option<PathBuf>;
 
-    fn is_absolute(&self, path: &Path) -> bool;
-
     /// Absolute current working dir.
     fn cwd(&self) -> Option<PathBuf>;
+
+    fn cwd_or_root(&self) -> PathBuf {
+        match self.cwd() {
+            Some(v) => v,
+            None => Path::new("/").to_path_buf(),
+        }
+    }
 }

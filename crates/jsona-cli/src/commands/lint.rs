@@ -27,7 +27,7 @@ impl<E: Environment> App<E> {
                         let cwd = self.env.cwd().ok_or_else(|| {
                             anyhow!("could not figure the current working directory")
                         })?;
-                        to_file_url(&schema_url, Some(cwd))
+                        to_file_url(&schema_url, &Some(cwd))
                             .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_url))?
                     }
                 };
@@ -107,6 +107,7 @@ impl<E: Environment> App<E> {
         self.lint_source(&*file.to_string_lossy(), &source).await
     }
 
+    #[tracing::instrument(skip_all, fields(%file_path))]
     async fn lint_source(&self, file_path: &str, source: &str) -> Result<(), anyhow::Error> {
         let parse = parser::parse(source);
 
@@ -126,7 +127,7 @@ impl<E: Environment> App<E> {
             return Err(anyhow!("semantic errors found"));
         }
 
-        let file_uri: Url = to_file_url(file_path, self.env.cwd()).unwrap();
+        let file_uri: Url = to_file_url(file_path, &self.env.cwd()).unwrap();
 
         self.schemas
             .associations()

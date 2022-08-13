@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::environment::Environment;
-use crate::util::{get_parent_path, join_path, to_file_url, GlobRule};
+use crate::util::path_utils::to_unix;
+use crate::util::{path_utils, to_file_url, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
 
@@ -70,6 +71,7 @@ impl Config {
             .map_err(|err| anyhow!("failed to deserialize config, {}", err))?;
         Ok(config)
     }
+
     /// Load config from file
     pub async fn from_file(
         config_path: &Path,
@@ -92,7 +94,9 @@ impl Config {
             }
         }
     }
-    /// Find config file from entry dir, if found, load conffig; if not found, find parent dir until root dir.
+    /// Find config file from entry dir.
+    /// If found, load config
+    /// If not found, find parent dir until root dir.
     pub async fn find_and_load(
         entry: &Path,
         env: &impl Environment,
@@ -103,16 +107,16 @@ impl Config {
         let mut p = entry.to_path_buf();
         loop {
             for name in CONFIG_FILE_NAMES {
-                let config_path = join_path(&p, name);
-                if let Ok(data) = env.read_file(&config_path).await {
+                let config_path = path_utils::join_path(name, &p);
+                if let Ok(data) = env.read_file(Path::new(&config_path)).await {
                     let config = std::str::from_utf8(&data)
                         .map_err(|_| anyhow!("invalid utf8"))
                         .and_then(Config::from_jsona)
-                        .map_err(|e| anyhow!("at {} throw {}", config_path.display(), e))?;
-                    return Ok((config_path, config));
+                        .map_err(|e| anyhow!("at {}, {}", config_path, e))?;
+                    return Ok((Path::new(&config_path).to_path_buf(), config));
                 }
             }
-            match get_parent_path(&p) {
+            match path_utils::get_parent_path(&p) {
                 Some(parent) => p = parent,
                 None => {
                     bail!("not found");
@@ -122,13 +126,13 @@ impl Config {
     }
     /// Prepare the configuration for further use.
     pub fn prepare(&mut self, config_path: Option<PathBuf>) -> Result<(), anyhow::Error> {
-        let default_include = String::from("**/*.jsona");
-        let config_dir = config_path.and_then(|v| get_parent_path(&v));
+        let config_dir = config_path.and_then(|v| path_utils::get_parent_path(&v));
+        self.make_absolute(&config_dir);
 
         self.file_rule = Some(GlobRule::new(
             self.include
                 .as_deref()
-                .unwrap_or(&[default_include] as &[String]),
+                .unwrap_or(&[String::from("**/*.jsona")] as &[String]),
             self.exclude.as_deref().unwrap_or(&[] as &[String]),
         )?);
 
@@ -138,14 +142,13 @@ impl Config {
         Ok(())
     }
 
-    pub fn is_included(&self, path: &Path) -> bool {
-        match &self.file_rule {
-            Some(r) => r.is_match(path),
-            None => {
-                tracing::debug!("no file matches were set up");
-                false
-            }
-        }
+    pub fn is_included<T: AsRef<str>>(&self, path: T) -> bool {
+        let path = to_unix(path);
+        let path = Path::new(&path);
+        self.file_rule
+            .as_ref()
+            .map(|r| r.is_match(path))
+            .unwrap_or_default()
     }
 
     pub fn schema_for<'r>(&'r self, path: &'r Path) -> Option<&'r SchemaRule> {
@@ -161,6 +164,15 @@ impl Config {
             if let Some(opts) = schema_opts.formatting.clone() {
                 options.update(opts);
             }
+        }
+    }
+    /// Transform all relative glob patterns to have the given base path.
+    fn make_absolute(&mut self, base: &Option<PathBuf>) {
+        make_absolute_impl(&mut self.include, base);
+        make_absolute_impl(&mut self.exclude, base);
+        for schema_rule in &mut self.rules {
+            make_absolute_impl(&mut schema_rule.include, base);
+            make_absolute_impl(&mut schema_rule.exclude, base);
         }
     }
 }
@@ -217,7 +229,7 @@ impl Debug for SchemaRule {
             .field("include", &self.include)
             .field("exclude", &self.exclude)
             .field("path", &self.path)
-            .field("url", &self.url)
+            .field("url", &self.url.as_ref().map(|v| v.to_string()))
             .field("formatting", &self.formatting)
             .finish()
     }
@@ -234,7 +246,7 @@ impl SchemaRule {
         )?);
         let url = match self.path.take() {
             Some(p) => {
-                Some(to_file_url(&p, base).ok_or_else(|| anyhow!("invalid schema path `{}`", p))?)
+                Some(to_file_url(&p, &base).ok_or_else(|| anyhow!("invalid schema path `{}`", p))?)
             }
             None => self.url.take(),
         };
@@ -243,12 +255,27 @@ impl SchemaRule {
 
         Ok(())
     }
+    fn is_included(&self, path: &Path) -> bool {
+        self.file_rule
+            .as_ref()
+            .map(|r| r.is_match(path))
+            .unwrap_or_default()
+    }
+}
 
-    #[must_use]
-    pub fn is_included(&self, path: &Path) -> bool {
-        match &self.file_rule {
-            Some(r) => r.is_match(path),
-            None => true,
+fn make_absolute_impl(paths: &mut Option<Vec<String>>, base: &Option<PathBuf>) {
+    let base = match base {
+        Some(v) => v.clone(),
+        None => Path::new("/").to_path_buf(),
+    };
+    if let Some(paths) = paths {
+        for path in paths {
+            if path_utils::is_absolute(path.as_str()) {
+                *path = path_utils::to_unix(path.as_str())
+            } else {
+                let full_path = path_utils::join_path(path.as_str(), &base);
+                *path = path_utils::to_unix(full_path)
+            }
         }
     }
 }
