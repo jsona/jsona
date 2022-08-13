@@ -273,6 +273,12 @@ impl<E: Environment> WorkspaceState<E> {
         document_url: &Url,
     ) {
         if let Some(assoc) = self.schemas.associations().association_for(document_url) {
+            tracing::debug!(
+                schema.url = %assoc.url,
+                schema.name = assoc.meta["name"].as_str().unwrap_or(""),
+                schema.source = assoc.meta["source"].as_str().unwrap_or(""),
+                "using schema"
+            );
             if let Err(error) = context
                 .write_notification::<DidChangeSchemaAssociation, _>(Some(
                     DidChangeSchemaAssociationParams {

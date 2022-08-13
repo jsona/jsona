@@ -1,11 +1,10 @@
 use anyhow::anyhow;
 use jsona::dom::{KeyOrIndex, Node};
-use parking_lot::{RwLock, RwLockReadGuard};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
-use tap::Tap;
 use url::Url;
 
 use crate::{
@@ -13,6 +12,7 @@ use crate::{
     environment::Environment,
     schema::Fetcher,
     util::{path_utils::to_unix, to_file_path, to_file_url, GlobRule},
+    HashMap,
 };
 
 pub const DEFAULT_SCHEMASTORE: &str =
@@ -41,6 +41,7 @@ pub struct SchemaAssociations<E: Environment> {
     env: E,
     fetcher: Fetcher<E>,
     associations: Arc<RwLock<Vec<(AssociationRule, SchemaAssociation)>>>,
+    cache: Arc<Mutex<HashMap<Url, Option<Arc<SchemaAssociation>>>>>,
 }
 
 impl<E: Environment> SchemaAssociations<E> {
@@ -49,14 +50,17 @@ impl<E: Environment> SchemaAssociations<E> {
             env,
             fetcher,
             associations: Default::default(),
+            cache: Arc::new(Mutex::new(HashMap::default())),
         }
     }
     pub fn add(&self, rule: AssociationRule, assoc: SchemaAssociation) {
         self.associations.write().push((rule, assoc));
+        self.cache.lock().clear();
     }
 
     pub fn retain(&self, f: impl Fn(&(AssociationRule, SchemaAssociation)) -> bool) {
         self.associations.write().retain(f);
+        self.cache.lock().clear();
     }
 
     pub fn read(&self) -> RwLockReadGuard<'_, Vec<(AssociationRule, SchemaAssociation)>> {
@@ -65,6 +69,7 @@ impl<E: Environment> SchemaAssociations<E> {
 
     pub fn clear(&self) {
         self.associations.write().clear();
+        self.cache.lock().clear();
     }
 
     pub async fn add_from_schemastore(&self, url: &Url) -> Result<(), anyhow::Error> {
@@ -72,7 +77,7 @@ impl<E: Environment> SchemaAssociations<E> {
         for schema in &schemastore.0 {
             match GlobRule::new(&schema.file_match, [] as [&str; 0]) {
                 Ok(rule) => {
-                    self.associations.write().push((
+                    self.add(
                         rule.into(),
                         SchemaAssociation {
                             url: schema.url.clone(),
@@ -84,7 +89,7 @@ impl<E: Environment> SchemaAssociations<E> {
                             }),
                             priority: priority::STORE,
                         },
-                    ));
+                    );
                 }
                 Err(error) => {
                     tracing::warn!(
@@ -112,14 +117,14 @@ impl<E: Environment> SchemaAssociations<E> {
             .and_then(|v| v.as_string().cloned())
         {
             if let Some(url) = to_file_url(url.value(), &self.env.cwd()) {
-                self.associations.write().push((
+                self.add(
                     AssociationRule::Url(doc_url.clone()),
                     SchemaAssociation {
                         url,
                         priority: priority::SCHEMA_FIELD,
                         meta: json!({ "source": source::SCHEMA_FIELD }),
                     },
-                ));
+                );
             }
         }
     }
@@ -131,7 +136,7 @@ impl<E: Environment> SchemaAssociations<E> {
                 None => continue,
             };
             if let Some(url) = &schema_rule.url {
-                self.associations.write().push((
+                self.add(
                     file_rule.into(),
                     SchemaAssociation {
                         url: url.clone(),
@@ -140,13 +145,17 @@ impl<E: Environment> SchemaAssociations<E> {
                         }),
                         priority: priority::CONFIG,
                     },
-                ));
+                );
             }
         }
     }
 
-    pub fn association_for(&self, file: &Url) -> Option<SchemaAssociation> {
-        self.associations
+    pub fn association_for(&self, file: &Url) -> Option<Arc<SchemaAssociation>> {
+        if let Some(assoc) = self.cache.lock().get(file).cloned() {
+            return assoc;
+        }
+        let assoc = self
+            .associations
             .read()
             .iter()
             .filter_map(|(rule, assoc)| {
@@ -157,16 +166,9 @@ impl<E: Environment> SchemaAssociations<E> {
                 }
             })
             .max_by_key(|assoc| assoc.priority)
-            .tap(|s| {
-                if let Some(schema_association) = s {
-                    tracing::debug!(
-                        schema.url = %schema_association.url,
-                        schema.name = schema_association.meta["name"].as_str().unwrap_or(""),
-                        schema.source = schema_association.meta["source"].as_str().unwrap_or(""),
-                        "found schema association"
-                    );
-                }
-            })
+            .map(Arc::new);
+        self.cache.lock().insert(file.clone(), assoc.clone());
+        assoc
     }
 
     async fn load_schemastore(&self, index_url: &Url) -> Result<SchemaStore, anyhow::Error> {

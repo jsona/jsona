@@ -135,8 +135,8 @@ pub async fn associated_schema<E: Environment>(
             .associations()
             .association_for(&p.document_uri)
             .map(|s| SchemaInfo {
-                url: s.url,
-                meta: s.meta,
+                url: s.url.clone(),
+                meta: s.meta.clone(),
             }),
     })
 }
