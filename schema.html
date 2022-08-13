@@ -141,14 +141,16 @@
 <li>code completions</li>
 </ul>
 <h2 id="developing-schemas"><a class="header" href="#developing-schemas">Developing Schemas</a></h2>
+<p>Schemastore is a universal JSON schema store where schemas for popular JSONA schema documents can be found.</p>
 <p>See <a href="https://github.com/jsona/schemastore/README.md">schemastore</a> for more details.</p>
 <h2 id="using-schema"><a class="header" href="#using-schema">Using schema</a></h2>
 <p>JSONA schemas can be assigned to JSONA documents according to the following in priority order starting with the highest priority:</p>
 <ul>
 <li>set manually in the environment, e.g. as <a href="./cli.html#using-a-specific-schema">a CLI flag</a> or an IDE setting</li>
-<li>as an URL under the <code>@jsonaschema</code> annotation in the root of the document</li>
-<li>configuration file <a href="./config.html#rules">rule</a></li>
+<li>as an URL under the <code>@jsonaschema</code> in the root of the document</li>
+<li><a href="./config.html#rules">configuration file rules</a></li>
 <li>contributed by an <a href="#visual-studio-code-extensions">extension</a> <em>(Visual Studio Code only)</em></li>
+<li>an association based on a schemastore</li>
 </ul>
 <h2 id="visual-studio-code-extensions"><a class="header" href="#visual-studio-code-extensions">Visual Studio Code extensions</a></h2>
 <p>Similarly to <a href="https://code.visualstudio.com/api/references/contribution-points#contributes.jsonValidation"><code>jsonValidation</code></a>, it is possible for extensions to contribute their own schemas.</p>

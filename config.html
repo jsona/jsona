@@ -158,6 +158,12 @@ the matched files are included in the operations by the tools unless explicitly 
   tailing_comma: false,
 }
 </code></pre>
+<h3 id="jsonaschema-directive"><a class="header" href="#jsonaschema-directive"><code>@jsonaschema</code> Directive</a></h3>
+<p>It is possible to override the schema for a specific document by using the <code>@jsonaschema</code>. A URL can be provided.</p>
+<pre><code class="language-jsona">{ @jsonaschema(&quot;https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona&quot;)
+
+}
+</code></pre>
 <h3 id="rules"><a class="header" href="#rules">Rules</a></h3>
 <p>The <code>rule</code> array of tables consist of rules that overwrite the above configuration based on some conditions.
 Thus it has the same <code>formatting</code> and <code>schema</code> settings, and the <code>include</code> and <code>exclude</code> with the same semantics as their <a href="#include">global variants</a>, however this time they are used to determine whether the rule applies.</p>
