@@ -68,7 +68,7 @@ pub struct AppArgs {
     pub cmd: JsonaCommand,
 }
 
-#[derive(Clone, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct GeneralArgs {
     /// Path to the Jsona configuration file.
     #[clap(long, short)]

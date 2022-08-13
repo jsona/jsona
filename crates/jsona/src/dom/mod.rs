@@ -11,7 +11,7 @@ pub mod keys;
 pub mod node;
 pub mod visitor;
 
-mod from_syntax;
+pub(crate) mod from_syntax;
 mod serde;
 mod to_string;
 

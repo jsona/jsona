@@ -24,7 +24,7 @@ pub async fn initialize<E: Environment>(
     if let Some(init_opts) = p.initialization_options {
         match serde_json::from_value::<InitializationOptions>(init_opts) {
             Ok(c) => {
-                tracing::debug!("use initialization_options {:?}", c);
+                tracing::debug!("use initialization options {:?}", c);
                 context.initialization_options.store(Arc::new(c))
             }
             Err(error) => {

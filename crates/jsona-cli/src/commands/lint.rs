@@ -153,7 +153,7 @@ impl<E: Environment> App<E> {
     }
 }
 
-#[derive(Clone, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct LintCommand {
     #[clap(flatten)]
     pub general: GeneralArgs,

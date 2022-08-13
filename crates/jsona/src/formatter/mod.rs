@@ -9,6 +9,7 @@ pub use options::*;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+    dom::{from_syntax::key_from_syntax, DomNode},
     parser,
     syntax::{SyntaxKind::*, SyntaxNode, SyntaxToken},
 };
@@ -284,7 +285,13 @@ fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
         match c {
             NodeOrToken::Node(n) => match n.kind() {
                 KEY => {
-                    let text = n.to_string();
+                    let mut text = n.to_string();
+                    if scope.options.format_key {
+                        let key = key_from_syntax(n.into());
+                        if key.is_valid_node() {
+                            text = key.to_string();
+                        }
+                    };
                     ctx.newline(&scope);
                     ctx.ident(&scope);
                     ctx.write(&scope, &text);

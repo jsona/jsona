@@ -115,11 +115,14 @@ create_options!(
         /// but technically could be anything.
         pub indent_string: String,
 
-        /// Put trailing commas for multiline arrays/objects
+        /// Put trailing commas for multiline arrays/objects.
         pub trailing_comma: bool,
 
         /// Add trailing newline to the source.
         pub trailing_newline: bool,
+
+        /// Remove unnecessary quote or choose better quote for property.
+        pub format_key: bool,
     }
 );
 
@@ -157,6 +160,7 @@ impl Default for Options {
             indent_string: "  ".into(),
             trailing_comma: true,
             trailing_newline: true,
+            format_key: false,
         }
     }
 }

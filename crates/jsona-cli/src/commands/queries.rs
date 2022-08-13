@@ -90,7 +90,7 @@ impl<E: Environment> App<E> {
     }
 }
 
-#[derive(Clone, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct GetCommand {
     /// Whether output includes annotation
     #[clap(short = 'A', long)]

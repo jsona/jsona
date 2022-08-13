@@ -135,7 +135,7 @@ impl<E: Environment> App<E> {
     }
 }
 
-#[derive(Clone, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct FormatCommand {
     #[clap(flatten)]
     pub general: GeneralArgs,
@@ -157,7 +157,7 @@ pub struct FormatCommand {
     /// If the only argument is "-", the standard input will be used.
     pub files: Vec<String>,
 
-    /// A path to the file that the Jsona CLI will treat like stdin.
+    /// A path to the file that the JSONA CLI will treat like stdin.
     ///
     /// This option does not change the file input source. This option should be used only when the
     /// source input arises from the stdin.

@@ -28,7 +28,7 @@ impl<E: Environment> App<E> {
     }
 }
 
-#[derive(Clone, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub enum LspCommand {
     /// Run the language server and listen on a TCP address.
     Tcp {
