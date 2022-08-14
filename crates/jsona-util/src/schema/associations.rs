@@ -3,14 +3,18 @@ use jsona::dom::{KeyOrIndex, Node};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{fmt::Debug, sync::Arc};
+use std::{fmt::Debug, path::Path, sync::Arc};
 use url::Url;
 
 use crate::{
     config::Config,
     environment::Environment,
     schema::Fetcher,
-    util::{to_file_uri, GlobRule},
+    util::{
+        is_url,
+        path_utils::{remove_tail_slash, to_unix},
+        to_file_uri, GlobRule,
+    },
     HashMap,
 };
 
@@ -207,26 +211,40 @@ impl Debug for AssociationRule {
     }
 }
 
-impl AssociationRule {
-    pub fn glob(pattern: &str) -> Result<Self, anyhow::Error> {
-        Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
-    }
-}
-
 impl From<GlobRule> for AssociationRule {
     fn from(v: GlobRule) -> Self {
         Self::Glob(v)
     }
 }
 
-impl From<&Url> for AssociationRule {
-    fn from(v: &Url) -> Self {
-        Self::Url(v.clone())
+impl From<Url> for AssociationRule {
+    fn from(v: Url) -> Self {
+        Self::Url(v)
     }
 }
 
 impl AssociationRule {
-    #[must_use]
+    pub fn new(pattern: &str, base: &Path) -> Result<Self, anyhow::Error> {
+        if is_url(pattern) {
+            let url: Url = pattern.parse()?;
+            return Ok(Self::Url(url));
+        }
+        let base = to_unix(remove_tail_slash(base.display().to_string()));
+        let pattern = to_unix(pattern);
+        let pattern = if pattern.starts_with('/') {
+            format!("{}{}", base, pattern)
+        } else if pattern.starts_with('*') {
+            pattern
+        } else {
+            format!("**{}", pattern)
+        };
+        Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
+    }
+
+    pub fn glob(pattern: &str) -> Result<Self, anyhow::Error> {
+        Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
+    }
+
     pub fn is_match(&self, url: &Url) -> bool {
         match self {
             AssociationRule::Glob(g) => g.is_match_url(url),
@@ -269,4 +287,34 @@ pub struct SchemaStoreMeta {
     pub url: Url,
     #[serde(default)]
     pub file_match: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    macro_rules! assert_association_rule {
+        ($t:expr, $p:expr, $b:expr, $r:expr) => {
+            let t: Url = $t.parse().unwrap();
+            assert_eq!(
+                AssociationRule::new($p, &PathBuf::from($b))
+                    .unwrap()
+                    .is_match(&t),
+                $r
+            );
+        };
+    }
+
+    #[test]
+    fn test_association_rule() {
+        assert_association_rule!("file:///home/u1/abc", "abc", "/home/u1", true);
+        assert_association_rule!("file:///home/u1/abc", "abc", "/home/u1/", true);
+        assert_association_rule!("file:///home/u1/abc", "ab*", "/home/u1", true);
+        assert_association_rule!("file:///home/u1/abcd", "ab*", "/home/u1", true);
+        assert_association_rule!("file:///home/u1/abcd", "ab*", "/home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", "abc", "/home/u1", true);
+        assert_association_rule!("file:///c%3A/abc", "abc", "C:\\abc", true);
+        assert_association_rule!("file:///c%3A/abc", "abc", "C:\\abc\\", true);
+        assert_association_rule!("file:///home/u1/p1/abc", "/abc", "/home/u1", false);
+    }
 }

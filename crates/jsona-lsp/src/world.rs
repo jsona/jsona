@@ -162,7 +162,8 @@ impl<E: Environment> WorkspaceState<E> {
             .associations()
             .add_from_config(&self.jsona_config);
 
-        for (schema_uri, file_uris) in &self.lsp_config.schema.associations {
+        let root_path = PathBuf::from(to_file_path(&self.root).unwrap_or_else(|| "/".into()));
+        for (schema_uri, lists) in &self.lsp_config.schema.associations {
             if let Ok(schema_uri) = schema_uri.parse() {
                 let assoc = SchemaAssociation {
                     url: schema_uri,
@@ -171,11 +172,12 @@ impl<E: Environment> WorkspaceState<E> {
                     }),
                     priority: priority::LSP_CONFIG,
                 };
-                for file_uri in file_uris {
-                    if let Ok(file_uri) = file_uri.parse() {
-                        self.schemas
-                            .associations()
-                            .add(AssociationRule::Url(file_uri), assoc.clone())
+                for item in lists {
+                    match AssociationRule::new(item, &root_path) {
+                        Ok(rule) => self.schemas.associations().add(rule, assoc.clone()),
+                        Err(error) => {
+                            tracing::error!(%error, item=%item, "failed to add a schema association");
+                        }
                     }
                 }
             }
