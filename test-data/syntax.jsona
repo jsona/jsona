@@ -1,0 +1,60 @@
+/*
+ multiple line comment
+*/
+
+// single line comment
+
+{
+    @foo /* abc */ @optional
+    @null(null) // single line comment
+    @bool(true)
+    @float(3.14)
+    @number(-3)
+    @string('abc "def" ghi')
+    @array([3,4])
+    @object({
+        k1: "v1",
+        k2: "v2",
+    })
+
+    nullValue: /* xyz */ null,
+    boolTrue: true,
+    boolFalse: false,
+    float: 3.14,
+    floatNegative: -3.14,
+    floatNegativeWithoutInteger: -.14,
+    floatNegativeWithoutDecimal: -3.,
+    integer: 3,
+    hex: 0x1a,
+    binary: 0b01,
+    octal: 0o12,
+    integerNegative: -3,
+    stringSingleQuota: 'abc "def" ghi',
+    stringDoubleQuota: "abc 'def' ghi",
+    stringBacktick: `abc
+def \`
+xyz`,
+    stringEscape1: '\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}',
+    stringEscape2: "\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}",
+    stringEscape3: `\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}`,
+    arrayEmpty: [], 
+    arrayEmptyMultiLine: [ @array
+    ],
+    arrayEmptyWithAnnotation: [],  // @array
+    arraySimple: [ @array
+        "a", @upper
+        "b",
+    ],
+    arrayOnline: ["a", "b"], @array
+    arrayExtraComma: ["a", "b",],
+    objectEmpty: {},
+    objectEmptyMultiLine: { @object
+    },
+    objectEmptyWithAnnotation: {}, @use("Object4")
+    objectSimple: { @save("Object4")
+        k1: "v1", @upper
+        k2: "v2",
+    },
+    objectOneLine: { k1: "v1", k2: "v2" }, @object
+    objectExtraComma: { k1: "v1", k2: "v2", },
+}

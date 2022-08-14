@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "yarn rollup --silent -c rollup.config.js",
-    "prebuild": "rimraf dist",
+    "prebuild": "rm -rf dist",
     "prepublish": "yarn build"
   },
   "repository": {
@@ -30,7 +30,6 @@
     "@types/node": "^17.0.41",
     "@wasm-tool/rollup-plugin-rust": "^2.2.2",
     "esbuild": "^0.14.45",
-    "rimraf": "^3.0.2",
     "rollup": "^2.75.6",
     "rollup-plugin-esbuild": "^4.9.1",
     "rollup-plugin-typescript2": "^0.32.1",

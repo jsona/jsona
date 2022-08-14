@@ -16,17 +16,34 @@ NPMS=( \
     lsp \
 )
 
+# @cmd  Preapre node_modules or other stuff
+prepare() {
+    (cd js && yarn)
+    (cd editors/vscode && yarn)
+}
+
 # @cmd Run jsona-cli
 # @arg args*
 run() {
     cargo run -p jsona-cli -- $@
 }
 
+# @cmd Run web extension in chrome
+# @flag --no-build
+# @arg entry=test-data
+chrome() {
+    if [[ -z $argc_no_build ]]; then
+        build.vscode browser
+    fi
+    vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
+}
+
+
 # @cmd Build jsona-cli
 # @alias i
 # @flag --prod
 install() {
-    if [[ $argc_prod -eq 1 ]]; then
+    if [[ -n $argc_prod ]]; then
         cargo build -r -p jsona-cli
         cp -f target/release/jsona $HOME/.cargo/bin/
         ls -alh $HOME/.cargo/bin/jsona
@@ -39,21 +56,45 @@ install() {
 
 # @cmd Build js
 # @flag --debug
+# @flag --sync
 # @arg name[core|util-types|lsp|all]
 build.js() {
+    __run() {
+        yarn --cwd js workspace @jsona/$name build
+        ls -alh js/$name/dist
+        if [[ -d editors/vscode/node_modules/@jsona/$name ]]; then
+            cp -rf js/$name/dist/* editors/vscode/node_modules/@jsona/$name/dist/
+        fi
+    }
     if [[ -n $argc_debug ]]; then
         export WASM_DEBUG=true
     fi
-    if [[ -z "$1" ]] || [[ "$1" == "all" ]]; then
+    if [[ -z "$argc_name" ]] || [[ "$argc_name" == "all" ]]; then
         for name in ${NPMS[@]}; do
-            yarn --cwd js workspace @jsona/$name build
-            ls -alh js/$name/dist
+            __run $name
         done
     else
-        yarn --cwd js workspace @jsona/$1 build
-        ls -alh js/$1/dist
+        __run $name
     fi
 }
+
+# @cmd Build vscode extension
+# @arg kind[node|browser|all]
+build.vscode() {
+    export RUST_LOG="debug"
+    export LOG_TOPICS="lsp2host,host2lsp"
+    pushd editors/vscode
+    if [[ "$1" == "browser" ]]; then
+        yarn build:browser-server
+        yarn build:browser-extension
+    elif [[ "$1" == "node" ]]; then
+        yarn build:node
+    else
+        yarn build
+    fi
+    popd
+}
+
 
 # @cmd Publish crate to carte.io
 publish.crate() {
@@ -95,7 +136,7 @@ example.syntax() {
 # @cmd Parse jsona dom and print value
 # @arg jsona_file!
 example.ast() {
-    cargo run -p jsona --example syntax -- $argc_jsona_file
+    cargo run -p jsona --example ast -- $argc_jsona_file
 }
 
 # @cmd Format jsona doc
