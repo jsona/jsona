@@ -32,34 +32,36 @@ pub enum AssociationRule {
     Url(Url),
 }
 
-pub enum AssociateSchema {}
+pub enum AssociateSchemas {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AssociateSchemaParams {
-    pub document_uri: Option<Url>,
+pub struct AssociateSchemasParams {
+    pub associations: Vec<AssociateSchema>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssociateSchema {
     pub schema_uri: Url,
     pub rule: AssociationRule,
-    pub priority: Option<usize>,
     pub meta: Option<Value>,
 }
 
-impl Notification for AssociateSchema {
-    type Params = AssociateSchemaParams;
-    const METHOD: &'static str = "jsona/associateSchema";
+impl Notification for AssociateSchemas {
+    type Params = AssociateSchemasParams;
+    const METHOD: &'static str = "jsona/associateSchemas";
 }
 
-pub enum DidChangeSchemaAssociation {}
+pub enum InitializeWorkspace {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DidChangeSchemaAssociationParams {
-    pub document_uri: Url,
-    pub schema_uri: Option<Url>,
-    pub meta: Option<Value>,
+pub struct InitializeWorkspaceParams {
+    pub root_uri: Url,
 }
 
-impl Notification for DidChangeSchemaAssociation {
-    type Params = DidChangeSchemaAssociationParams;
-    const METHOD: &'static str = "jsona/didChangeSchemaAssociation";
+impl Notification for InitializeWorkspace {
+    type Params = InitializeWorkspaceParams;
+    const METHOD: &'static str = "jsona/initializeWorkspace";
 }

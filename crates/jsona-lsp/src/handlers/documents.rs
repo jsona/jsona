@@ -46,7 +46,6 @@ pub(crate) async fn document_open<E: Environment>(
         ws.schemas
             .associations()
             .add_from_document(document_uri, &dom);
-        ws.emit_association(context.clone(), document_uri).await;
     }
 
     ws.documents
@@ -93,7 +92,6 @@ pub(crate) async fn document_change<E: Environment>(
         ws.schemas
             .associations()
             .add_from_document(document_uri, &dom);
-        ws.emit_association(context.clone(), document_uri).await;
     }
 
     ws.documents
