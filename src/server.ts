@@ -1,5 +1,4 @@
 import fsPromise from "fs/promises";
-import path from "path";
 import { exit } from "process";
 import { RpcMessage, JsonaLsp } from "@jsona/lsp";
 import fetch, { Headers, Request, Response } from "node-fetch";
@@ -70,6 +69,11 @@ function log(topic: "lsp2host" | "host2lsp" | "fetchFile", message: any) {
   if((import.meta.env.LOG_TOPICS).indexOf(topic) > -1) {
     if (typeof message === "object") {
       console.log(topic, JSON.stringify(message));
+      if (message?.jsonrpc && message?.method)  {
+        console.log(topic, message.method, JSON.stringify(message, null, 2));
+      } else {
+        console.log(topic, JSON.stringify(message, null, 2));
+      }
     } else {
       console.log(topic, message);
     }

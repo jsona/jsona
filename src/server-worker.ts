@@ -109,6 +109,10 @@ reader.listen(async (message: RpcMessage) => {
 
 function log(topic: "lsp2host" | "host2lsp" | "fetchFile", message: any) {
   if((import.meta.env.LOG_TOPICS).indexOf(topic) > -1) {
+    if (message?.jsonrpc && message?.method)  {
+      console.log(topic, message.method, message);
+    } else {
       console.log(topic, message);
+    }
   }
 }
