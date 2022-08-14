@@ -1,6 +1,6 @@
 use crate::{
     config::{InitializationOptions, LspConfig},
-    lsp_ext::notification::{DidChangeSchemaAssociation, DidChangeSchemaAssociationParams},
+    lsp_ext::notification::{InitializeWorkspace, InitializeWorkspaceParams},
 };
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
@@ -196,7 +196,8 @@ impl<E: Environment> WorkspaceState<E> {
             tracing::error!(%error, url=%store_url, "failed to set schemastore");
         }
 
-        self.emit_all_associations(context.clone()).await;
+        self.emit_initialize_workspace(context.clone()).await;
+
         Ok(())
     }
 
@@ -254,44 +255,11 @@ impl<E: Environment> WorkspaceState<E> {
         Ok(())
     }
 
-    pub(crate) async fn emit_all_associations(&self, context: Context<World<E>>) {
-        for document_url in self.documents.keys() {
-            self.emit_association(context.clone(), document_url).await;
-        }
-    }
-
-    pub(crate) async fn emit_association(
-        &self,
-        mut context: Context<World<E>>,
-        document_url: &Url,
-    ) {
-        if let Some(assoc) = self.schemas.associations().association_for(document_url) {
-            tracing::debug!(
-                schema.url = %assoc.url,
-                schema.name = assoc.meta["name"].as_str().unwrap_or(""),
-                schema.source = assoc.meta["source"].as_str().unwrap_or(""),
-                "using schema"
-            );
-            if let Err(error) = context
-                .write_notification::<DidChangeSchemaAssociation, _>(Some(
-                    DidChangeSchemaAssociationParams {
-                        document_uri: document_url.clone(),
-                        schema_uri: Some(assoc.url.clone()),
-                        meta: Some(assoc.meta.clone()),
-                    },
-                ))
-                .await
-            {
-                tracing::error!(%error, "failed to write notification");
-            }
-        } else if let Err(error) = context
-            .write_notification::<DidChangeSchemaAssociation, _>(Some(
-                DidChangeSchemaAssociationParams {
-                    document_uri: document_url.clone(),
-                    schema_uri: None,
-                    meta: None,
-                },
-            ))
+    pub(crate) async fn emit_initialize_workspace(&self, mut context: Context<World<E>>) {
+        if let Err(error) = context
+            .write_notification::<InitializeWorkspace, _>(Some(InitializeWorkspaceParams {
+                root_uri: self.root.clone(),
+            }))
             .await
         {
             tracing::error!(%error, "failed to write notification");

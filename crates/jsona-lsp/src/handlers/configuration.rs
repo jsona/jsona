@@ -18,20 +18,11 @@ pub async fn configuration_change<E: Environment>(
     context: Context<World<E>>,
     params: Params<DidChangeConfigurationParams>,
 ) {
-    let p = match params.optional() {
+    match params.optional() {
         None => return,
         Some(p) => p,
     };
-
-    let mut workspaces = context.workspaces.write().await;
-
-    for (_, ws) in workspaces.iter_mut() {
-        context.env.spawn_local(update_workspace_configuration(
-            context.clone(),
-            ws.root.clone(),
-            p.settings.clone(),
-        ));
-    }
+    update_configuration(context).await;
 }
 
 #[tracing::instrument(skip_all)]
@@ -70,14 +61,14 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
             for (i, config) in configs.into_iter().enumerate() {
                 if config.is_object() {
                     if i == 0 {
-                        context.env.spawn_local(update_workspace_configuration(
+                        context.env.spawn_local(initialize_workspace(
                             context.clone(),
                             DEFAULT_WORKSPACE_URL.clone(),
                             config.clone(),
                         ));
                     } else {
                         let uri = config_items.get(i - 1).unwrap().scope_uri.as_ref().unwrap();
-                        context.env.spawn_local(update_workspace_configuration(
+                        context.env.spawn_local(initialize_workspace(
                             context.clone(),
                             uri.clone(),
                             config.clone(),
@@ -92,7 +83,7 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
     }
 }
 
-pub async fn update_workspace_configuration<E: Environment>(
+pub async fn initialize_workspace<E: Environment>(
     context: Context<World<E>>,
     uri: Url,
     config: Value,

@@ -33,7 +33,7 @@ pub fn create_server<E: Environment>() -> Server<World<E>> {
         .on_notification::<notification::DidChangeWorkspaceFolders, _>(handlers::workspace_change)
         .on_request::<lsp_ext::request::ListSchemasRequest, _>(handlers::list_schemas)
         .on_request::<lsp_ext::request::AssociatedSchemaRequest, _>(handlers::associated_schema)
-        .on_notification::<lsp_ext::notification::AssociateSchema, _>(handlers::associate_schema)
+        .on_notification::<lsp_ext::notification::AssociateSchemas, _>(handlers::associate_schemas)
         .build()
 }
 

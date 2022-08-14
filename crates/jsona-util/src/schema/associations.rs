@@ -23,14 +23,16 @@ pub const SCHEMA_KEY: &str = "@jsonaschema";
 pub mod priority {
     pub const STORE: usize = 30;
     pub const CONFIG: usize = 50;
-    pub const LSP_CONFIG: usize = 60;
-    pub const SCHEMA_FIELD: usize = 75;
+    pub const EXT_CONFIG: usize = 60;
+    pub const LSP_CONFIG: usize = 70;
+    pub const SCHEMA_FIELD: usize = 80;
     pub const MAX: usize = usize::MAX;
 }
 
 pub mod source {
     pub const STORE: &str = "store";
     pub const CONFIG: &str = "config";
+    pub const EXT_CONFIG: &str = "ext_config";
     pub const LSP_CONFIG: &str = "lsp_config";
     pub const MANUAL: &str = "manual";
     pub const SCHEMA_FIELD: &str = "$schema";
