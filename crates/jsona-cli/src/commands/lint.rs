@@ -32,7 +32,7 @@ impl<E: Environment> App<E> {
                     }
                 };
                 self.schemas.associations().add(
-                    AssociationRule::regex(".*")?,
+                    AssociationRule::glob("**")?,
                     SchemaAssociation {
                         meta: json!({"source": "command-line"}),
                         url,

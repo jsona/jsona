@@ -1,4 +1,4 @@
-use self::path_utils::encode_url;
+use self::path_utils::{encode_url, to_unix};
 use globset::{Glob, GlobSetBuilder};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -38,12 +38,19 @@ impl GlobRule {
         })
     }
 
-    pub fn is_match(&self, text: impl AsRef<Path>) -> bool {
-        if !self.include.is_match(text.as_ref()) {
+    pub fn is_match(&self, path: impl AsRef<Path>) -> bool {
+        if !self.include.is_match(path.as_ref()) {
             return false;
         }
 
-        !self.exclude.is_match(text.as_ref())
+        !self.exclude.is_match(path.as_ref())
+    }
+    pub fn is_match_url(&self, url: &Url) -> bool {
+        if let Some(path) = to_file_path(url).map(to_unix) {
+            self.is_match(path)
+        } else {
+            false
+        }
     }
 }
 
@@ -145,13 +152,17 @@ pub mod path_utils {
     }
 }
 
-/// Convert path to file uri
-pub fn to_file_uri(path: &str, base: &Option<PathBuf>) -> Option<Url> {
-    if RE_URI_PROTOCOL
+/// Judge string is a url
+pub fn is_url(path: &str) -> bool {
+    RE_URI_PROTOCOL
         .captures(path)
         .and_then(|v| v.get(0))
         .is_some()
-    {
+}
+
+/// Convert path to file uri
+pub fn to_file_uri(path: &str, base: &Option<PathBuf>) -> Option<Url> {
+    if is_url(path) {
         return path.parse().ok();
     }
     let url = if path_utils::is_window(path) {

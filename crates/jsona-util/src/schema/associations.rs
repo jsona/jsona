@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use jsona::dom::{KeyOrIndex, Node};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{fmt::Debug, sync::Arc};
@@ -11,7 +10,7 @@ use crate::{
     config::Config,
     environment::Environment,
     schema::Fetcher,
-    util::{path_utils::to_unix, to_file_path, to_file_uri, GlobRule},
+    util::{to_file_uri, GlobRule},
     HashMap,
 };
 
@@ -196,7 +195,6 @@ impl<E: Environment> SchemaAssociations<E> {
 #[derive(Clone)]
 pub enum AssociationRule {
     Glob(GlobRule),
-    Regex(Regex),
     Url(Url),
 }
 
@@ -204,7 +202,6 @@ impl Debug for AssociationRule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AssociationRule::Glob(_) => f.write_str("Glob"),
-            AssociationRule::Regex(regex) => write!(f, "Regex({})", regex),
             AssociationRule::Url(url) => write!(f, "Url({})", url),
         }
     }
@@ -213,16 +210,6 @@ impl Debug for AssociationRule {
 impl AssociationRule {
     pub fn glob(pattern: &str) -> Result<Self, anyhow::Error> {
         Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
-    }
-
-    pub fn regex(regex: &str) -> Result<Self, anyhow::Error> {
-        Ok(Self::Regex(Regex::new(regex)?))
-    }
-}
-
-impl From<Regex> for AssociationRule {
-    fn from(v: Regex) -> Self {
-        Self::Regex(v)
     }
 }
 
@@ -242,10 +229,7 @@ impl AssociationRule {
     #[must_use]
     pub fn is_match(&self, url: &Url) -> bool {
         match self {
-            AssociationRule::Glob(g) => to_file_path(url)
-                .map(|v| g.is_match(to_unix(v)))
-                .unwrap_or_default(),
-            AssociationRule::Regex(r) => r.is_match(url.as_str()),
+            AssociationRule::Glob(g) => g.is_match_url(url),
             AssociationRule::Url(u) => u == url,
         }
     }
