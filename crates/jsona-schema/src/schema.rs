@@ -91,20 +91,20 @@ pub struct Schema {
     #[serde(skip_serializing_if = "Option::is_none", rename = "writeOnly")]
     pub write_only: Option<bool>,
 
-    #[serde(rename = "not", skip_serializing_if = "Option::is_none")]
-    pub not: Option<Vec<Schema>>,
     #[serde(rename = "allOf", skip_serializing_if = "Option::is_none")]
     pub all_of: Option<Vec<Schema>>,
     #[serde(rename = "oneOf", skip_serializing_if = "Option::is_none")]
     pub one_of: Option<Vec<Schema>>,
     #[serde(rename = "anyOf", skip_serializing_if = "Option::is_none")]
     pub any_of: Option<Vec<Schema>>,
+    #[serde(rename = "not", skip_serializing_if = "Option::is_none")]
+    pub not: Option<Vec<Schema>>,
     #[serde(rename = "if", skip_serializing_if = "Option::is_none")]
-    pub if_value: Option<BoolOrSchema>,
+    pub if_value: Option<Box<Schema>>,
     #[serde(rename = "then", skip_serializing_if = "Option::is_none")]
-    pub then_value: Option<BoolOrSchema>,
+    pub then_value: Option<Box<Schema>>,
     #[serde(rename = "else", skip_serializing_if = "Option::is_none")]
-    pub else_value: Option<BoolOrSchema>,
+    pub else_value: Option<Box<Schema>>,
 
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub unknown: Option<Map<String, Value>>,
