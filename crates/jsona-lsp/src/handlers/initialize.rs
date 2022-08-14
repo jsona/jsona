@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::update_configuration;
 use crate::config::InitializationOptions;
-use crate::world::WorkspaceState;
+use crate::world::{WorkspaceState, DEFAULT_WORKSPACE_URL};
 use crate::World;
 use jsona_util::environment::Environment;
 use lsp_async_stub::{rpc::Error, Context, Params, RequestWriter};
@@ -41,6 +41,13 @@ pub async fn initialize<E: Environment>(
             wss.entry(workspace.uri.clone())
                 .or_insert(WorkspaceState::new(context.env.clone(), workspace.uri));
         }
+    } else {
+        let mut wss = context.workspaces.write().await;
+        wss.entry(DEFAULT_WORKSPACE_URL.clone())
+            .or_insert(WorkspaceState::new(
+                context.env.clone(),
+                DEFAULT_WORKSPACE_URL.clone(),
+            ));
     }
 
     Ok(InitializeResult {

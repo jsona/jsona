@@ -10,7 +10,6 @@ use lsp_types::{
     DidChangeConfigurationParams,
 };
 use serde_json::Value;
-use std::iter::once;
 use url::Url;
 
 #[tracing::instrument(skip_all)]
@@ -28,52 +27,39 @@ pub async fn configuration_change<E: Environment>(
 #[tracing::instrument(skip_all)]
 pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
     let workspaces = context.workspaces.read().await;
-    let config_items: Vec<_> = workspaces
-        .iter()
-        .filter_map(|(uri, _)| {
-            if *uri == *DEFAULT_WORKSPACE_URL {
-                None
+    let urls: Vec<&Url> = workspaces.keys().collect();
+    let items: Vec<_> = urls
+        .clone()
+        .into_iter()
+        .map(|uri| {
+            let scope_uri = if *uri == *DEFAULT_WORKSPACE_URL {
+                Some(DEFAULT_WORKSPACE_URL.clone())
             } else {
-                Some(ConfigurationItem {
-                    scope_uri: Some(uri.clone()),
-                    section: Some(DEFAULT_CONFIGURATION_SECTION.to_string()),
-                })
+                Some(uri.clone())
+            };
+            ConfigurationItem {
+                scope_uri,
+                section: Some(DEFAULT_CONFIGURATION_SECTION.to_string()),
             }
         })
         .collect();
 
     let res = context
         .clone()
-        .write_request::<WorkspaceConfiguration, _>(Some(ConfigurationParams {
-            items: once(ConfigurationItem {
-                scope_uri: None,
-                section: Some(DEFAULT_CONFIGURATION_SECTION.to_string()),
-            })
-            .chain(config_items.iter().cloned())
-            .collect::<Vec<_>>(),
-        }))
+        .write_request::<WorkspaceConfiguration, _>(Some(ConfigurationParams { items }))
         .await
         .context("failed to fetch configuration")
         .and_then(|res| res.into_result().context("invalid configuration response"));
 
     match res {
         Ok(configs) => {
-            for (i, config) in configs.into_iter().enumerate() {
+            for (config, uri) in configs.into_iter().zip(urls) {
                 if config.is_object() {
-                    if i == 0 {
-                        context.env.spawn_local(initialize_workspace(
-                            context.clone(),
-                            DEFAULT_WORKSPACE_URL.clone(),
-                            config.clone(),
-                        ));
-                    } else {
-                        let uri = config_items.get(i - 1).unwrap().scope_uri.as_ref().unwrap();
-                        context.env.spawn_local(initialize_workspace(
-                            context.clone(),
-                            uri.clone(),
-                            config.clone(),
-                        ));
-                    }
+                    context.env.spawn_local(initialize_workspace(
+                        context.clone(),
+                        uri.clone(),
+                        config.clone(),
+                    ));
                 }
             }
         }

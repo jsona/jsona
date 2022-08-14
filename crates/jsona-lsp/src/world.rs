@@ -92,14 +92,7 @@ impl<E: Environment> WorldState<E> {
     pub fn new(env: E) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
-            workspaces: {
-                let mut m = IndexMap::default();
-                m.insert(
-                    DEFAULT_WORKSPACE_URL.clone(),
-                    WorkspaceState::new(env.clone(), DEFAULT_WORKSPACE_URL.clone()),
-                );
-                AsyncRwLock::new(Workspaces(m))
-            },
+            workspaces: AsyncRwLock::new(Workspaces(IndexMap::default())),
             initialization_options: Default::default(),
             default_config: Default::default(),
             env,
