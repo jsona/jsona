@@ -14,7 +14,11 @@ fn main() {
     let result = match keys {
         Some(keys) => {
             let keys: Keys = keys.parse().unwrap();
-            if keys.last().unwrap().is_annotation_key() {
+            if keys
+                .last()
+                .map(|v| v.is_annotation_key())
+                .unwrap_or_default()
+            {
                 serde_json::to_string_pretty(&schema_value.annotations.pointer(&keys)).unwrap()
             } else {
                 serde_json::to_string_pretty(&schema_value.value.pointer(&keys)).unwrap()

@@ -364,8 +364,8 @@ impl FromStr for Keys {
     type Err = QueryError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() {
-            return Ok(Keys::new(vec![].into_iter()));
+        if s.is_empty() || s == "." {
+            return Ok(Keys::default());
         }
         let mut p = Parser::new(s).parse_keys_only();
         if let Some(err) = p.errors.pop() {

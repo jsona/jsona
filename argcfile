@@ -60,6 +60,7 @@ install() {
 # @arg name[core|util-types|lsp|all]
 build.js() {
     __run() {
+        name=$1
         yarn --cwd js workspace @jsona/$name build
         ls -alh js/$name/dist
         if [[ -d editors/vscode/node_modules/@jsona/$name ]]; then
@@ -74,7 +75,7 @@ build.js() {
             __run $name
         done
     else
-        __run $name
+        __run $argc_name
     fi
 }
 
