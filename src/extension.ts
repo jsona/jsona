@@ -17,14 +17,10 @@ export async function activate(context: vscode.ExtensionContext) {
   await c.start()
  
   registerCommands(context, c);
-  associateSchemas(c);
   vscode.commands.executeCommand("setContext", "jsona.extensionActive", true);
   context.subscriptions.push(
     getOutput(),
     schemaIndicator,
-    vscode.extensions.onDidChange(() => {
-      associateSchemas(c);
-    }),
     vscode.window.onDidChangeActiveTextEditor(async editor => {
       updateSchemaIndicator(c, editor, schemaIndicator);
     }),
@@ -60,13 +56,6 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 }
 
-function associateSchemas(c: BaseLanguageClient) {
-  let associations = getSchemaAssociations();
-  if (associations.length > 0) {
-    c.sendNotification("jsona/associateSchemas", { associations });
-  }
-}
-
 async function updateSchemaIndicator(c: BaseLanguageClient, editor: vscode.TextEditor, schemaIndicator: vscode.StatusBarItem) {
     if (editor?.document.languageId === "jsona") {
       let documentUrl = editor?.document.uri;
@@ -93,76 +82,4 @@ function resetSchemaIndicator(schemaIndicator: vscode.StatusBarItem) {
   schemaIndicator.text = "no schema";
   schemaIndicator.tooltip = "Select JSONA Schema";
   schemaIndicator.command = "jsona.selectSchema";
-}
-
-function getSchemaAssociations() {
-  let associations: Lsp.AssociateSchema[] = [];
-  for (const ext of vscode.extensions.all) {
-    const jsonaValidation = ext.packageJSON?.contributes?.jsonaValidation;
-
-    if (!Array.isArray(jsonaValidation)) {
-      continue;
-    }
-
-    for (const rule of jsonaValidation) {
-      if (typeof rule !== "object") {
-        continue;
-      }
-
-      const url = rule.url;
-
-      if (typeof url !== "string") {
-        continue;
-      }
-
-      let fileMatch = rule.fileMatch;
-      let regexMatch = rule.regexMatch;
-
-      if (!Array.isArray(fileMatch)) {
-        fileMatch = [fileMatch];
-      }
-
-      for (let m of fileMatch) {
-        if (typeof m !== "string") {
-          continue;
-        }
-
-        if (!m.startsWith("/")) {
-          m = `/${m}`;
-        }
-        associations.push({
-          schemaUri: url,
-          rule: {
-            glob: `**${m}`,
-          },
-          meta: {
-            source: "extension",
-            extensionId: ext.id,
-          },
-        });
-      }
-
-      if (!Array.isArray(regexMatch)) {
-        regexMatch = [regexMatch];
-      }
-
-      for (const m of regexMatch) {
-        if (typeof m !== "string") {
-          continue;
-        }
-
-        associations.push({
-          schemaUri: url,
-          rule: {
-            regex: m,
-          },
-          meta: {
-            source: "extension",
-            extensionId: ext.id,
-          },
-        });
-      }
-    }
-  }
-  return associations;
 }
