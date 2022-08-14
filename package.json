@@ -94,8 +94,7 @@
           "default": true
         },
         "jsona.schema.associations": {
-          "description": "Document and schema associations.",
-          "markdownDescription": "Additional document and schema associations. \n\n The key must be a regular expression, this pattern is used to associate schemas with absolute document URIs. Overlapping patterns result in undefined behaviour and either matching schema can be used. \n\n The value must be an absolute URI to the JSON schema, for supported values and more information [read here](https://jsona.github.io/jsona/configuration#visual-studio-code).",
+          "description": "Associate schemas to JSONA files in the current workspace.",
           "type": "object",
           "scope": "resource",
           "default": {}
