@@ -190,7 +190,7 @@ impl<E: Environment> WorkspaceState<E> {
                 }
             }
         }
-        let store_url = &self.lsp_config.schema.schemastore;
+        let store_url = &self.lsp_config.schema.store_url;
 
         if let Err(error) = self
             .schemas

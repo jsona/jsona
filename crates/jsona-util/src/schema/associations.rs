@@ -58,6 +58,7 @@ impl<E: Environment> SchemaAssociations<E> {
         }
     }
     pub fn add(&self, rule: AssociationRule, assoc: SchemaAssociation) {
+        tracing::debug!("add a schema association {:?} {:?}", rule, assoc);
         self.associations.write().push((rule, assoc));
         self.cache.lock().clear();
     }
@@ -212,7 +213,7 @@ pub enum AssociationRule {
 impl Debug for AssociationRule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AssociationRule::Glob(_) => f.write_str("Glob"),
+            AssociationRule::Glob(glob) => write!(f, "Glob({:?})", glob),
             AssociationRule::Url(url) => write!(f, "Url({})", url),
         }
     }

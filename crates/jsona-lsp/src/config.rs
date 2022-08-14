@@ -36,7 +36,7 @@ impl LspConfig {
 pub struct SchemaConfig {
     pub enabled: bool,
     pub associations: HashMap<String, Vec<String>>,
-    pub schemastore: Url,
+    pub store_url: Url,
 }
 
 impl Default for SchemaConfig {
@@ -44,7 +44,7 @@ impl Default for SchemaConfig {
         Self {
             enabled: true,
             associations: Default::default(),
-            schemastore: DEFAULT_SCHEMASTORE.clone(),
+            store_url: DEFAULT_SCHEMASTORE.clone(),
         }
     }
 }

@@ -99,6 +99,11 @@
           "scope": "resource",
           "default": {}
         },
+        "jsona.schema.storeUrl": {
+          "type": "string",
+          "default": null,
+          "description": "URL of jsona schema store catalog to use"
+        },
         "jsona.formatter.indentString": {
           "scope": "resource",
           "type": "string",
