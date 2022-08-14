@@ -5,12 +5,14 @@ use crate::config::InitializationOptions;
 use crate::world::WorkspaceState;
 use crate::World;
 use jsona_util::environment::Environment;
-use lsp_async_stub::{rpc::Error, Context, Params};
+use lsp_async_stub::{rpc::Error, Context, Params, RequestWriter};
+use lsp_types::notification::{DidChangeConfiguration, Notification};
+use lsp_types::request::RegisterCapability;
 use lsp_types::{
     CompletionOptions, FoldingRangeProviderCapability, HoverProviderCapability, InitializedParams,
-    OneOf, SelectionRangeProviderCapability, ServerCapabilities, ServerInfo,
-    TextDocumentSyncCapability, TextDocumentSyncKind, WorkspaceFoldersServerCapabilities,
-    WorkspaceServerCapabilities,
+    OneOf, Registration, RegistrationParams, SelectionRangeProviderCapability, ServerCapabilities,
+    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
+    WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
 };
 use lsp_types::{InitializeParams, InitializeResult};
 
@@ -76,6 +78,19 @@ pub async fn initialized<E: Environment>(
     context: Context<World<E>>,
     _params: Params<InitializedParams>,
 ) {
+    if let Err(error) = context
+        .clone()
+        .write_request::<RegisterCapability, _>(Some(RegistrationParams {
+            registrations: vec![Registration {
+                id: context.id.clone(),
+                method: DidChangeConfiguration::METHOD.into(),
+                register_options: None,
+            }],
+        }))
+        .await
+    {
+        tracing::error!(?error, "failed to send registration");
+    }
     context
         .env
         .spawn_local(update_configuration(context.clone()));
