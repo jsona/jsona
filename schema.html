@@ -149,20 +149,15 @@
 <li>set manually in the environment, e.g. as <a href="./cli.html#using-a-specific-schema">a CLI flag</a> or an IDE setting</li>
 <li>as an URL under the <code>@jsonaschema</code> in the root of the document</li>
 <li><a href="./config.html#rules">configuration file rules</a></li>
-<li>contributed by an <a href="#visual-studio-code-extensions">extension</a> <em>(Visual Studio Code only)</em></li>
+<li>contributed by an <a href="#vscode-studio-code-settings">vscode settings</a> <em>(Visual Studio Code only)</em></li>
 <li>an association based on a schemastore</li>
 </ul>
-<h2 id="visual-studio-code-extensions"><a class="header" href="#visual-studio-code-extensions">Visual Studio Code extensions</a></h2>
-<p>Similarly to <a href="https://code.visualstudio.com/api/references/contribution-points#contributes.jsonValidation"><code>jsonValidation</code></a>, it is possible for extensions to contribute their own schemas.</p>
-<p>Other than <code>fileMatch</code>, it is also possible to specify <code>regexMatch</code> that is matched against the entire document URI.</p>
-<pre><code class="language-json">{
-  &quot;contributes&quot;: {
-    &quot;jsonaValidation&quot;: [
-      {
-        &quot;regexMatch&quot;: &quot;^.*api.jsona$&quot;,
-        &quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona&quot;
-      }
-    ]
+<h2 id="visual-studio-code-settings"><a class="header" href="#visual-studio-code-settings">Visual Studio Code Settings</a></h2>
+<pre><code class="language-jsona">{
+  &quot;jsona.schema.associations&quot;: {
+    &quot;https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona&quot;: [
+      &quot;api*.jsona&quot;,
+    ],
   }
 }
 </code></pre>
