@@ -10,6 +10,12 @@ CRATES=( \
     jsona-cli \
 )
 
+NPMS=( \
+    core \
+    util-types \
+    lsp \
+)
+
 # @cmd Run jsona-cli
 # @arg args*
 run() {
@@ -31,8 +37,26 @@ install() {
     fi
 }
 
+# @cmd Build js
+# @flag --debug
+# @arg name[core|util-types|lsp|all]
+build.js() {
+    if [[ -n $argc_debug ]]; then
+        export WASM_DEBUG=true
+    fi
+    if [[ -z "$1" ]] || [[ "$1" == "all" ]]; then
+        for name in ${NPMS[@]}; do
+            yarn --cwd js workspace @jsona/$name build
+            ls -alh js/$name/dist
+        done
+    else
+        yarn --cwd js workspace @jsona/$1 build
+        ls -alh js/$1/dist
+    fi
+}
+
 # @cmd Publish crate to carte.io
-publish() {
+publish.crate() {
     for name in ${CRATES[@]}; do
         online_ver=$(curl -fsSL https://crates.io/api/v1/crates/$name 2>/dev/null | jq -r '.crate.newest_version')
         crate_ver=$(cargo pkgid -p $name | sed 's/.*#//')
@@ -41,6 +65,23 @@ publish() {
             if [[ "$choice" == y ]]; then
                 cargo publish -p $name
             fi
+        fi
+    done
+}
+
+
+# @cmd Publish to npm
+publish.npm() {
+    for name in ${PKGS[@]}; do
+        online_ver=$(npm show @jsona/$name version)
+        pkg_ver=$(node -p "require('./js/"$name"/package.json').version")
+        if [[ "$online_ver" != "$pkg_ver" ]]; then
+            read -p "Upgrade $name from $online_ver to $pkg_ver (y/n)? " choice
+            if [[ "$choice" == y ]]; then
+                (cd js/$name && npm publish)
+            fi
+        else
+            echo @jsona/$name:$pkg_ver is up to date
         fi
     done
 }
