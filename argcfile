@@ -79,20 +79,23 @@ build.js() {
 }
 
 # @cmd Build vscode extension
-# @arg kind[node|browser|all]
+# @arg kind[node|browser|vsix|all]
 build.vscode() {
     export RUST_LOG="debug"
     export LOG_TOPICS="lsp2host,host2lsp"
-    pushd editors/vscode
+    pushd editors/vscode > /dev/null
     if [[ "$1" == "browser" ]]; then
         yarn build:browser-server
         yarn build:browser-extension
     elif [[ "$1" == "node" ]]; then
         yarn build:node
+    elif [[ "$1" == "vsix" ]]; then
+        yarn package
+        ls -alh *.vsix
     else
         yarn build
     fi
-    popd
+    popd > /dev/null
 }
 
 

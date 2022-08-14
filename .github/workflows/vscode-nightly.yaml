@@ -1,9 +1,9 @@
-name: Nightly release
+name: VSCode Nightly release
 
 on:
   push:
     branches:
-    - vscode-release
+    - vscode-nightly
 
 jobs:
   nightly-release:
@@ -26,7 +26,8 @@ jobs:
       shell: bash
       run: |
         version=$(npm version minor --no-git-tag-version | tr -d 'v')
-        version_new=${version%.*}.${{ github.run_number }}
+        patch=${{ github.run_number }}
+        version_new=${version%.*}.$((patch + 100))
         sed -i 's/^  "version": "'$version'",/  "version": "'$version_new'",/' package.json
       working-directory: editors/vscode     
 
