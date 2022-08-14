@@ -111,7 +111,7 @@ pub async fn lint(env: JsValue, jsona: String, config: JsValue) -> Result<JsValu
 
     if let Some(schema) = schemas
         .associations()
-        .association_for(&Url::parse("file:///__.jsona").unwrap())
+        .query_for(&Url::parse("file:///__.jsona").unwrap())
     {
         let schema_errors = schemas
             .validate(&schema.url, &dom)
