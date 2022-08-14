@@ -34,16 +34,17 @@ pub(crate) async fn publish_diagnostics<E: Environment>(
     collect_syntax_errors(doc, &mut diags);
     drop(workspaces);
 
-    context
-        .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: document_url.clone(),
-            diagnostics: diags.clone(),
-            version: None,
-        }))
-        .await
-        .unwrap_or_else(|err| tracing::error!("{err}"));
-
     if !diags.is_empty() {
+        context
+            .write_notification::<notification::PublishDiagnostics, _>(Some(
+                PublishDiagnosticsParams {
+                    uri: document_url.clone(),
+                    diagnostics: diags.clone(),
+                    version: None,
+                },
+            ))
+            .await
+            .unwrap_or_else(|err| tracing::error!("{err}"));
         return;
     }
 
@@ -65,16 +66,18 @@ pub(crate) async fn publish_diagnostics<E: Environment>(
     collect_dom_errors(doc, &dom, &document_url, &mut diags);
     drop(workspaces);
 
-    context
-        .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: document_url.clone(),
-            diagnostics: diags.clone(),
-            version: None,
-        }))
-        .await
-        .unwrap_or_else(|err| tracing::error!("{err}"));
-
     if !diags.is_empty() {
+        context
+            .write_notification::<notification::PublishDiagnostics, _>(Some(
+                PublishDiagnosticsParams {
+                    uri: document_url.clone(),
+                    diagnostics: diags.clone(),
+                    version: None,
+                },
+            ))
+            .await
+            .unwrap_or_else(|err| tracing::error!("{err}"));
+
         return;
     }
 
@@ -94,14 +97,18 @@ pub(crate) async fn publish_diagnostics<E: Environment>(
     collect_schema_errors(ws, doc, &dom, &document_url, &mut diags).await;
     drop(workspaces);
 
-    context
-        .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: document_url.clone(),
-            diagnostics: diags.clone(),
-            version: None,
-        }))
-        .await
-        .unwrap_or_else(|err| tracing::error!("{err}"));
+    if !diags.is_empty() {
+        context
+            .write_notification::<notification::PublishDiagnostics, _>(Some(
+                PublishDiagnosticsParams {
+                    uri: document_url.clone(),
+                    diagnostics: diags.clone(),
+                    version: None,
+                },
+            ))
+            .await
+            .unwrap_or_else(|err| tracing::error!("{err}"));
+    }
 }
 
 #[tracing::instrument(skip_all)]
