@@ -6,11 +6,9 @@ export namespace Server {
         message: string;
       };
     };
-    "jsona/didChangeSchemaAssociation": {
+    "jsona/initializeWorkspace": {
       params: {
-        documentUri: string;
-        schemaUri?: string | null;
-        meta?: any;
+        rootUri: string
       };
     };
   }
@@ -25,13 +23,9 @@ export namespace Server {
 
 export namespace Client {
   interface ClientNotifications {
-    "jsona/associateSchema": {
+    "jsona/associateSchemas": {
       params: {
-        document_uri?: string | null;
-        schema_uri: string;
-        rule: AssociationRule;
-        priority?: number | null;
-        meta?: any;
+        associations: AssociateSchema[]
       };
     };
   }
@@ -92,4 +86,10 @@ export type AssociationRule =
 export interface SchemaInfo {
   url: string;
   meta: any;
+}
+
+export interface AssociateSchema {
+  schemaUri: string;
+  rule: AssociationRule;
+  meta?: any;
 }
