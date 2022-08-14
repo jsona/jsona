@@ -51,8 +51,8 @@ impl<E: Environment> Workspaces<E> {
             .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
             .map_or_else(
                 || {
-                    tracing::warn!(document_url = %url, "using detached workspace");
-                    self.0.get(&*DEFAULT_WORKSPACE_URL).unwrap()
+                    tracing::warn!(document_uri = %url, "using detached workspace");
+                    self.0.get(&*DEFAULT_WORKSPACE_URI).unwrap()
                 },
                 |(_, ws)| ws,
             )
@@ -62,12 +62,12 @@ impl<E: Environment> Workspaces<E> {
         self.0
             .iter_mut()
             .filter(|(key, _)| {
-                url.as_str().starts_with(key.as_str()) || *key == &*DEFAULT_WORKSPACE_URL
+                url.as_str().starts_with(key.as_str()) || *key == &*DEFAULT_WORKSPACE_URI
             })
             .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
             .map(|(k, ws)| {
-                if k == &*DEFAULT_WORKSPACE_URL {
-                    tracing::warn!(document_url = %url, "using detached workspace");
+                if k == &*DEFAULT_WORKSPACE_URI {
+                    tracing::warn!(document_uri = %url, "using detached workspace");
                 }
 
                 ws
@@ -84,7 +84,7 @@ pub struct WorldState<E: Environment> {
     pub(crate) default_config: ArcSwap<Config>,
 }
 
-pub static DEFAULT_WORKSPACE_URL: Lazy<Url> = Lazy::new(|| Url::parse("root:///").unwrap());
+pub static DEFAULT_WORKSPACE_URI: Lazy<Url> = Lazy::new(|| Url::parse("root:///").unwrap());
 
 impl<E: Environment> WorldState<E> {
     pub fn new(env: E) -> Self {
@@ -165,20 +165,20 @@ impl<E: Environment> WorkspaceState<E> {
             .associations()
             .add_from_config(&self.jsona_config);
 
-        for (schema_url, file_urls) in &self.lsp_config.schema.associations {
-            if let Ok(schema_url) = schema_url.parse() {
+        for (schema_uri, file_uris) in &self.lsp_config.schema.associations {
+            if let Ok(schema_uri) = schema_uri.parse() {
                 let assoc = SchemaAssociation {
-                    url: schema_url,
+                    url: schema_uri,
                     meta: json!({
                         "source": source::LSP_CONFIG,
                     }),
                     priority: priority::LSP_CONFIG,
                 };
-                for file_url in file_urls {
-                    if let Ok(file_url) = file_url.parse() {
+                for file_uri in file_uris {
+                    if let Ok(file_uri) = file_uri.parse() {
                         self.schemas
                             .associations()
-                            .add(AssociationRule::Url(file_url), assoc.clone())
+                            .add(AssociationRule::Url(file_uri), assoc.clone())
                     }
                 }
             }
@@ -260,7 +260,6 @@ impl<E: Environment> WorkspaceState<E> {
         }
     }
 
-    #[tracing::instrument(skip_all, fields(%file, %path))]
     pub(crate) async fn schemas_at_path(&self, file: &Url, path: &Keys) -> Option<Vec<Schema>> {
         let schema_association = self.schemas.associations().association_for(file)?;
         match self

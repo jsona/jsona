@@ -1,6 +1,6 @@
 use crate::{
     config::DEFAULT_CONFIGURATION_SECTION,
-    world::{World, DEFAULT_WORKSPACE_URL},
+    world::{World, DEFAULT_WORKSPACE_URI},
 };
 use anyhow::Context as AnyhowContext;
 use jsona_util::environment::Environment;
@@ -32,8 +32,8 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
         .clone()
         .into_iter()
         .map(|uri| {
-            let scope_uri = if *uri == *DEFAULT_WORKSPACE_URL {
-                Some(DEFAULT_WORKSPACE_URL.clone())
+            let scope_uri = if *uri == *DEFAULT_WORKSPACE_URI {
+                Some(DEFAULT_WORKSPACE_URI.clone())
             } else {
                 Some(uri.clone())
             };

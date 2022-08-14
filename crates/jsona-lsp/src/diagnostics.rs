@@ -13,20 +13,20 @@ use lsp_types::{
 #[tracing::instrument(skip_all)]
 pub(crate) async fn publish_diagnostics<E: Environment>(
     mut context: Context<World<E>>,
-    ws_url: Url,
-    document_url: Url,
+    ws_uri: Url,
+    document_uri: Url,
 ) {
     let mut diags = Vec::new();
 
     let workspaces = context.workspaces.read().await;
-    let ws = match workspaces.get(&ws_url) {
+    let ws = match workspaces.get(&ws_uri) {
         Some(d) => d,
         None => {
-            tracing::warn!(%document_url, "workspace not found");
+            tracing::warn!(%document_uri, "workspace not found");
             return;
         }
     };
-    let doc = match ws.documents.get(&document_url) {
+    let doc = match ws.documents.get(&document_uri) {
         Some(doc) => doc,
         None => return,
     };
@@ -36,7 +36,7 @@ pub(crate) async fn publish_diagnostics<E: Environment>(
 
     context
         .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: document_url.clone(),
+            uri: document_uri.clone(),
             diagnostics: diags.clone(),
             version: None,
         }))
@@ -48,26 +48,26 @@ pub(crate) async fn publish_diagnostics<E: Environment>(
     }
 
     let workspaces = context.workspaces.read().await;
-    let ws = match workspaces.get(&ws_url) {
+    let ws = match workspaces.get(&ws_uri) {
         Some(d) => d,
         None => {
-            tracing::warn!(%document_url, "workspace not found");
+            tracing::warn!(%document_uri, "workspace not found");
             return;
         }
     };
-    let doc = match ws.documents.get(&document_url) {
+    let doc = match ws.documents.get(&document_uri) {
         Some(doc) => doc,
         None => return,
     };
 
     let dom = doc.dom.clone();
 
-    collect_dom_errors(doc, &dom, &document_url, &mut diags);
+    collect_dom_errors(doc, &dom, &document_uri, &mut diags);
     drop(workspaces);
 
     context
         .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: document_url.clone(),
+            uri: document_uri.clone(),
             diagnostics: diags.clone(),
             version: None,
         }))
@@ -79,24 +79,24 @@ pub(crate) async fn publish_diagnostics<E: Environment>(
     }
 
     let workspaces = context.workspaces.read().await;
-    let ws = match workspaces.get(&ws_url) {
+    let ws = match workspaces.get(&ws_uri) {
         Some(d) => d,
         None => {
-            tracing::warn!(%document_url, "workspace not found");
+            tracing::warn!(%document_uri, "workspace not found");
             return;
         }
     };
-    let doc = match ws.documents.get(&document_url) {
+    let doc = match ws.documents.get(&document_uri) {
         Some(doc) => doc,
         None => return,
     };
 
-    collect_schema_errors(ws, doc, &dom, &document_url, &mut diags).await;
+    collect_schema_errors(ws, doc, &dom, &document_uri, &mut diags).await;
     drop(workspaces);
 
     context
         .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: document_url.clone(),
+            uri: document_uri.clone(),
             diagnostics: diags.clone(),
             version: None,
         }))
@@ -107,11 +107,11 @@ pub(crate) async fn publish_diagnostics<E: Environment>(
 #[tracing::instrument(skip_all)]
 pub(crate) async fn clear_diagnostics<E: Environment>(
     mut context: Context<World<E>>,
-    document_url: Url,
+    document_uri: Url,
 ) {
     context
         .write_notification::<notification::PublishDiagnostics, _>(Some(PublishDiagnosticsParams {
-            uri: document_url,
+            uri: document_uri,
             diagnostics: Vec::new(),
             version: None,
         }))
@@ -141,7 +141,7 @@ fn collect_syntax_errors(doc: &DocumentState, diags: &mut Vec<Diagnostic>) {
 fn collect_dom_errors(
     doc: &DocumentState,
     dom: &Node,
-    document_url: &Url,
+    document_uri: &Url,
     diags: &mut Vec<Diagnostic>,
 ) {
     if let Err(errors) = dom.validate() {
@@ -167,7 +167,7 @@ fn collect_dom_errors(
                         message: error.to_string(),
                         related_information: Some(Vec::from([DiagnosticRelatedInformation {
                             location: Location {
-                                uri: document_url.clone(),
+                                uri: document_uri.clone(),
                                 range: other_range,
                             },
                             message: "other key defined here".into(),
@@ -182,7 +182,7 @@ fn collect_dom_errors(
                         message: error.to_string(),
                         related_information: Some(Vec::from([DiagnosticRelatedInformation {
                             location: Location {
-                                uri: document_url.clone(),
+                                uri: document_uri.clone(),
                                 range,
                             },
                             message: "other key defined here".into(),
@@ -215,19 +215,19 @@ fn collect_dom_errors(
     }
 }
 
-#[tracing::instrument(skip_all, fields(%document_url))]
+#[tracing::instrument(skip_all, fields(%document_uri))]
 async fn collect_schema_errors<E: Environment>(
     ws: &WorkspaceState<E>,
     doc: &DocumentState,
     dom: &Node,
-    document_url: &Url,
+    document_uri: &Url,
     diags: &mut Vec<Diagnostic>,
 ) {
     if !ws.lsp_config.schema.enabled {
         return;
     }
 
-    if let Some(schema_association) = ws.schemas.associations().association_for(document_url) {
+    if let Some(schema_association) = ws.schemas.associations().association_for(document_uri) {
         tracing::debug!(
             schema.url = %schema_association.url,
             schema.name = schema_association.meta["name"].as_str().unwrap_or(""),

@@ -7,7 +7,7 @@ use jsona::parser;
 use jsona_util::{
     environment::Environment,
     schema::associations::{AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORE},
-    util::to_file_url,
+    util::to_file_uri,
 };
 use serde_json::json;
 use std::path::Path;
@@ -20,15 +20,15 @@ impl<E: Environment> App<E> {
         let config = self.load_config(&cmd.general).await?;
 
         if !cmd.no_schema {
-            if let Some(schema_url) = cmd.schema.clone() {
-                let url: Url = match schema_url.parse() {
+            if let Some(schema_uri) = cmd.schema.clone() {
+                let url: Url = match schema_uri.parse() {
                     Ok(url) => url,
                     Err(_) => {
                         let cwd = self.env.cwd().ok_or_else(|| {
                             anyhow!("could not figure the current working directory")
                         })?;
-                        to_file_url(&schema_url, &Some(cwd))
-                            .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_url))?
+                        to_file_uri(&schema_uri, &Some(cwd))
+                            .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_uri))?
                     }
                 };
                 self.schemas.associations().add(
@@ -125,7 +125,7 @@ impl<E: Environment> App<E> {
             return Err(anyhow!("semantic errors found"));
         }
 
-        let file_uri: Url = to_file_url(file_path, &self.env.cwd()).unwrap();
+        let file_uri: Url = to_file_uri(file_path, &self.env.cwd()).unwrap();
 
         self.schemas
             .associations()

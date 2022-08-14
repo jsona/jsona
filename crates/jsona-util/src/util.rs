@@ -143,8 +143,8 @@ pub mod path_utils {
 
 pub const FILE_PROTOCOL: &str = "file://";
 
-/// Convert path to file url
-pub fn to_file_url(path: &str, base: &Option<PathBuf>) -> Option<Url> {
+/// Convert path to file uri
+pub fn to_file_uri(path: &str, base: &Option<PathBuf>) -> Option<Url> {
     if path.starts_with(FILE_PROTOCOL) {
         return path.parse().ok();
     }
@@ -204,13 +204,13 @@ pub fn to_file_path(url: &Url) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    macro_rules! asset_to_file_url {
+    macro_rules! asset_to_file_uri {
         ($o:expr, $p:expr) => {
-            assert_eq!(to_file_url($p, &None).unwrap().to_string(), $o);
+            assert_eq!(to_file_uri($p, &None).unwrap().to_string(), $o);
         };
         ($o:expr, $p:expr, $b:expr) => {
             assert_eq!(
-                to_file_url($p, &Some(PathBuf::from($b)))
+                to_file_uri($p, &Some(PathBuf::from($b)))
                     .unwrap()
                     .to_string(),
                 $o
@@ -224,17 +224,17 @@ mod tests {
     }
 
     #[test]
-    fn test_to_file_url() {
-        asset_to_file_url!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1");
-        asset_to_file_url!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1\\");
-        asset_to_file_url!("file:///c%3A/dir1/a/b", "a\\b", "C:\\dir1\\");
-        asset_to_file_url!("file:///dir1/a/b", "a/b", "/dir1");
-        asset_to_file_url!("file:///dir1/a/b", "a/b", "/dir1/");
-        asset_to_file_url!("file:///dir1/a/b", "a\\b", "/dir1/");
-        asset_to_file_url!("file:///a/b", "/a/b", "/dir1");
-        asset_to_file_url!("file:///a/b", "/a/b");
-        asset_to_file_url!("file:///a/b", "file:///a/b", "/dir1");
-        asset_to_file_url!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
+    fn test_to_file_uri() {
+        asset_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1");
+        asset_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1\\");
+        asset_to_file_uri!("file:///c%3A/dir1/a/b", "a\\b", "C:\\dir1\\");
+        asset_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1");
+        asset_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1/");
+        asset_to_file_uri!("file:///dir1/a/b", "a\\b", "/dir1/");
+        asset_to_file_uri!("file:///a/b", "/a/b", "/dir1");
+        asset_to_file_uri!("file:///a/b", "/a/b");
+        asset_to_file_uri!("file:///a/b", "file:///a/b", "/dir1");
+        asset_to_file_uri!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
     }
 
     #[test]

@@ -11,7 +11,7 @@ use crate::{
     config::Config,
     environment::Environment,
     schema::Fetcher,
-    util::{path_utils::to_unix, to_file_path, to_file_url, GlobRule},
+    util::{path_utils::to_unix, to_file_path, to_file_uri, GlobRule},
     HashMap,
 };
 
@@ -116,7 +116,7 @@ impl<E: Environment> SchemaAssociations<E> {
             .get(&KeyOrIndex::annotation(SCHEMA_KEY))
             .and_then(|v| v.as_string().cloned())
         {
-            if let Some(url) = to_file_url(url.value(), &self.env.cwd()) {
+            if let Some(url) = to_file_uri(url.value(), &self.env.cwd()) {
                 self.add(
                     AssociationRule::Url(doc_url.clone()),
                     SchemaAssociation {

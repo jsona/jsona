@@ -45,42 +45,42 @@ impl<E: Environment> Schemas<E> {
 }
 
 impl<E: Environment> Schemas<E> {
-    #[tracing::instrument(skip_all, fields(%schema_url))]
+    #[tracing::instrument(skip_all, fields(%schema_uri))]
     pub async fn validate(
         &self,
-        schema_url: &Url,
+        schema_uri: &Url,
         value: &Node,
     ) -> Result<Vec<NodeValidationError>, anyhow::Error> {
-        let validator = match self.get_validator(schema_url) {
+        let validator = match self.get_validator(schema_uri) {
             Some(s) => s,
             None => {
                 let schema = self
-                    .load_schema(schema_url)
+                    .load_schema(schema_uri)
                     .await
-                    .map_err(|err| anyhow!("failed to load schema {schema_url} {}", err))?;
-                self.add_schema(schema_url, schema.clone());
-                self.add_validator(schema_url.clone(), &schema)
-                    .map_err(|err| anyhow!("load schema {schema_url} throw {}", err))?
+                    .map_err(|err| anyhow!("failed to load schema {schema_uri} {}", err))?;
+                self.add_schema(schema_uri, schema.clone());
+                self.add_validator(schema_uri.clone(), &schema)
+                    .map_err(|err| anyhow!("load schema {schema_uri} throw {}", err))?
             }
         };
         Ok(validator.validate(value))
     }
 
-    pub fn add_schema(&self, schema_url: &Url, schema: Arc<JSONASchemaValue>) {
-        drop(self.schemas.lock().insert(schema_url.clone(), schema));
+    pub fn add_schema(&self, schema_uri: &Url, schema: Arc<JSONASchemaValue>) {
+        drop(self.schemas.lock().insert(schema_uri.clone(), schema));
     }
 
     pub async fn load_schema(
         &self,
-        schema_url: &Url,
+        schema_uri: &Url,
     ) -> Result<Arc<JSONASchemaValue>, anyhow::Error> {
-        if let Some(s) = self.schemas.lock().get(schema_url).cloned() {
-            tracing::debug!(%schema_url, "schema was found in cache");
+        if let Some(s) = self.schemas.lock().get(schema_uri).cloned() {
+            tracing::debug!(%schema_uri, "schema was found in cache");
             return Ok(s);
         }
 
         let schema: Arc<JSONASchemaValue> =
-            match self.fetcher.fetch(schema_url).await.and_then(|v| {
+            match self.fetcher.fetch(schema_uri).await.and_then(|v| {
                 std::str::from_utf8(&v)
                     .map_err(|v| anyhow!("{}", v))
                     .and_then(|v| v.parse().map_err(|err| anyhow!("{}", err)))
@@ -94,33 +94,33 @@ impl<E: Environment> Schemas<E> {
 
         self.schemas
             .lock()
-            .insert(schema_url.clone(), schema.clone());
+            .insert(schema_uri.clone(), schema.clone());
 
         Ok(schema)
     }
 
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, fields(%schema_uri))]
     pub async fn schemas_at_path(
         &self,
-        schema_url: &Url,
+        schema_uri: &Url,
         path: &Keys,
     ) -> Result<Vec<Schema>, anyhow::Error> {
-        let schema = self.load_schema(schema_url).await?;
+        let schema = self.load_schema(schema_uri).await?;
         let schemas = schema.pointer(path).into_iter().cloned().collect();
         Ok(schemas)
     }
 
-    fn get_validator(&self, schema_url: &Url) -> Option<Arc<JSONASchemaValidator>> {
-        self.validators.lock().get(schema_url).cloned()
+    fn get_validator(&self, schema_uri: &Url) -> Option<Arc<JSONASchemaValidator>> {
+        self.validators.lock().get(schema_uri).cloned()
     }
 
     fn add_validator(
         &self,
-        schema_url: Url,
+        schema_uri: Url,
         schema: &JSONASchemaValue,
     ) -> Result<Arc<JSONASchemaValidator>, anyhow::Error> {
         let v = Arc::new(JSONASchemaValidator::new(schema)?);
-        self.validators.lock().insert(schema_url, v.clone());
+        self.validators.lock().insert(schema_uri, v.clone());
         Ok(v)
     }
 }

@@ -9,7 +9,7 @@ use url::Url;
 
 use crate::environment::Environment;
 use crate::util::path_utils::to_unix;
-use crate::util::{path_utils, to_file_url, GlobRule};
+use crate::util::{path_utils, to_file_uri, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
 
@@ -245,7 +245,7 @@ impl SchemaRule {
         )?);
         let url = match self.path.take() {
             Some(p) => {
-                Some(to_file_url(&p, &base).ok_or_else(|| anyhow!("invalid schema path `{}`", p))?)
+                Some(to_file_uri(&p, &base).ok_or_else(|| anyhow!("invalid schema path `{}`", p))?)
             }
             None => self.url.take(),
         };
