@@ -10,7 +10,7 @@ PKGS=( \
 
 # @cmd Build js
 # @flag --debug
-# @arg name![core|util-types|lsp|all]
+# @arg name[core|util-types|lsp|all]
 build() {
     if [[ -n $argc_debug ]]; then
         export WASM_DEBUG=true
