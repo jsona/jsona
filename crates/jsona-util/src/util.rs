@@ -1,11 +1,15 @@
+use self::path_utils::encode_url;
 use globset::{Glob, GlobSetBuilder};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::{
     borrow::Cow,
     path::{Path, PathBuf},
 };
 use url::Url;
 
-use self::path_utils::encode_url;
+const FILE_PROTOCOL: &str = "file://";
+static RE_URI_PROTOCOL: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+://)").unwrap());
 
 #[derive(Debug, Clone)]
 pub struct GlobRule {
@@ -141,11 +145,13 @@ pub mod path_utils {
     }
 }
 
-pub const FILE_PROTOCOL: &str = "file://";
-
 /// Convert path to file uri
 pub fn to_file_uri(path: &str, base: &Option<PathBuf>) -> Option<Url> {
-    if path.starts_with(FILE_PROTOCOL) {
+    if RE_URI_PROTOCOL
+        .captures(path)
+        .and_then(|v| v.get(0))
+        .is_some()
+    {
         return path.parse().ok();
     }
     let url = if path_utils::is_window(path) {
@@ -235,6 +241,7 @@ mod tests {
         asset_to_file_uri!("file:///a/b", "/a/b");
         asset_to_file_uri!("file:///a/b", "file:///a/b", "/dir1");
         asset_to_file_uri!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
+        asset_to_file_uri!("http://example.com/a/b", "http://example.com/a/b");
     }
 
     #[test]
