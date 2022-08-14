@@ -4,3 +4,22 @@ node_modules
 yarn.lock
 *.log
 js/**/dist
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IDE & editors
+.idea
+.vscode
+
+# Dependency directory
+node_modules/
+
+# Compiled and tempory files
+*.vsix
+
+.vscode-test-web
+/editors/vscode/dist
+/editors/vscode/out

@@ -1,0 +1,181 @@
+{
+  "name": "vscode-jsona",
+  "displayName": "JSONA",
+  "description": "Fully-featured JSONA support",
+  "version": "0.4.2",
+  "publisher": "sigoden",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.66.0"
+  },
+  "icon": "icon.png",
+  "homepage": "https://github.com/jsona/jsona",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsona/jsona",
+    "directory": "editors/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/jsona/jsona/issues"
+  },
+  "keywords": [
+    "jsona",
+    "completion",
+    "syntax",
+    "highlight"
+  ],
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:jsona"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "JSONA",
+      "properties": {
+        "jsona.executable.bundled": {
+          "description": "Use the bundled jsona language server. If set to `false`, the `jsona` executable must be found in PATH or must be set in `jsona.executable.path`.",
+          "type": "boolean",
+          "scope": "resource",
+          "default": true
+        },
+        "jsona.executable.path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "scope": "resource",
+          "description": "Path to the jsona executable.",
+          "default": null
+        },
+        "jsona.executable.environment": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "scope": "resource",
+          "description": "Environment variables for the jsona executable.",
+          "properties": {
+            "type": "string"
+          },
+          "default": null
+        },
+        "jsona.executable.extraArgs": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "scope": "resource",
+          "description": "Additional arguments for the jsona executable.",
+          "items": {
+            "type": "string"
+          },
+          "default": null
+        },
+        "jsona.configFile.path": {
+          "description": "An absolute, or workspace relative path to the Jsona configuration file.",
+          "type": "string",
+          "scope": "resource"
+        },
+        "jsona.configFile.enabled": {
+          "description": "Whether to enable the usage of a Jsona configuration file.",
+          "type": "boolean",
+          "scope": "resource",
+          "default": true
+        },
+        "jsona.schema.enabled": {
+          "description": "Enable completion and validation based on JSON schemas.",
+          "type": "boolean",
+          "scope": "resource",
+          "default": true
+        },
+        "jsona.schema.associations": {
+          "description": "Associate schemas to JSONA files in the current workspace.",
+          "type": "object",
+          "scope": "resource",
+          "default": {}
+        },
+        "jsona.formatter.indentString": {
+          "scope": "resource",
+          "type": "string",
+          "default": null,
+          "description": "Indentation to use, should be tabs or spaces but technically could be anything."
+        },
+        "jsona.formatter.trailingNewline": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": null,
+          "description": "Add trailing newline to the source."
+        },
+        "jsona.formatter.trailingComma": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": null,
+          "description": "Put trailing commas for multiline arrays and objects."
+        },
+        "jsona.formatter.formatKey": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": null,
+          "description": "Remove unnecessary quote or choose better quote for property."
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "jsona",
+        "aliases": [
+          "JSONA"
+        ],
+        "extensions": [
+          ".jsona"
+        ],
+        "filenames": [
+          ".jsona"
+        ],
+        "configuration": "./jsona.configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jsona",
+        "scopeName": "source.jsona",
+        "path": "./syntaxes/jsona.json"
+      }
+    ]
+  },
+  "main": "./dist/extension.js",
+  "browser": "./dist/browser-extension.js",
+  "scripts": {
+    "package": "npx vsce package",
+    "vscode:prepublish": "yarn build",
+    "build:browser-extension": "rollup -c rollup.config.browser-extension.js",
+    "build:browser-server": "rollup -c rollup.config.browser-server.js",
+    "build:node": "rollup -c rollup.config.js",
+    "build": "rimraf dist && yarn build:node && yarn build:browser-extension && yarn build:browser-server"
+  },
+  "dependencies": {
+    "@jsona/lsp": "^0.1.5",
+    "@jsona/util-types": "^0.1.1",
+    "esbuild": "^0.15.0",
+    "fast-glob": "^3.2.11",
+    "node-fetch": "^3.2.10",
+    "typescript": "^4.7.4",
+    "vscode-languageclient": "^8.0.2",
+    "which": "^2.0.2"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^22.0.2",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-replace": "^4.0.0",
+    "@types/node": "^18.6.5",
+    "@types/vscode": "^1.44.0",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.77.2",
+    "rollup-plugin-esbuild": "^4.9.1"
+  }
+}

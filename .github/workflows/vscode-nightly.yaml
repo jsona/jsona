@@ -1,0 +1,51 @@
+name: Nightly release
+
+on:
+  push:
+    branches:
+    - vscode-release
+
+jobs:
+  nightly-release:
+    name: Publish to Github Releases And Marketplace
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+        cache: 'yarn'
+
+    - run: yarn install --frozen-lockfile
+      working-directory: editors/vscode     
+
+    - name: Set nightly version
+      shell: bash
+      working-directory: editors/vscode     
+      run: |
+        version=$(npm version minor --no-git-tag-version | tr -d 'v')
+        version_new=${version%.*}.${{ github.run_number }}
+        sed -i 's/^  "version": "'$version'",/  "version": "'$version_new'",/' package.json
+
+    - run: yarn package -o jsona.vsix --pre-release
+      working-directory: editors/vscode     
+    
+    - name: Update Nightly Release
+      uses: andelf/nightly-release@main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        name: 'Nightly Release $$'
+        tag_name: nightly
+        draft: false
+        prerelease: true
+        body: 'This is a nightly release of the vscode-jsona extension.'
+        files: editros/vscode/jsona.vsix
+
+
+    - name: Publish Extension
+      run: npx vsce publish --pat ${{ secrets.MARKETPLACE_TOKEN }} --packagePath jsona.vsix --pre-release
+      working-directory: editors/vscode     

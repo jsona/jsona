@@ -1,0 +1,347 @@
+{
+	"scopeName": "source.jsona",
+	"fileTypes": ["jsona"],
+	"name": "JSONA",
+	"patterns": [
+		{ "include": "#comments" },
+		{ "include": "#value" }
+	],
+	"repository": {
+		"annotation": {
+			"patterns": [
+				{
+					"begin": "((@)\\s*([^\\s(]+))(\\()",
+					"beginCaptures": {
+							"2": {
+								"name": "punctuation.definition.annotation.jsona"
+							},
+							"3": {
+								"name": "storage.type.annotation.jsona"
+							},
+							"4": {
+								"name": "punctuation.definition.annotation-arguments.begin.bracket.round.jsona"
+							}
+					},
+					"end": "\\)",
+					"endCaptures": {
+						"0": { "name": "punctuation.definition.annotation-arguments.end.bracket.round.jsona" }
+					},
+					"name": "meta.declaration.annotation.jsona",
+					"patterns": [
+						{ "include": "#comments" },
+						{ "include": "#value" }
+					]
+				},
+				{
+					"match": "((@)\\s*([^\\s(]+))",
+					"name": "meta.declaration.annotation.jsona",
+					"captures": {
+						"2": {
+							"name": "punctuation.definition.annotation.jsona"
+						},
+						"3": {
+							"name": "storage.type.annotation.jsona"
+						}
+					}
+				}
+			]
+		},
+		"array": {
+			"begin": "\\[",
+			"beginCaptures": {
+				"0": { "name": "punctuation.definition.array.begin.jsona" }
+			},
+			"end": "\\]",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.array.end.jsona" }
+			},
+			"name": "meta.structure.array.jsona",
+			"patterns": [
+				{ "include": "#comments" },
+				{ "include": "#value" },
+				{ "include": "#annotation" },
+				{
+					"match": ",",
+					"name": "punctuation.separator.array.jsona"
+				},
+				{
+					"match": "[^\\s\\]]",
+					"name": "invalid.illegal.expected-array-separator.jsona"
+				}
+			]
+		},
+		"constant": {
+			"match": "\\b(?:true|false|null)\\b",
+			"name": "constant.language.jsona"
+		},
+		"number": {
+			"patterns": [
+				{
+					"name": "constant.numeric.hex.jsona",
+					"match": "\\b(?<!\\$)0(?:x|X)[0-9a-fA-F][0-9a-fA-F_]*(n)?\\b(?!\\$)",
+					"captures": {
+						"1": {
+							"name": "storage.type.numeric.bigint.jsona"
+						}
+					}
+				},
+				{
+					"name": "constant.numeric.binary.jsona",
+					"match": "\\b(?<!\\$)0(?:b|B)[01][01_]*(n)?\\b(?!\\$)",
+					"captures": {
+						"1": {
+							"name": "storage.type.numeric.bigint.jsona"
+						}
+					}
+				},
+				{
+					"name": "constant.numeric.octal.jsona",
+					"match": "\\b(?<!\\$)0(?:o|O)?[0-7][0-7_]*(n)?\\b(?!\\$)",
+					"captures": {
+						"1": {
+							"name": "storage.type.numeric.bigint.jsona"
+						}
+					}
+				},
+				{
+					"match": "(?x)\n(?<!\\$)(?:\n  (?:\\b[0-9][0-9_]*(\\.)[0-9][0-9_]*[eE][+-]?[0-9][0-9_]*(n)?\\b)| # 1.1E+3\n  (?:\\b[0-9][0-9_]*(\\.)[eE][+-]?[0-9][0-9_]*(n)?\\b)|             # 1.E+3\n  (?:\\B(\\.)[0-9][0-9_]*[eE][+-]?[0-9][0-9_]*(n)?\\b)|             # .1E+3\n  (?:\\b[0-9][0-9_]*[eE][+-]?[0-9][0-9_]*(n)?\\b)|                 # 1E+3\n  (?:\\b[0-9][0-9_]*(\\.)[0-9][0-9_]*(n)?\\b)|                      # 1.1\n  (?:\\b[0-9][0-9_]*(\\.)(n)?\\B)|                                  # 1.\n  (?:\\B(\\.)[0-9][0-9_]*(n)?\\b)|                                  # .1\n  (?:\\b[0-9][0-9_]*(n)?\\b(?!\\.))                                 # 1\n)(?!\\$)",
+					"captures": {
+						"0": {
+							"name": "constant.numeric.decimal.jsona"
+						},
+						"1": {
+							"name": "meta.delimiter.decimal.period.jsona"
+						},
+						"2": {
+							"name": "storage.type.numeric.bigint.jsona"
+						},
+						"3": {
+							"name": "meta.delimiter.decimal.period.jsona"
+						},
+						"4": {
+							"name": "storage.type.numeric.bigint.jsona"
+						},
+						"5": {
+							"name": "meta.delimiter.decimal.period.jsona"
+						},
+						"6": {
+							"name": "storage.type.numeric.bigint.jsona"
+						},
+						"7": {
+							"name": "storage.type.numeric.bigint.jsona"
+						},
+						"8": {
+							"name": "meta.delimiter.decimal.period.jsona"
+						},
+						"9": {
+							"name": "storage.type.numeric.bigint.jsona"
+						},
+						"10": {
+							"name": "meta.delimiter.decimal.period.jsona"
+						},
+						"11": {
+							"name": "storage.type.numeric.bigint.jsona"
+						},
+						"12": {
+							"name": "meta.delimiter.decimal.period.jsona"
+						},
+						"13": {
+							"name": "storage.type.numeric.bigint.jsona"
+						},
+						"14": {
+							"name": "storage.type.numeric.bigint.jsona"
+						}
+					}
+				}
+			]
+		},
+		"string": {
+			"patterns": [
+				{
+					"include": "#stringSingle"
+				},
+				{
+					"include": "#stringDouble"
+				},
+				{
+					"include": "#stringTemplate"
+				}
+			]
+		},
+		"stringDouble": {
+			"name": "string.quoted.double.jsona",
+			"begin": "\"",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.jsona"
+				}
+			},
+			"end": "(\")|((?:[^\\\\\\n])$)",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.string.end.jsona"
+				},
+				"2": {
+					"name": "invalid.illegal.newline.jsona"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#stringCharacterEscape"
+				}
+			]
+		},
+		"stringSingle": {
+			"name": "string.quoted.single.jsona",
+			"begin": "'",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.jsona"
+				}
+			},
+			"end": "(\\')|((?:[^\\\\\\n])$)",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.string.end.jsona"
+				},
+				"2": {
+					"name": "invalid.illegal.newline.jsona"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#stringCharacterEscape"
+				}
+			]
+		},
+		"stringTemplate": {
+			"patterns": [
+				{
+					"name": "string.template.jsona",
+					"begin": "([_$[:alpha:]][_$[:alnum:]]*)?(`)",
+					"beginCaptures": {
+						"1": {
+							"name": "entity.name.function.tagged-template.jsona"
+						},
+						"2": {
+							"name": "punctuation.definition.string.template.begin.jsona"
+						}
+					},
+					"end": "`",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.string.template.end.jsona"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#template-substitution-element"
+						},
+						{
+							"include": "#stringCharacterEscape"
+						}
+					]
+				}
+			]
+		},
+		"stringCharacterEscape": {
+			"name": "constant.character.escape.jsona",
+			"match": "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\\{[0-9A-Fa-f]+\\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)"
+		},
+		"object": {
+			"begin": "\\{",
+			"beginCaptures": {
+				"0": { "name": "punctuation.definition.dictionary.begin.jsona" }
+			},
+			"comment": "a jsona object",
+			"end": "\\}",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.dictionary.end.jsona" }
+			},
+			"name": "meta.structure.dictionary.jsona",
+			"patterns": [
+				{ "include": "#comments" },
+				{ "include": "#annotation" },
+				{
+					"comment": "the jsona object key",
+					"include": "#objectkey"
+				},
+				{
+					"include": "#comments"
+				},
+				{
+					"begin": ":",
+					"beginCaptures": {
+						"0": { "name": "punctuation.separator.dictionary.key-value.jsona" }
+					},
+					"end": "(,)|(?=\\})",
+					"endCaptures": {
+						"1": { "name": "punctuation.separator.dictionary.pair.jsona" }
+					},
+					"name": "meta.structure.dictionary.value.jsona",
+					"patterns": [
+						{
+							"comment": "the jsona object value",
+							"include": "#value"
+						},
+						{
+							"match": "[^\\s,]",
+							"name": "invalid.illegal.expected-dictionary-separator.jsona"
+						}
+					]
+				},
+				{
+					"match": "[^\\s\\}]",
+					"name": "invalid.illegal.expected-dictionary-separator.jsona"
+				}
+			]
+		},
+		"objectkey": {
+			"name": "string.key.jsona",
+			"patterns": [
+				{
+					"match": "[a-zA-Z0-9_]+",
+					"name": "meta.object-literal.key.jsona"
+				},
+				{ "include": "#string" }
+			]
+		},
+		"value": {
+			"comment": "the 'value' diagram at http://json.org",
+			"patterns": [
+				{ "include": "#annotation" },
+				{ "include": "#constant" },
+				{ "include": "#infinity" },
+				{ "include": "#number" },
+				{ "include": "#string" },
+				{ "include": "#array" },
+				{ "include": "#object" },
+				{ "include": "#comments" }
+			]
+		},
+		"comments": {
+			"patterns": [
+				{
+					"match": "/{2}.*",
+					"name": "comment.single.jsona"
+				},
+				{
+					"begin": "/\\*\\*(?!/)",
+					"captures": {
+						"0": { "name": "punctuation.definition.comment.jsona" }
+					},
+					"end": "\\*/",
+					"name": "comment.block.documentation.jsona"
+				},
+				{
+					"begin": "/\\*",
+					"captures": {
+						"0": { "name": "punctuation.definition.comment.jsona" }
+					},
+					"end": "\\*/",
+					"name": "comment.block.jsona"
+				}
+			]
+		}
+	}
+}
