@@ -22,9 +22,9 @@ use jsona_util::{
 use lsp_async_stub::{rpc, util::Mapper, Context, RequestWriter};
 use lsp_types::Url;
 use once_cell::sync::Lazy;
-use regex::Regex;
 use serde_json::{json, Value};
 use std::{path::PathBuf, sync::Arc};
+use uuid::Uuid;
 
 pub type World<E> = Arc<WorldState<E>>;
 
@@ -80,6 +80,7 @@ impl<E: Environment> Workspaces<E> {
 
 pub struct WorldState<E: Environment> {
     pub(crate) env: E,
+    pub(crate) id: String,
     pub(crate) workspaces: AsyncRwLock<Workspaces<E>>,
     pub(crate) initialization_options: ArcSwap<InitializationOptions>,
     pub(crate) default_config: ArcSwap<Config>,
@@ -90,6 +91,7 @@ pub static DEFAULT_WORKSPACE_URL: Lazy<Url> = Lazy::new(|| Url::parse("root:///"
 impl<E: Environment> WorldState<E> {
     pub fn new(env: E) -> Self {
         Self {
+            id: Uuid::new_v4().to_string(),
             workspaces: {
                 let mut m = IndexMap::default();
                 m.insert(
@@ -115,7 +117,7 @@ pub struct WorkspaceState<E: Environment> {
     pub(crate) documents: HashMap<lsp_types::Url, DocumentState>,
     pub(crate) jsona_config: Config,
     pub(crate) schemas: Schemas<E>,
-    pub(crate) config: LspConfig,
+    pub(crate) lsp_config: LspConfig,
 }
 
 impl<E: Environment> WorkspaceState<E> {
@@ -125,7 +127,7 @@ impl<E: Environment> WorkspaceState<E> {
             documents: Default::default(),
             jsona_config: Default::default(),
             schemas: Schemas::new(env),
-            config: LspConfig::default(),
+            lsp_config: LspConfig::default(),
         }
     }
 }
@@ -141,12 +143,12 @@ impl<E: Environment> WorkspaceState<E> {
     pub(crate) async fn initialize(
         &mut self,
         context: Context<World<E>>,
-        config: &Value,
+        lsp_config: &Value,
     ) -> Result<(), anyhow::Error> {
         self.schemas
             .set_cache_path(context.initialization_options.load().cache_path.clone());
 
-        if let Err(error) = self.config.update_from_json(config) {
+        if let Err(error) = self.lsp_config.update_from_json(lsp_config) {
             tracing::error!(?error, "invalid configuration");
         }
 
@@ -157,7 +159,7 @@ impl<E: Environment> WorkspaceState<E> {
             .associations()
             .retain(|(_, assoc)| assoc.meta["source"] == "manual");
 
-        if !self.config.schema.enabled {
+        if !self.lsp_config.schema.enabled {
             return Ok(());
         }
 
@@ -165,41 +167,25 @@ impl<E: Environment> WorkspaceState<E> {
             .associations()
             .add_from_config(&self.jsona_config);
 
-        for (pattern, schema_url) in &self.config.schema.associations {
-            let pattern = match Regex::new(pattern) {
-                Ok(p) => p,
-                Err(error) => {
-                    tracing::error!(%error, "invalid association pattern");
-                    continue;
-                }
-            };
-
-            let url = if schema_url.starts_with("./") {
-                self.root.join(schema_url)
-            } else {
-                schema_url.parse()
-            };
-
-            let url = match url {
-                Ok(u) => u,
-                Err(error) => {
-                    tracing::error!(%error, url = %schema_url, "invalid schema url");
-                    continue;
-                }
-            };
-
-            self.schemas.associations().add(
-                AssociationRule::Regex(pattern),
-                SchemaAssociation {
-                    url,
+        for (schema_url, file_urls) in &self.lsp_config.schema.associations {
+            if let Ok(schema_url) = schema_url.parse() {
+                let assoc = SchemaAssociation {
+                    url: schema_url,
                     meta: json!({
                         "source": source::LSP_CONFIG,
                     }),
                     priority: priority::LSP_CONFIG,
-                },
-            );
+                };
+                for file_url in file_urls {
+                    if let Ok(file_url) = file_url.parse() {
+                        self.schemas
+                            .associations()
+                            .add(AssociationRule::Url(file_url), assoc.clone())
+                    }
+                }
+            }
         }
-        let store_url = &self.config.schema.schemastore;
+        let store_url = &self.lsp_config.schema.schemastore;
 
         if let Err(error) = self
             .schemas
@@ -219,7 +205,7 @@ impl<E: Environment> WorkspaceState<E> {
         env: &impl Environment,
         default_config: &Config,
     ) -> Result<(), anyhow::Error> {
-        if !self.config.config_file.enabled {
+        if !self.lsp_config.config_file.enabled {
             self.jsona_config = default_config.clone();
             return Ok(());
         }
@@ -228,7 +214,7 @@ impl<E: Environment> WorkspaceState<E> {
             return Ok(());
         };
 
-        let mut config_path = self.config.config_file.path.clone();
+        let mut config_path = self.lsp_config.config_file.path.clone();
         if let Some(path) = config_path.as_ref() {
             if path.as_os_str().is_empty() {
                 config_path = None;

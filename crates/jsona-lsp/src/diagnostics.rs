@@ -223,7 +223,7 @@ async fn collect_schema_errors<E: Environment>(
     document_url: &Url,
     diags: &mut Vec<Diagnostic>,
 ) {
-    if !ws.config.schema.enabled {
+    if !ws.lsp_config.schema.enabled {
         return;
     }
 

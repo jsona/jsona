@@ -9,7 +9,9 @@ use lsp_types::{
     request::WorkspaceConfiguration, ConfigurationItem, ConfigurationParams,
     DidChangeConfigurationParams,
 };
+use serde_json::Value;
 use std::iter::once;
+use url::Url;
 
 #[tracing::instrument(skip_all)]
 pub async fn configuration_change<E: Environment>(
@@ -24,16 +26,17 @@ pub async fn configuration_change<E: Environment>(
     let mut workspaces = context.workspaces.write().await;
 
     for (_, ws) in workspaces.iter_mut() {
-        if let Err(error) = ws.initialize(context.clone(), &p.settings).await {
-            tracing::error!(%error, "failed to update workspace");
-        }
+        context.env.spawn_local(update_workspace_configuration(
+            context.clone(),
+            ws.root.clone(),
+            p.settings.clone(),
+        ));
     }
 }
 
 #[tracing::instrument(skip_all)]
 pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
-    let mut workspaces = context.workspaces.write().await;
-
+    let workspaces = context.workspaces.read().await;
     let config_items: Vec<_> = workspaces
         .iter()
         .filter_map(|(uri, _)| {
@@ -67,28 +70,37 @@ pub async fn update_configuration<E: Environment>(context: Context<World<E>>) {
             for (i, config) in configs.into_iter().enumerate() {
                 if config.is_object() {
                     if i == 0 {
-                        for (_, ws) in workspaces
-                            .iter_mut()
-                            .filter(|(uri, _)| **uri == *DEFAULT_WORKSPACE_URL)
-                        {
-                            if let Err(error) = ws.initialize(context.clone(), &config).await {
-                                let uri = DEFAULT_WORKSPACE_URL.as_str();
-                                tracing::error!(%error, uri, "failed to update workspace");
-                            }
-                        }
+                        context.env.spawn_local(update_workspace_configuration(
+                            context.clone(),
+                            DEFAULT_WORKSPACE_URL.clone(),
+                            config.clone(),
+                        ));
                     } else {
                         let uri = config_items.get(i - 1).unwrap().scope_uri.as_ref().unwrap();
-                        let ws = workspaces.get_mut(uri).unwrap();
-
-                        if let Err(error) = ws.initialize(context.clone(), &config).await {
-                            tracing::error!(%error, %uri, "failed to update workspace");
-                        }
+                        context.env.spawn_local(update_workspace_configuration(
+                            context.clone(),
+                            uri.clone(),
+                            config.clone(),
+                        ));
                     }
                 }
             }
         }
         Err(error) => {
             tracing::error!(?error, "failed to fetch configuration");
+        }
+    }
+}
+
+pub async fn update_workspace_configuration<E: Environment>(
+    context: Context<World<E>>,
+    uri: Url,
+    config: Value,
+) {
+    let mut workspaces = context.workspaces.write().await;
+    if let Some(ws) = workspaces.get_mut(&uri) {
+        if let Err(error) = ws.initialize(context.clone(), &config).await {
+            tracing::error!(%error, %uri, "failed to update workspace");
         }
     }
 }

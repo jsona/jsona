@@ -42,7 +42,7 @@ pub(crate) async fn format<E: Environment>(
     ws.jsona_config
         .update_format_options(doc_path, &mut format_opts);
 
-    format_opts.update_camel(ws.config.formatter.clone());
+    format_opts.update_camel(ws.lsp_config.formatter.clone());
 
     Ok(Some(vec![TextEdit {
         range: doc.mapper.all_range().into_lsp(),

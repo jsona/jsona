@@ -35,7 +35,7 @@ impl LspConfig {
 #[serde(rename_all = "camelCase")]
 pub struct SchemaConfig {
     pub enabled: bool,
-    pub associations: HashMap<String, String>,
+    pub associations: HashMap<String, Vec<String>>,
     pub schemastore: Url,
 }
 

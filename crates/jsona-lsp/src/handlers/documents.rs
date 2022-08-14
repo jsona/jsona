@@ -34,7 +34,7 @@ pub(crate) async fn document_open<E: Environment>(
     let ws = workspaces.by_document_mut(document_uri);
     let dom = parse.clone().into_dom();
 
-    if ws.config.schema.enabled {
+    if ws.lsp_config.schema.enabled {
         ws.schemas
             .associations()
             .retain(|(rule, assoc)| match rule {
@@ -81,7 +81,7 @@ pub(crate) async fn document_change<E: Environment>(
     let ws = workspaces.by_document_mut(document_uri);
     let dom = parse.clone().into_dom();
 
-    if ws.config.schema.enabled {
+    if ws.lsp_config.schema.enabled {
         ws.schemas
             .associations()
             .retain(|(rule, assoc)| match rule {
