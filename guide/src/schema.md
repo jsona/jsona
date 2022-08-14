@@ -18,24 +18,17 @@ JSONA schemas can be assigned to JSONA documents according to the following in p
 - set manually in the environment, e.g. as [a CLI flag](./cli.md#using-a-specific-schema) or an IDE setting
 - as an URL under the `@jsonaschema` in the root of the document
 - [configuration file rules](./config.md#rules)
-- contributed by an [extension](#visual-studio-code-extensions) *(Visual Studio Code only)*
+- contributed by an [vscode settings](#vscode-studio-code-settings) *(Visual Studio Code only)*
 - an association based on a schemastore
 
-## Visual Studio Code extensions
+## Visual Studio Code Settings
 
-Similarly to [`jsonValidation`](https://code.visualstudio.com/api/references/contribution-points#contributes.jsonValidation), it is possible for extensions to contribute their own schemas.
-
-Other than `fileMatch`, it is also possible to specify `regexMatch` that is matched against the entire document URI.
-
-```json
+```jsona
 {
-  "contributes": {
-    "jsonaValidation": [
-      {
-        "regexMatch": "^.*api.jsona$",
-        "url": "https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona"
-      }
-    ]
+  "jsona.schema.associations": {
+    "https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona": [
+      "api*.jsona",
+    ],
   }
 }
 ```
