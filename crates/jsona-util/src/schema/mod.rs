@@ -17,7 +17,6 @@ pub use jsona_schema_validator::{
 
 #[derive(Clone)]
 pub struct Schemas<E: Environment> {
-    env: E,
     associations: SchemaAssociations<E>,
     fetcher: Fetcher<E>,
     validators: Arc<Mutex<HashMap<Url, Arc<JSONASchemaValidator>>>>,
@@ -28,9 +27,8 @@ impl<E: Environment> Schemas<E> {
     pub fn new(env: E) -> Self {
         let fetcher = Fetcher::new(env.clone());
         Self {
-            associations: SchemaAssociations::new(env.clone(), fetcher.clone()),
+            associations: SchemaAssociations::new(env, fetcher.clone()),
             fetcher,
-            env,
             validators: Arc::new(Mutex::new(HashMap::default())),
             schemas: Arc::new(Mutex::new(HashMap::default())),
         }
@@ -39,10 +37,6 @@ impl<E: Environment> Schemas<E> {
     /// Get a reference to the schemas's associations.
     pub fn associations(&self) -> &SchemaAssociations<E> {
         &self.associations
-    }
-
-    pub fn env(&self) -> &E {
-        &self.env
     }
 
     pub fn set_cache_path(&self, path: Option<PathBuf>) {

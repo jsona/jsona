@@ -655,6 +655,7 @@ dependencies = [
  "jsona-util",
  "lsp-async-stub",
  "lsp-types",
+ "md5",
  "once_cell",
  "parking_lot",
  "regex",
@@ -663,7 +664,6 @@ dependencies = [
  "time",
  "tracing",
  "url",
- "uuid 1.1.2",
 ]
 
 [[package]]
@@ -746,7 +746,7 @@ dependencies = [
  "serde_json",
  "time",
  "url",
- "uuid 0.8.2",
+ "uuid",
 ]
 
 [[package]]
@@ -1655,15 +1655,6 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
-
-[[package]]
-name = "uuid"
-version = "1.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd6469f4314d5f1ffec476e05f17cc9a78bc7a27a6a857842170bdf8d6f98d2f"
-dependencies = [
- "getrandom",
-]
 
 [[package]]
 name = "valuable"

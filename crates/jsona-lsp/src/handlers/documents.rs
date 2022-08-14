@@ -1,7 +1,4 @@
-use jsona_util::{
-    environment::Environment,
-    schema::associations::{source, AssociationRule},
-};
+use jsona_util::environment::Environment;
 use lsp_async_stub::{util::Mapper, Context, Params, RequestWriter};
 use lsp_types::{
     notification, Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams,
@@ -35,14 +32,6 @@ pub(crate) async fn document_open<E: Environment>(
     let dom = parse.clone().into_dom();
 
     if ws.lsp_config.schema.enabled {
-        ws.schemas
-            .associations()
-            .retain(|(rule, assoc)| match rule {
-                AssociationRule::Url(u) => {
-                    !(u == document_uri && assoc.meta["source"] != source::SCHEMA_FIELD)
-                }
-                _ => true,
-            });
         ws.schemas
             .associations()
             .add_from_document(document_uri, &dom);
@@ -81,14 +70,6 @@ pub(crate) async fn document_change<E: Environment>(
     let dom = parse.clone().into_dom();
 
     if ws.lsp_config.schema.enabled {
-        ws.schemas
-            .associations()
-            .retain(|(rule, assoc)| match rule {
-                AssociationRule::Url(u) => {
-                    !(u == document_uri && assoc.meta["source"] != source::SCHEMA_FIELD)
-                }
-                _ => true,
-            });
         ws.schemas
             .associations()
             .add_from_document(document_uri, &dom);

@@ -4,7 +4,7 @@ use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 use url::Url;
 
 use crate::{
@@ -34,7 +34,6 @@ pub mod source {
     pub const CONFIG: &str = "config";
     pub const EXT_CONFIG: &str = "ext_config";
     pub const LSP_CONFIG: &str = "lsp_config";
-    pub const MANUAL: &str = "manual";
     pub const SCHEMA_FIELD: &str = "$schema";
 }
 
@@ -87,7 +86,6 @@ impl<E: Environment> SchemaAssociations<E> {
                                 "name": schema.name,
                                 "description": schema.description,
                                 "source": source::STORE,
-                                "catalog_url": url,
                             }),
                             priority: priority::STORE,
                         },
@@ -198,6 +196,16 @@ pub enum AssociationRule {
     Url(Url),
 }
 
+impl Debug for AssociationRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AssociationRule::Glob(_) => f.write_str("Glob"),
+            AssociationRule::Regex(regex) => write!(f, "Regex({})", regex),
+            AssociationRule::Url(url) => write!(f, "Url({})", url),
+        }
+    }
+}
+
 impl AssociationRule {
     pub fn glob(pattern: &str) -> Result<Self, anyhow::Error> {
         Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
@@ -220,6 +228,12 @@ impl From<GlobRule> for AssociationRule {
     }
 }
 
+impl From<&Url> for AssociationRule {
+    fn from(v: &Url) -> Self {
+        Self::Url(v.clone())
+    }
+}
+
 impl AssociationRule {
     #[must_use]
     pub fn is_match(&self, url: &Url) -> bool {
@@ -233,11 +247,24 @@ impl AssociationRule {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SchemaAssociation {
     pub meta: Value,
     pub url: Url,
     pub priority: usize,
+}
+
+impl Debug for SchemaAssociation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SchemaAssociation")
+            .field(
+                "meta",
+                &serde_json::to_string(&self.meta).unwrap_or_default(),
+            )
+            .field("url", &self.url.to_string())
+            .field("priority", &self.priority)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -30,4 +30,4 @@ jsona-schema = { path = "../jsona-schema", version = "0.1" }
 time = { version = "0.3", features = ["formatting", "parsing"] }
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
-uuid = { version = "1.1", features = ["v4"] }
+md5 = "0.7"
