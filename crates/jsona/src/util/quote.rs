@@ -282,7 +282,7 @@ fn check_quote(s: &str) -> QuoteType {
     let mut backtick = false;
     let mut single = true;
     for c in s.chars() {
-        if !c.is_ascii_alphanumeric() {
+        if !(c.is_ascii_alphanumeric() || c == '_') {
             plain = false;
         }
         match c {
