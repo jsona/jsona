@@ -163,22 +163,30 @@ impl<E: Environment> WorkspaceState<E> {
             .add_from_config(&self.jsona_config);
 
         let root_path = PathBuf::from(to_file_path(&self.root).unwrap_or_else(|| "/".into()));
-        for (schema_uri, lists) in &self.lsp_config.schema.associations {
-            if let Ok(schema_uri) = schema_uri.parse() {
-                let assoc = SchemaAssociation {
-                    url: schema_uri,
-                    meta: json!({
-                        "source": source::LSP_CONFIG,
-                    }),
-                    priority: priority::LSP_CONFIG,
-                };
-                for item in lists {
-                    match AssociationRule::new(item, &root_path) {
-                        Ok(rule) => self.schemas.associations().add(rule, assoc.clone()),
+
+        for (schema_uri, list) in &self.lsp_config.schema.associations {
+            match schema_uri.parse::<Url>() {
+                Ok(schema_uri) => {
+                    let assoc = SchemaAssociation {
+                        url: schema_uri.clone(),
+                        meta: json!({
+                            "source": source::LSP_CONFIG,
+                        }),
+                        priority: priority::LSP_CONFIG,
+                    };
+                    match AssociationRule::batch(list, &root_path) {
+                        Ok(rules) => {
+                            for rule in rules {
+                                self.schemas.associations().add(rule, assoc.clone())
+                            }
+                        }
                         Err(error) => {
-                            tracing::error!(%error, item=%item, "failed to add a schema association");
+                            tracing::error!(%error, %schema_uri, "failed to add schema associations");
                         }
                     }
+                }
+                Err(error) => {
+                    tracing::error!(%error, %schema_uri, "failed to add schema associations");
                 }
             }
         }
@@ -187,7 +195,7 @@ impl<E: Environment> WorkspaceState<E> {
         if let Err(error) = self
             .schemas
             .associations()
-            .add_from_schemastore(store_url)
+            .add_from_schemastore(store_url, &root_path)
             .await
         {
             tracing::error!(%error, url=%store_url, "failed to load schemastore");

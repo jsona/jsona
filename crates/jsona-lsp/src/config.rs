@@ -44,7 +44,7 @@ impl Default for SchemaConfig {
         Self {
             enabled: true,
             associations: Default::default(),
-            schemastore: DEFAULT_SCHEMASTORE.parse().unwrap(),
+            schemastore: DEFAULT_SCHEMASTORE.clone(),
         }
     }
 }

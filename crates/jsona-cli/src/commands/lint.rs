@@ -10,7 +10,7 @@ use jsona_util::{
     util::to_file_uri,
 };
 use serde_json::json;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::io::AsyncReadExt;
 use url::Url;
 
@@ -19,17 +19,13 @@ impl<E: Environment> App<E> {
         self.schemas.set_cache_path(cmd.general.cache_path.clone());
         let config = self.load_config(&cmd.general).await?;
 
+        let root = self.env.cwd().unwrap_or_else(|| PathBuf::from("/"));
         if !cmd.no_schema {
             if let Some(schema_uri) = cmd.schema.clone() {
                 let url: Url = match schema_uri.parse() {
                     Ok(url) => url,
-                    Err(_) => {
-                        let cwd = self.env.cwd().ok_or_else(|| {
-                            anyhow!("could not figure the current working directory")
-                        })?;
-                        to_file_uri(&schema_uri, &Some(cwd))
-                            .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_uri))?
-                    }
+                    Err(_) => to_file_uri(&schema_uri, &Some(root.clone()))
+                        .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_uri))?,
                 };
                 self.schemas.associations().add(
                     AssociationRule::glob("**")?,
@@ -45,7 +41,7 @@ impl<E: Environment> App<E> {
                 if let Some(store) = &cmd.schemastore {
                     self.schemas
                         .associations()
-                        .add_from_schemastore(store)
+                        .add_from_schemastore(store, &root)
                         .await
                         .with_context(|| "failed to load schema store")?;
                 }
@@ -53,7 +49,7 @@ impl<E: Environment> App<E> {
                 if cmd.default_schemastore {
                     self.schemas
                         .associations()
-                        .add_from_schemastore(&DEFAULT_SCHEMASTORE.parse().unwrap())
+                        .add_from_schemastore(&DEFAULT_SCHEMASTORE, &root)
                         .await
                         .with_context(|| "failed to load schema store")?;
                 }

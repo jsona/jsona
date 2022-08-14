@@ -38,6 +38,17 @@ impl GlobRule {
         })
     }
 
+    pub fn preprocessing_pattern(pattern: &str, base: &str) -> String {
+        let path = to_unix(pattern);
+        if path.starts_with('/') {
+            format!("{}{}", base, path)
+        } else if path.starts_with('*') {
+            path
+        } else {
+            format!("**{}", path)
+        }
+    }
+
     pub fn is_match(&self, path: impl AsRef<Path>) -> bool {
         if !self.include.is_match(path.as_ref()) {
             return false;

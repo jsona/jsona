@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use jsona::dom::{KeyOrIndex, Node};
+use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -18,8 +19,9 @@ use crate::{
     HashMap,
 };
 
-pub const DEFAULT_SCHEMASTORE: &str =
-    "https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json";
+pub static DEFAULT_SCHEMASTORE: Lazy<Url> = Lazy::new(|| {
+    Url::parse("https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json").unwrap()
+});
 
 pub const SCHEMA_KEY: &str = "@jsonaschema";
 
@@ -69,10 +71,15 @@ impl<E: Environment> SchemaAssociations<E> {
         self.cache.lock().clear();
     }
 
-    pub async fn add_from_schemastore(&self, url: &Url) -> Result<(), anyhow::Error> {
+    pub async fn add_from_schemastore(&self, url: &Url, base: &Path) -> Result<(), anyhow::Error> {
+        let base = to_unix(remove_tail_slash(base.display().to_string()));
         let schemastore = self.load_schemastore(url).await?;
         for schema in &schemastore.0 {
-            match GlobRule::new(&schema.file_match, [] as [&str; 0]) {
+            let include = schema
+                .file_match
+                .iter()
+                .map(|v| GlobRule::preprocessing_pattern(v, &base));
+            match GlobRule::new(include, [] as [&str; 0]) {
                 Ok(rule) => {
                     self.add(
                         rule.into(),
@@ -224,21 +231,21 @@ impl From<Url> for AssociationRule {
 }
 
 impl AssociationRule {
-    pub fn new(pattern: &str, base: &Path) -> Result<Self, anyhow::Error> {
-        if is_url(pattern) {
-            let url: Url = pattern.parse()?;
-            return Ok(Self::Url(url));
-        }
+    pub fn batch(patterns: &[String], base: &Path) -> Result<Vec<Self>, anyhow::Error> {
         let base = to_unix(remove_tail_slash(base.display().to_string()));
-        let pattern = to_unix(pattern);
-        let pattern = if pattern.starts_with('/') {
-            format!("{}{}", base, pattern)
-        } else if pattern.starts_with('*') {
-            pattern
-        } else {
-            format!("**{}", pattern)
-        };
-        Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
+        let mut rules = vec![];
+        let mut glob_includes = vec![];
+        for pattern in patterns {
+            if is_url(pattern) {
+                rules.push(Self::Url(pattern.parse()?));
+            } else {
+                glob_includes.push(GlobRule::preprocessing_pattern(pattern, &base));
+            }
+        }
+        if !glob_includes.is_empty() {
+            rules.push(Self::Glob(GlobRule::new(&glob_includes, &[] as &[&str])?));
+        }
+        Ok(rules)
     }
 
     pub fn glob(pattern: &str) -> Result<Self, anyhow::Error> {
@@ -295,11 +302,13 @@ mod tests {
     use std::path::PathBuf;
     macro_rules! assert_association_rule {
         ($t:expr, $p:expr, $b:expr, $r:expr) => {
+            let p: Vec<String> = $p.into_iter().map(|v| v.to_string()).collect();
             let t: Url = $t.parse().unwrap();
             assert_eq!(
-                AssociationRule::new($p, &PathBuf::from($b))
+                AssociationRule::batch(&p, &PathBuf::from($b))
                     .unwrap()
-                    .is_match(&t),
+                    .iter()
+                    .any(|v| v.is_match(&t)),
                 $r
             );
         };
@@ -307,14 +316,14 @@ mod tests {
 
     #[test]
     fn test_association_rule() {
-        assert_association_rule!("file:///home/u1/abc", "abc", "/home/u1", true);
-        assert_association_rule!("file:///home/u1/abc", "abc", "/home/u1/", true);
-        assert_association_rule!("file:///home/u1/abc", "ab*", "/home/u1", true);
-        assert_association_rule!("file:///home/u1/abcd", "ab*", "/home/u1", true);
-        assert_association_rule!("file:///home/u1/abcd", "ab*", "/home/u1", true);
-        assert_association_rule!("file:///home/u1/p1/abc", "abc", "/home/u1", true);
-        assert_association_rule!("file:///c%3A/abc", "abc", "C:\\abc", true);
-        assert_association_rule!("file:///c%3A/abc", "abc", "C:\\abc\\", true);
-        assert_association_rule!("file:///home/u1/p1/abc", "/abc", "/home/u1", false);
+        assert_association_rule!("file:///home/u1/abc", ["abc"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/abc", ["abc"], "/home/u1/", true);
+        assert_association_rule!("file:///home/u1/abc", ["ab*"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/abcd", ["ab*"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/abcd", ["ab*"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["abc"], "/home/u1", true);
+        assert_association_rule!("file:///c%3A/abc", ["abc"], "C:\\abc", true);
+        assert_association_rule!("file:///c%3A/abc", ["abc"], "C:\\abc\\", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["/abc"], "/home/u1", false);
     }
 }
