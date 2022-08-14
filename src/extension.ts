@@ -90,7 +90,7 @@ async function updateSchemaIndicator(c: BaseLanguageClient, editor: vscode.TextE
 }
 
 function resetSchemaIndicator(schemaIndicator: vscode.StatusBarItem) {
-  schemaIndicator.text = "No JSONA Schema";
+  schemaIndicator.text = "no schema";
   schemaIndicator.tooltip = "Select JSONA Schema";
   schemaIndicator.command = "jsona.selectSchema";
 }
