@@ -9,11 +9,10 @@ export function register(ctx: vscode.ExtensionContext, c: BaseLanguageClient) {
         if (!editor) {
           return;
         }
+        let documentUri = editor.document.uri.toString();
 
         const schemasResp: { schemas: { url: string; meta?: any }[] } =
-          await c.sendRequest("jsona/listSchemas", {
-            documentUri: editor.document.uri.toString(),
-          });
+          await c.sendRequest("jsona/listSchemas", { documentUri });
 
         interface SchemaItem extends vscode.QuickPickItem {
           url: string;
@@ -21,9 +20,7 @@ export function register(ctx: vscode.ExtensionContext, c: BaseLanguageClient) {
         }
 
         const selectedSchema: { schema?: { url: string } } =
-          await c.sendRequest("jsona/associatedSchema", {
-            documentUri: editor.document.uri.toString(),
-          });
+          await c.sendRequest("jsona/associatedSchema", { documentUri });
 
         const selection = await vscode.window.showQuickPick<SchemaItem>(
           schemasResp.schemas.map(s => ({
@@ -39,18 +36,37 @@ export function register(ctx: vscode.ExtensionContext, c: BaseLanguageClient) {
         if (!selection) {
           return;
         }
-
-        c.sendNotification("jsona/associateSchema", {
-          documentUri: editor.document.uri.toString(),
-          schemaUri: selection.url,
-          rule: {
-            url: editor.document.uri.toString(),
-          },
-          meta: selection.meta,
-        });
+        writeSchemaAssociations(selection.url, documentUri);
       }
     )
   );
+}
+
+function writeSchemaAssociations(schemaUrl: string, fileUrl: string) {
+    const associations: Record<string, string[]> = vscode.workspace.getConfiguration("jsona").get("schema.associations");
+    const newAssociations = Object.assign({}, associations);
+    deleteExistingAssociationFile(newAssociations, fileUrl);
+    let schemaAssociations = newAssociations[schemaUrl];
+    if (!schemaAssociations) {
+      newAssociations[schemaUrl] = [fileUrl];
+    } else {
+      newAssociations[schemaUrl] = [...schemaAssociations, fileUrl];
+    }
+   vscode.workspace.getConfiguration("jsona").update("schema.associations", newAssociations);
+}
+
+function deleteExistingAssociationFile(associations: Record<string, string[]>, fileUri: string) {
+  for (const key in associations) {
+    if (Object.prototype.hasOwnProperty.call(associations, key)) {
+      const element = associations[key];
+      if (Array.isArray(element)) {
+        const filePatterns = element.filter((val) => val !== fileUri);
+        associations[key] = filePatterns;
+      } else {
+        delete associations[key];
+      }
+    }
+  }
 }
 
 function schemaDescription(meta: any | undefined): string | undefined {
