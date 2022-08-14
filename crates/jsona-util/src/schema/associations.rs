@@ -57,11 +57,6 @@ impl<E: Environment> SchemaAssociations<E> {
         self.cache.lock().clear();
     }
 
-    pub fn retain(&self, f: impl Fn(&(AssociationRule, SchemaAssociation)) -> bool) {
-        self.associations.write().retain(f);
-        self.cache.lock().clear();
-    }
-
     pub fn read(&self) -> RwLockReadGuard<'_, Vec<(AssociationRule, SchemaAssociation)>> {
         self.associations.read()
     }
@@ -104,12 +99,23 @@ impl<E: Environment> SchemaAssociations<E> {
 
     /// Adds the schema from a `@jsonaschema` annotation in the root.
     pub fn add_from_document(&self, doc_url: &Url, root: &Node) {
-        self.retain(|(rule, assoc)| match rule {
-            AssociationRule::Url(u) => {
-                !(u == doc_url && assoc.meta["source"] == source::SCHEMA_FIELD)
-            }
-            _ => true,
-        });
+        let mut dirty = false;
+        self.associations
+            .write()
+            .retain(|(rule, assoc)| match rule {
+                AssociationRule::Url(u) => {
+                    if u == doc_url && assoc.meta["source"] == source::SCHEMA_FIELD {
+                        dirty = true;
+                        false
+                    } else {
+                        true
+                    }
+                }
+                _ => true,
+            });
+        if dirty {
+            self.cache.lock().clear();
+        }
         if let Some(url) = root
             .get(&KeyOrIndex::annotation(SCHEMA_KEY))
             .and_then(|v| v.as_string().cloned())
@@ -148,7 +154,7 @@ impl<E: Environment> SchemaAssociations<E> {
         }
     }
 
-    pub fn association_for(&self, file: &Url) -> Option<Arc<SchemaAssociation>> {
+    pub fn query_for(&self, file: &Url) -> Option<Arc<SchemaAssociation>> {
         if let Some(assoc) = self.cache.lock().get(file).cloned() {
             return assoc;
         }

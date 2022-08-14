@@ -75,7 +75,6 @@ impl<E: Environment> Schemas<E> {
         schema_uri: &Url,
     ) -> Result<Arc<JSONASchemaValue>, anyhow::Error> {
         if let Some(s) = self.schemas.lock().get(schema_uri).cloned() {
-            tracing::debug!(%schema_uri, "schema was found in cache");
             return Ok(s);
         }
 

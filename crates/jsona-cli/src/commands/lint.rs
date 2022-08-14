@@ -131,7 +131,7 @@ impl<E: Environment> App<E> {
             .associations()
             .add_from_document(&file_uri, &dom);
 
-        if let Some(schema_association) = self.schemas.associations().association_for(&file_uri) {
+        if let Some(schema_association) = self.schemas.associations().query_for(&file_uri) {
             tracing::debug!(
                 schema.url = %schema_association.url,
                 schema.name = schema_association.meta["name"].as_str().unwrap_or(""),

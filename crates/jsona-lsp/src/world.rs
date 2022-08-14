@@ -152,14 +152,11 @@ impl<E: Environment> WorkspaceState<E> {
 
         tracing::debug!("Use lsp_config {:#?}", lsp_config);
 
+        self.schemas.associations().clear();
+
         if !self.lsp_config.schema.enabled {
-            self.schemas.associations().clear();
             return Ok(());
         }
-
-        self.schemas
-            .associations()
-            .retain(|(_, assoc)| assoc.meta["source"] == "manual");
 
         self.schemas
             .associations()
@@ -261,7 +258,7 @@ impl<E: Environment> WorkspaceState<E> {
     }
 
     pub(crate) async fn schemas_at_path(&self, file: &Url, path: &Keys) -> Option<Vec<Schema>> {
-        let schema_association = self.schemas.associations().association_for(file)?;
+        let schema_association = self.schemas.associations().query_for(file)?;
         match self
             .schemas
             .schemas_at_path(&schema_association.url, path)

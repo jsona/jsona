@@ -69,12 +69,6 @@ pub(crate) async fn document_change<E: Environment>(
     let ws = workspaces.by_document_mut(document_uri);
     let dom = parse.clone().into_dom();
 
-    if ws.lsp_config.schema.enabled {
-        ws.schemas
-            .associations()
-            .add_from_document(document_uri, &dom);
-    }
-
     ws.documents
         .insert(document_uri.clone(), DocumentState { parse, dom, mapper });
 
