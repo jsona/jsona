@@ -23,13 +23,7 @@ export namespace Server {
 
 export namespace Client {
   interface ClientNotifications {
-    "jsona/associateSchemas": {
-      params: {
-        associations: AssociateSchema[]
-      };
-    };
   }
-
   interface ClientRequests {
     "jsona/listSchemas": {
       params: {
@@ -78,18 +72,7 @@ interface RequestDescription {
   readonly response: any;
 }
 
-export type AssociationRule =
-  | { glob: string }
-  | { regex: string }
-  | { url: string };
-
 export interface SchemaInfo {
   url: string;
   meta: any;
-}
-
-export interface AssociateSchema {
-  schemaUri: string;
-  rule: AssociationRule;
-  meta?: any;
 }

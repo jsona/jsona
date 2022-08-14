@@ -617,7 +617,7 @@ dependencies = [
 [[package]]
 name = "jsona"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
+source = "git+https://github.com/jsona/jsona.git#913783904f829f43f0d11c681d1e060a6525f399"
 dependencies = [
  "arc-swap",
  "indexmap",
@@ -632,7 +632,7 @@ dependencies = [
 [[package]]
 name = "jsona-cli"
 version = "0.4.0"
-source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
+source = "git+https://github.com/jsona/jsona.git#913783904f829f43f0d11c681d1e060a6525f399"
 dependencies = [
  "anyhow",
  "async-ctrlc",
@@ -654,7 +654,7 @@ dependencies = [
 [[package]]
 name = "jsona-lsp"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
+source = "git+https://github.com/jsona/jsona.git#913783904f829f43f0d11c681d1e060a6525f399"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -668,12 +668,12 @@ dependencies = [
  "jsona-util",
  "lsp-async-stub",
  "lsp-types",
+ "md5",
  "once_cell",
  "parking_lot",
  "regex",
  "serde",
  "serde_json",
- "tap",
  "time",
  "tracing",
  "url",
@@ -682,7 +682,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
+source = "git+https://github.com/jsona/jsona.git#913783904f829f43f0d11c681d1e060a6525f399"
 dependencies = [
  "either",
  "fancy-regex 0.10.0",
@@ -696,7 +696,7 @@ dependencies = [
 [[package]]
 name = "jsona-schema-validator"
 version = "0.1.1"
-source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
+source = "git+https://github.com/jsona/jsona.git#913783904f829f43f0d11c681d1e060a6525f399"
 dependencies = [
  "indexmap",
  "jsona",
@@ -710,7 +710,7 @@ dependencies = [
 [[package]]
 name = "jsona-util"
 version = "0.2.0"
-source = "git+https://github.com/jsona/jsona.git#d1f9ce9525ccfaa61e00f42fc805e071c5a3b90d"
+source = "git+https://github.com/jsona/jsona.git#913783904f829f43f0d11c681d1e060a6525f399"
 dependencies = [
  "ahash",
  "anyhow",
@@ -725,12 +725,12 @@ dependencies = [
  "jsona-schema-validator",
  "jsonschema",
  "md5",
+ "once_cell",
  "parking_lot",
  "regex",
  "reqwest",
  "serde",
  "serde_json",
- "tap",
  "time",
  "tokio",
  "tracing",
@@ -1076,9 +1076,9 @@ checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
 
 [[package]]
 name = "os_str_bytes"
-version = "6.2.0"
+version = "6.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "648001efe5d5c0102d8cea768e348da85d90af8ba91f0bea908f157951493cd4"
+checksum = "9ff7415e9ae3fff1225851df9e0d9e4e5479f947619774677a63572e55e80eff"
 
 [[package]]
 name = "parking_lot"
@@ -1425,12 +1425,6 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
-
-[[package]]
-name = "tap"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "termcolor"
