@@ -1,5 +1,4 @@
 use crate::{
-    diagnostics::publish_diagnostics,
     lsp_ext::{
         notification::{self, AssociateSchemasParams},
         request::{
@@ -96,22 +95,8 @@ pub async fn associate_schemas<E: Environment>(
 
                     ws.schemas.associations().add(rule, assoc.clone());
                 }
-                notification::AssociationRule::Url(document_uri) => {
-                    ws.schemas
-                        .associations()
-                        .retain(|(rule, assoc)| match rule {
-                            AssociationRule::Url(u) => {
-                                !(u == document_uri && assoc.meta["source"] == source::MANUAL)
-                            }
-                            _ => true,
-                        });
-
-                    ws.schemas
-                        .associations()
-                        .add(AssociationRule::Url(document_uri.clone()), assoc.clone());
-
-                    let ws_root = ws.root.clone();
-                    publish_diagnostics(context.clone(), ws_root, document_uri.clone()).await;
+                notification::AssociationRule::Url(url) => {
+                    ws.schemas.associations().add(url.into(), assoc.clone());
                 }
             };
         }

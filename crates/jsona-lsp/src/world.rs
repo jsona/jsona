@@ -24,8 +24,6 @@ use lsp_types::Url;
 use once_cell::sync::Lazy;
 use serde_json::{json, Value};
 use std::{path::PathBuf, sync::Arc};
-use uuid::Uuid;
-
 pub type World<E> = Arc<WorldState<E>>;
 
 #[repr(transparent)]
@@ -90,8 +88,12 @@ pub static DEFAULT_WORKSPACE_URL: Lazy<Url> = Lazy::new(|| Url::parse("root:///"
 
 impl<E: Environment> WorldState<E> {
     pub fn new(env: E) -> Self {
+        let id = format!(
+            "{:x}",
+            md5::compute(format!("JSONA-{}", env.now().unix_timestamp_nanos()))
+        );
         Self {
-            id: Uuid::new_v4().to_string(),
+            id,
             workspaces: AsyncRwLock::new(Workspaces(IndexMap::default())),
             initialization_options: Default::default(),
             default_config: Default::default(),
@@ -148,13 +150,16 @@ impl<E: Environment> WorkspaceState<E> {
         self.load_config(&context.env, &*context.world().default_config.load())
             .await?;
 
+        tracing::debug!("Use lsp_config {:#?}", lsp_config);
+
+        if !self.lsp_config.schema.enabled {
+            self.schemas.associations().clear();
+            return Ok(());
+        }
+
         self.schemas
             .associations()
             .retain(|(_, assoc)| assoc.meta["source"] == "manual");
-
-        if !self.lsp_config.schema.enabled {
-            return Ok(());
-        }
 
         self.schemas
             .associations()
@@ -186,7 +191,7 @@ impl<E: Environment> WorkspaceState<E> {
             .add_from_schemastore(store_url)
             .await
         {
-            tracing::error!(%error, url=%store_url, "failed to set schemastore");
+            tracing::error!(%error, url=%store_url, "failed to load schemastore");
         }
 
         self.emit_initialize_workspace(context.clone()).await;
@@ -203,10 +208,6 @@ impl<E: Environment> WorkspaceState<E> {
             self.jsona_config = default_config.clone();
             return Ok(());
         }
-
-        if self.root == *DEFAULT_WORKSPACE_URL {
-            return Ok(());
-        };
 
         let mut config_path = self.lsp_config.config_file.path.clone();
         if let Some(path) = config_path.as_ref() {
@@ -243,7 +244,7 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         self.jsona_config.prepare(config_path)?;
-        tracing::debug!("using config: {:#?}", self.jsona_config);
+        tracing::debug!("using jsona config: {:#?}", self.jsona_config);
 
         Ok(())
     }
