@@ -6,7 +6,7 @@ use codespan_reporting::files::SimpleFile;
 use jsona::parser;
 use jsona_util::{
     environment::Environment,
-    schema::associations::{AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORE},
+    schema::associations::{AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORE_URI},
     util::to_file_uri,
 };
 use serde_json::json;
@@ -49,7 +49,7 @@ impl<E: Environment> App<E> {
                 if cmd.default_schemastore {
                     self.schemas
                         .associations()
-                        .add_from_schemastore(&DEFAULT_SCHEMASTORE, &root)
+                        .add_from_schemastore(&DEFAULT_SCHEMASTORE_URI, &root)
                         .await
                         .with_context(|| "failed to load schema store")?;
                 }

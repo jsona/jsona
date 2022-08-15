@@ -5,6 +5,7 @@ let output: vscode.OutputChannel;
 
 export const ID = "JSONA";
 export const NAME = "JSONA Language Server";
+export const SCHEMA_CACHE_KEY = "jsona.schema.cache"
 
 export function getOutput(): vscode.OutputChannel {
   if (!output) {

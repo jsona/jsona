@@ -19,7 +19,7 @@ use crate::{
     HashMap,
 };
 
-pub static DEFAULT_SCHEMASTORE: Lazy<Url> = Lazy::new(|| {
+pub static DEFAULT_SCHEMASTORE_URI: Lazy<Url> = Lazy::new(|| {
     Url::parse("https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json").unwrap()
 });
 

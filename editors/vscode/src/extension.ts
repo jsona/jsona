@@ -1,8 +1,8 @@
 import type { Lsp } from "@jsona/lsp";
 import * as vscode from "vscode";
-import { createClient } from "./client";
+import { createClient, syncSchemaCache } from "./client";
 import { registerCommands } from "./commands";
-import { showMessage, getOutput } from "./util";
+import { showMessage, getOutput, SCHEMA_CACHE_KEY } from "./util";
 import { BaseLanguageClient } from "vscode-languageclient";
 
 
@@ -21,6 +21,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     getOutput(),
     schemaIndicator,
+    vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration(SCHEMA_CACHE_KEY)) {
+        syncSchemaCache(context);
+      }
+    }),
     vscode.window.onDidChangeActiveTextEditor(async editor => {
       updateSchemaIndicator(c, editor, schemaIndicator);
     }),
