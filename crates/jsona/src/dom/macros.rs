@@ -27,10 +27,6 @@ macro_rules! wrap_node {
             fn annotations(&self) -> Option<&$crate::dom::node::Annotations> {
                 self.inner.annotations.as_ref()
             }
-
-            fn validate_node(&self) -> Result<(), &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>>> {
-                self.validate_impl()
-            }
         }
 
         impl $inner {
@@ -85,14 +81,6 @@ impl DomNode for Node {
         match self {
             $(
             Node::$elm(v) => v.annotations(),
-            )*
-        }
-    }
-
-    fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
-        match self {
-            $(
-            Node::$elm(v) => v.validate_node(),
             )*
         }
     }

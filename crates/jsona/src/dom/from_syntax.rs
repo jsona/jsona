@@ -400,12 +400,8 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
     add_to_map(map, errors, key, value, Some(syntax.into()));
 }
 
-fn null_from_syntax(
-    syntax: SyntaxElement,
-    annotations: Option<Annotations>,
-    invalid: bool,
-) -> Node {
-    let errors = if invalid {
+fn null_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>, error: bool) -> Node {
+    let errors = if error {
         Vec::from([Error::UnexpectedSyntax {
             syntax: syntax.clone(),
         }])
