@@ -164,7 +164,8 @@ fn parse_node(scope: Scope) -> Result<Schema> {
         } else {
             return Err(Error::mismatch_type(scope.keys.clone()));
         }
-    } else if schema_type == "any" {
+    } 
+	if exist_annotation(&scope, "@anytype") {
         schema.schema_type = None;
     }
     if !def_value.is_empty() {
