@@ -17,7 +17,7 @@ pub enum SyntaxKind {
     #[regex(r"/\*", lex_comment_block)]
     BLOCK_COMMENT,
 
-    #[regex(r"//[^\n]*")]
+    #[regex(r"//[^\n\r]*")]
     LINE_COMMENT,
 
     #[regex(r"[A-Za-z0-9_]+", priority = 2)]

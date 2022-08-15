@@ -23,7 +23,7 @@ pub fn from_syntax(root: SyntaxElement) -> Node {
             SCALAR => scalar_from_syntax(root, syntax, annotations),
             ARRAY => array_from_syntax(root, syntax, annotations),
             OBJECT => object_from_syntax(root, syntax, annotations),
-            k => unreachable!("unexpected syntax {:?}", k),
+            _ => null_from_syntax(root, annotations, true),
         }
     } else {
         null_from_syntax(root, annotations, false)
@@ -133,7 +133,7 @@ fn scalar_from_syntax(
     let errors: Vec<Error> = Default::default();
     let syntax = match syntax.into_node().and_then(|v| v.first_child_or_token()) {
         Some(v) => v,
-        _ => unreachable!("scalar syntax must contain a token"),
+        _ => return null_from_syntax(root, annotations, true),
     };
     match syntax.kind() {
         NULL => NullInner {
@@ -211,7 +211,7 @@ fn scalar_from_syntax(
                 .wrap()
                 .into()
             } else {
-                unreachable!("unexpected float token {}", syntax.to_string())
+                null_from_syntax(root, annotations, true)
             }
         }
         SINGLE_QUOTE => StringInner {
