@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 set -e
 
 CRATES=( \
@@ -33,11 +34,16 @@ run() {
 # @arg entry=test-data
 chrome() {
     if [[ -z $argc_no_build ]]; then
-        build.vscode browser
+        vscode browser
     fi
     vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
 }
 
+# @cmd Build vscode extension
+build() {
+    js all
+    vscode package
+}
 
 # @cmd Build jsona-cli
 # @alias i
@@ -56,9 +62,8 @@ install() {
 
 # @cmd Build js
 # @flag --debug
-# @flag --sync
 # @arg name[core|util-types|lsp|all]
-build.js() {
+js() {
     __run() {
         name=$1
         yarn --cwd js workspace @jsona/$name build
@@ -81,7 +86,7 @@ build.js() {
 
 # @cmd Build vscode extension
 # @arg kind[node|browser|vsix|all]
-build.vscode() {
+vscode() {
     export RUST_LOG="debug"
     export LOG_TOPICS="lsp2host,host2lsp"
     pushd editors/vscode > /dev/null
