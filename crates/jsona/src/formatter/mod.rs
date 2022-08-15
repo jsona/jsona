@@ -433,6 +433,9 @@ fn format_annotation_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
         scope.write(&syntax.to_string());
         return;
     }
+    if syntax.text() == "(null)" {
+        return;
+    }
     for c in syntax.children_with_tokens() {
         match c {
             NodeOrToken::Node(n) => {
