@@ -320,11 +320,16 @@ mod tests {
         assert_association_rule!("file:///home/u1/abc", ["abc"], "/home/u1", true);
         assert_association_rule!("file:///home/u1/abc", ["abc"], "/home/u1/", true);
         assert_association_rule!("file:///home/u1/abc", ["ab*"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/abc", ["*bc"], "/home/u1", true);
         assert_association_rule!("file:///home/u1/abcd", ["ab*"], "/home/u1", true);
         assert_association_rule!("file:///home/u1/abcd", ["ab*"], "/home/u1", true);
         assert_association_rule!("file:///home/u1/p1/abc", ["abc"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["*abc"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["*/abc"], "/home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["**/abc"], "/home/u1", true);
         assert_association_rule!("file:///c%3A/abc", ["abc"], "C:\\abc", true);
         assert_association_rule!("file:///c%3A/abc", ["abc"], "C:\\abc\\", true);
         assert_association_rule!("file:///home/u1/p1/abc", ["/abc"], "/home/u1", false);
+        assert_association_rule!("file:///home/u1/p1/abc", ["/abc"], "/home/u1/p1", true);
     }
 }

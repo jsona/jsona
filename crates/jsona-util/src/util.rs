@@ -60,10 +60,8 @@ impl GlobRule {
         let path = to_unix(pattern);
         if path.starts_with('/') {
             format!("{}{}", base, path)
-        } else if path.starts_with('*') {
-            path
         } else {
-            format!("**{}", path)
+            format!("**/{}", path)
         }
     }
 
