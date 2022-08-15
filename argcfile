@@ -149,6 +149,12 @@ example.format() {
     cargo run -p jsona --example format -- $argc_jsona_file
 }
 
+# @cmd Jsona node to_string
+# @arg jsona_file!
+example.to_string() {
+    cargo run -p jsona --example to_string -- $argc_jsona_file
+}
+
 # @cmd Convert jsona jsonschema to plain jsonschema
 # @arg jsona_file!
 # @arg pointer
