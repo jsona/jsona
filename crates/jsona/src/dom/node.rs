@@ -20,10 +20,6 @@ pub trait DomNode: Sized + Sealed {
     fn syntax(&self) -> Option<&SyntaxElement>;
     fn errors(&self) -> &Shared<Vec<Error>>;
     fn annotations(&self) -> Option<&Annotations>;
-    fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>>;
-    fn is_valid_node(&self) -> bool {
-        self.validate_node().is_ok()
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -77,12 +73,10 @@ impl Node {
         }
     }
 
-    pub fn text_range(&self) -> Option<TextRange> {
-        self.syntax().map(|v| v.text_range())
-    }
-
-    pub fn node_text_range(&self) -> Option<TextRange> {
-        self.node_syntax().map(|v| v.text_range())
+    pub fn is_valid(&self) -> bool {
+        let mut valid = true;
+        self.is_valid_impl(&mut valid);
+        valid
     }
 
     pub fn is_scalar(&self) -> bool {
@@ -90,6 +84,14 @@ impl Node {
             self,
             Node::Null(_) | Node::Bool(_) | Node::Number(_) | Node::String(_)
         )
+    }
+
+    pub fn text_range(&self) -> Option<TextRange> {
+        self.syntax().map(|v| v.text_range())
+    }
+
+    pub fn node_text_range(&self) -> Option<TextRange> {
+        self.node_syntax().map(|v| v.text_range())
     }
 
     pub fn matches_all(
@@ -112,7 +114,7 @@ impl Node {
     pub fn scalar_text(&self) -> Option<StdString> {
         match self {
             Node::Null(v) => {
-                if v.is_valid_node() {
+                if v.errors().read().is_empty() {
                     Some("null".to_string())
                 } else {
                     None
@@ -143,64 +145,118 @@ impl Node {
         }
     }
 
-    fn validate_all_impl(&self, errors: &mut Vec<Error>) {
+    fn is_valid_impl(&self, valid: &mut bool) {
         match self {
             Node::Object(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
+                if !v.errors().read().as_ref().is_empty() {
+                    *valid = false;
+                    return;
                 }
-
                 let items = v.inner.properties.read();
                 for (k, entry) in items.as_ref().kv_iter() {
-                    if let Err(errs) = k.validate_node() {
-                        errors.extend(errs.read().as_ref().iter().cloned())
+                    if !k.is_valid() {
+                        *valid = false;
+                        return;
                     }
-                    entry.validate_all_impl(errors);
+                    entry.is_valid_impl(valid);
+                    if !*valid {
+                        return;
+                    }
                 }
             }
             Node::Array(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
+                if !v.errors().read().as_ref().is_empty() {
+                    *valid = false;
+                    return;
                 }
-
                 let items = v.inner.items.read();
                 for item in &**items.as_ref() {
-                    if let Err(errs) = item.validate_node() {
-                        errors.extend(errs.read().as_ref().iter().cloned())
+                    item.is_valid_impl(valid);
+                    if !*valid {
+                        return;
                     }
                 }
             }
             Node::Bool(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
+                if !v.errors().read().as_ref().is_empty() {
+                    *valid = false;
+                    return;
                 }
             }
             Node::String(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
+                if !v.errors().read().as_ref().is_empty() {
+                    *valid = false;
+                    return;
                 }
             }
             Node::Number(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
+                if !v.errors().read().as_ref().is_empty() {
+                    *valid = false;
+                    return;
                 }
             }
             Node::Null(v) => {
-                if let Err(errs) = v.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
+                if !v.errors().read().as_ref().is_empty() {
+                    *valid = false;
+                    return;
                 }
             }
         }
         if let Some(v) = self.annotations() {
-            if let Err(errs) = v.validate_node() {
-                errors.extend(errs.read().as_ref().iter().cloned())
+            if !v.errors().read().as_ref().is_empty() {
+                *valid = false;
+                return;
             }
-
             let items = v.inner.map.read();
             for (k, node) in items.as_ref().kv_iter() {
-                if let Err(errs) = k.validate_node() {
-                    errors.extend(errs.read().as_ref().iter().cloned())
+                if !k.errors().read().as_ref().is_empty() {
+                    *valid = false;
+                    return;
                 }
+                node.is_valid_impl(valid);
+                if !*valid {
+                    return;
+                }
+            }
+        }
+    }
+
+    fn validate_all_impl(&self, errors: &mut Vec<Error>) {
+        match self {
+            Node::Object(v) => {
+                errors.extend(v.errors().read().as_ref().iter().cloned());
+
+                let items = v.inner.properties.read();
+                for (k, entry) in items.as_ref().kv_iter() {
+                    errors.extend(k.errors().read().as_ref().iter().cloned());
+                    entry.validate_all_impl(errors);
+                }
+            }
+            Node::Array(v) => {
+                errors.extend(v.errors().read().as_ref().iter().cloned());
+                let items = v.inner.items.read();
+                for item in &**items.as_ref() {
+                    item.validate_all_impl(errors);
+                }
+            }
+            Node::Bool(v) => {
+                errors.extend(v.errors().read().as_ref().iter().cloned());
+            }
+            Node::String(v) => {
+                errors.extend(v.errors().read().as_ref().iter().cloned());
+            }
+            Node::Number(v) => {
+                errors.extend(v.errors().read().as_ref().iter().cloned());
+            }
+            Node::Null(v) => {
+                errors.extend(v.errors().read().as_ref().iter().cloned());
+            }
+        }
+        if let Some(v) = self.annotations() {
+            errors.extend(v.errors().read().as_ref().iter().cloned());
+            let items = v.inner.map.read();
+            for (k, node) in items.as_ref().kv_iter() {
+                errors.extend(k.errors().read().as_ref().iter().cloned());
                 node.validate_all_impl(errors);
             }
         }
@@ -263,12 +319,8 @@ wrap_node! {
 }
 
 impl Null {
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
+    pub fn is_valid(&self) -> bool {
+        Node::Null(self.clone()).is_valid()
     }
 }
 
@@ -307,14 +359,6 @@ impl Bool {
                 .and_then(|s| s.text().parse().ok())
                 .unwrap_or_default()
         })
-    }
-
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
     }
 }
 
@@ -391,14 +435,6 @@ impl Number {
                 .unwrap_or_else(|| JsonNumber::from(0))
         })
     }
-
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
-    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -471,15 +507,6 @@ impl String {
                 .unwrap_or_default()
         })
     }
-
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        let _ = self.value();
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
-    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -530,14 +557,6 @@ impl Array {
     pub fn value(&self) -> &Shared<Vec<Node>> {
         &self.inner.items
     }
-
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -587,14 +606,6 @@ impl Object {
             .kv_iter()
             .map(|(k, _)| k.to_string())
             .collect()
-    }
-
-    fn validate_impl(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
     }
 }
 
@@ -699,6 +710,10 @@ impl Key {
             None => self.value().to_string(),
         }
     }
+
+    pub fn is_valid(&self) -> bool {
+        self.errors().read().is_empty()
+    }
 }
 
 impl Sealed for Key {}
@@ -717,15 +732,6 @@ impl DomNode for Key {
 
     fn annotations(&self) -> Option<&Annotations> {
         None
-    }
-
-    fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
-        let _ = self.value();
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
     }
 }
 
@@ -747,10 +753,10 @@ impl core::fmt::Display for Key {
 
 impl PartialEq for Key {
     fn eq(&self, other: &Self) -> bool {
-        if !self.is_valid_node() || !other.is_valid_node() {
-            return false;
+        if self.is_valid() && self.is_valid() {
+            return self.value().eq(other.value());
         }
-        self.value().eq(other.value())
+        false
     }
 }
 
@@ -758,11 +764,10 @@ impl Eq for Key {}
 
 impl std::hash::Hash for Key {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        if !self.is_valid_node() {
-            return 0.hash(state);
+        if self.is_valid() {
+            return self.value().hash(state);
         }
-
-        self.value().hash(state)
+        0.hash(state);
     }
 }
 
@@ -844,14 +849,6 @@ impl DomNode for Annotations {
 
     fn annotations(&self) -> Option<&Annotations> {
         None
-    }
-
-    fn validate_node(&self) -> Result<(), &Shared<Vec<Error>>> {
-        if self.errors().read().as_ref().is_empty() {
-            Ok(())
-        } else {
-            Err(self.errors())
-        }
     }
 }
 

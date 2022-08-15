@@ -14,7 +14,7 @@ impl Display for Node {
 }
 
 fn write_value(scope: Scope, value: &Node) {
-    if !value.is_valid_node() {
+    if !value.is_valid() {
         return;
     }
     match value {
@@ -83,7 +83,7 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
         Some(annotations) => {
             let annotations = annotations.value().read();
             for (key, value) in annotations.kv_iter() {
-                if !value.is_valid_node() {
+                if !value.is_valid() {
                     continue;
                 }
                 match value {

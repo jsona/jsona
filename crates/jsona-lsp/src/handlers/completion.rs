@@ -369,9 +369,6 @@ fn complete_value_schemaless(
 }
 
 fn completion_item_from_node(query: &Query, node: &Node) -> Option<CompletionItem> {
-    if !node.is_valid_node() {
-        return None;
-    }
     let (label, value) = match node {
         Node::Null(_) => ("null".to_string(), "null".to_string()),
         Node::Bool(v) => (v.value().to_string(), v.value().to_string()),
@@ -655,7 +652,7 @@ fn schema_from_node(node: &Node) -> Schema {
     let mut schema = Schema::default();
     let schema_type = match node {
         Node::Null(v) => {
-            if v.is_valid_node() {
+            if v.is_valid() {
                 "null"
             } else {
                 "any"

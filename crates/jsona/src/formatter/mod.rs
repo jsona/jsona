@@ -9,7 +9,7 @@ pub use options::*;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    dom::{from_syntax::key_from_syntax, DomNode},
+    dom::from_syntax::key_from_syntax,
     parser,
     syntax::{SyntaxKind::*, SyntaxNode, SyntaxToken},
 };
@@ -289,7 +289,7 @@ fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                     let mut text = n.to_string();
                     if scope.options.format_key {
                         let key = key_from_syntax(n.into());
-                        if key.is_valid_node() {
+                        if key.is_valid() {
                             text = key.to_string();
                         }
                     };
