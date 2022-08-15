@@ -261,6 +261,14 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
                     .map(|v| v.text_range().contains(offset))
                     .unwrap_or_default()
                 {
+                    if value.syntax().is_none()
+                        && key
+                            .syntax()
+                            .map(|v| v.text_range().contains(offset))
+                            .unwrap_or_default()
+                    {
+                        return Some((keys, node.clone()));
+                    }
                     return node_at_impl(value, offset, keys.join(key.into()));
                 }
             }

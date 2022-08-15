@@ -64,12 +64,10 @@ pub async fn completion<E: Environment>(
         Some(v) => v,
         None => return Ok(None),
     };
-    let query_keys = match &query.scope {
-        ScopeKind::AnnotationKey => {
-            Keys::single(Key::annotation(query.key.as_ref().unwrap().text()))
-        }
-        ScopeKind::PropertyKey => keys.parent().unwrap_or_default(),
-        _ => keys.clone(),
+    let query_keys = if let ScopeKind::AnnotationKey = &query.scope {
+        Keys::single(Key::annotation(query.key.as_ref().unwrap().text()))
+    } else {
+        keys.clone()
     };
 
     let schemas = ws.schemas_at_path(&document_uri, &query_keys).await;
@@ -77,6 +75,7 @@ pub async fn completion<E: Environment>(
         ?query,
         "completion keys={} schemas={}",
         keys,
+        // schemas.as_ref().and_then(|v| serde_json::to_string(&v).ok()).unwrap_or_default()
         schemas.is_some()
     );
 
