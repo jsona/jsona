@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as node from "vscode-languageclient/node";
 import * as browser from "vscode-languageclient/browser";
 import which from "which";
-import { getOutput, ID, NAME } from "./util";
+import { getOutput, ID, NAME, SCHEMA_CACHE_KEY } from "./util";
 import { BaseLanguageClient } from "vscode-languageclient";
 
 
@@ -100,8 +100,9 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       debug: run,
     };
   }
-  let cachePath = vscode.Uri.joinPath(context.globalStorageUri, "schema_cache");
-  await vscode.workspace.fs.createDirectory(cachePath);
+
+  let cachePath = await syncSchemaCache(context);
+
 
   return new node.LanguageClient(
     ID,
@@ -111,8 +112,20 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       outputChannel: getOutput(),
       documentSelector: [{ language: "jsona" }],
       initializationOptions: {
-        cachePath: cachePath.fsPath,
+        cachePath: cachePath?.fsPath,
       },
     }
   );
+}
+
+export async function syncSchemaCache(context: vscode.ExtensionContext) {
+  const cachePath = vscode.Uri.joinPath(context.globalStorageUri, "schema_cache");
+  try {
+    if (vscode.workspace.getConfiguration().get(SCHEMA_CACHE_KEY)) {
+      await vscode.workspace.fs.createDirectory(cachePath);
+    } else {
+      await vscode.workspace.fs.delete(cachePath, { recursive: true });
+    }
+  } catch (err) {}
+  return cachePath;
 }

@@ -13,7 +13,9 @@ use jsona_util::{
     config::Config,
     environment::Environment,
     schema::{
-        associations::{priority, source, AssociationRule, SchemaAssociation},
+        associations::{
+            priority, source, AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORE_URI,
+        },
         Schemas,
     },
     util::to_file_path,
@@ -140,17 +142,21 @@ impl<E: Environment> WorkspaceState<E> {
         context: Context<World<E>>,
         lsp_config: &Value,
     ) -> Result<(), anyhow::Error> {
-        self.schemas
-            .set_cache_path(context.initialization_options.load().cache_path.clone());
-
         if let Err(error) = self.lsp_config.update_from_json(lsp_config) {
             tracing::error!(?error, "invalid configuration");
         }
 
+        tracing::debug!("Use jsona_config {:#?}", self.lsp_config);
+
+        if self.lsp_config.schema.cache {
+            self.schemas
+                .set_cache_path(context.initialization_options.load().cache_path.clone());
+        } else {
+            self.schemas.set_cache_path(None);
+        }
+
         self.load_config(&context.env, &*context.world().default_config.load())
             .await?;
-
-        tracing::debug!("Use lsp_config {:#?}", lsp_config);
 
         self.schemas.associations().clear();
 
@@ -190,7 +196,12 @@ impl<E: Environment> WorkspaceState<E> {
                 }
             }
         }
-        let store_url = &self.lsp_config.schema.store_url;
+        let store_url = self
+            .lsp_config
+            .schema
+            .store_url
+            .as_ref()
+            .unwrap_or(&DEFAULT_SCHEMASTORE_URI);
 
         if let Err(error) = self
             .schemas
@@ -198,7 +209,7 @@ impl<E: Environment> WorkspaceState<E> {
             .add_from_schemastore(store_url, &root_path)
             .await
         {
-            tracing::error!(%error, url=%store_url, "failed to load schemastore");
+            tracing::error!(%error, url=?store_url, "failed to load schemastore");
         }
 
         self.emit_initialize_workspace(context.clone()).await;

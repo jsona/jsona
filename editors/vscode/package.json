@@ -104,6 +104,11 @@
           "default": null,
           "description": "URL of jsona schema store catalog to use"
         },
+        "jsona.schema.cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cache remote jsonschema to speed up extension startup. Turn it off then turn on to refresh the expired cache schemas"
+        },
         "jsona.formatter.indentString": {
           "scope": "resource",
           "type": "string",
