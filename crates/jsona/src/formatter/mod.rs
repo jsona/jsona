@@ -89,6 +89,7 @@ pub(crate) enum ScopeKind {
     Root,
     Array,
     Object,
+    Annotation,
 }
 
 impl Default for ScopeKind {
@@ -193,7 +194,7 @@ fn format_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                 SCALAR => format_scalar(scope.clone(), n, ctx),
                 OBJECT => format_object(scope.clone(), n, ctx),
                 ARRAY => format_array(scope.clone(), n, ctx),
-                ANNOTATIONS => format_annotations(scope.clone(), n, ctx),
+                ANNOTATIONS => format_annotations(scope.clone(), n, ctx, true),
                 _ => {}
             },
             NodeOrToken::Token(t) => match t.kind() {
@@ -244,7 +245,7 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                         }
                         format_entry(scope.clone(), n, ctx);
                     }
-                    ANNOTATIONS => format_annotations(scope.clone(), n, ctx),
+                    ANNOTATIONS => format_annotations(scope.clone(), n, ctx, false),
                     _ => {}
                 }
             }
@@ -337,7 +338,7 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
                         }
                         format_value(scope.clone(), n, ctx);
                     }
-                    ANNOTATIONS => format_annotations(scope.clone(), n, ctx),
+                    ANNOTATIONS => format_annotations(scope.clone(), n, ctx, false),
                     _ => {}
                 }
             }
@@ -370,7 +371,7 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     ctx.comma(&scope);
 }
 
-fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context, outside: bool) {
     if syntax.kind() != ANNOTATIONS {
         scope.write(&syntax.to_string());
         return;
@@ -381,7 +382,7 @@ fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
         match c {
             NodeOrToken::Node(n) => {
                 if n.kind() == ANNOTATION_PROPERTY {
-                    format_annotation_entry(scope.clone(), n, ctx);
+                    format_annotation_entry(scope.clone(), n, ctx, outside);
                 }
             }
             NodeOrToken::Token(t) => match t.kind() {
@@ -395,7 +396,7 @@ fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     ctx.compacts.pop();
 }
 
-fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
+fn format_annotation_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context, outside: bool) {
     if syntax.kind() != ANNOTATION_PROPERTY {
         scope.write(&syntax.to_string());
         return;
@@ -409,6 +410,9 @@ fn format_annotation_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) 
             },
             NodeOrToken::Token(t) => match t.kind() {
                 ANNOTATION_KEY => {
+                    if outside {
+                        scope = scope.enter(ScopeKind::Annotation);
+                    }
                     if ctx.col_offset > 0 && !scope.is_last_char(' ') {
                         ctx.col_offset += scope.write(" ");
                     }
