@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as node from "vscode-languageclient/node";
 import * as browser from "vscode-languageclient/browser";
 import which from "which";
-import { getOutput } from "./util";
+import { getOutput, ID, NAME } from "./util";
 import { BaseLanguageClient } from "vscode-languageclient";
 
 
@@ -23,9 +23,10 @@ async function createBrowserClient(context: vscode.ExtensionContext) {
   );
   const worker = new Worker(serverMain.toString(true));
   return new browser.LanguageClient(
-    "JSONA",
-    "JSONA Language Server",
+    ID,
+    NAME,
     {
+      outputChannel: getOutput(),
       documentSelector: [{ language: "jsona" }],
     },
     worker
@@ -67,7 +68,6 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       vscode.workspace.getConfiguration().get("jsona.executable.path") ?? which.sync("jsona", { nothrow: true });
 
     if (typeof jsonaPath !== "string") {
-      out.appendLine("failed to locate JSONA LSP");
       throw new Error("failed to locate JSONA LSP");
     }
 
@@ -105,10 +105,11 @@ async function createNodeClient(context: vscode.ExtensionContext) {
   out.appendLine(`Use cache at ${cachePath.fsPath}`);
 
   return new node.LanguageClient(
-    "JSONA",
-    "JSONA Language Server",
+    ID,
+    NAME,
     serverOpts,
     {
+      outputChannel: getOutput(),
       documentSelector: [{ language: "jsona" }],
       initializationOptions: {
         cachePath: cachePath.fsPath,

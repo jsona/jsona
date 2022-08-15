@@ -3,9 +3,12 @@ import { BaseLanguageClient } from "vscode-languageclient";
 
 let output: vscode.OutputChannel;
 
+export const ID = "JSONA";
+export const NAME = "JSONA Language Server";
+
 export function getOutput(): vscode.OutputChannel {
   if (!output) {
-    output = vscode.window.createOutputChannel("JSONA");
+    output = vscode.window.createOutputChannel(NAME);
   }
 
   return output;
