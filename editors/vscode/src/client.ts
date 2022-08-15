@@ -94,7 +94,7 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       },
     };
 
-    out.appendLine(`Use lsp at ${jsonaPath}`);
+    out.appendLine(`Use native lsp at ${jsonaPath}`);
     serverOpts = {
       run,
       debug: run,
@@ -102,7 +102,6 @@ async function createNodeClient(context: vscode.ExtensionContext) {
   }
   let cachePath = vscode.Uri.joinPath(context.globalStorageUri, "schema_cache");
   await vscode.workspace.fs.createDirectory(cachePath);
-  out.appendLine(`Use cache at ${cachePath.fsPath}`);
 
   return new node.LanguageClient(
     ID,
