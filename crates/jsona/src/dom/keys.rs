@@ -248,12 +248,15 @@ impl Keys {
         Some(Keys::new(self.iter().take(self.len() - 1).cloned()))
     }
 
-    pub fn shift(&self) -> (Option<KeyOrIndex>, Self) {
+    pub fn shift(&self) -> Option<(KeyOrIndex, Self)> {
         if self.is_empty() {
-            return (None, self.clone());
+            return None;
         }
         let (left, right) = self.keys.split_at(1);
-        (left.get(0).cloned(), Self::new(right.iter().cloned()))
+        Some((
+            left.get(0).cloned().unwrap(),
+            Self::new(right.iter().cloned()),
+        ))
     }
 
     pub fn shift_annotation(&self) -> (Option<Key>, Self) {

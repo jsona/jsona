@@ -220,18 +220,17 @@ fn pointer_impl<'a>(
         let mut pointed = false;
         for schema in schemas.iter() {
             pointer_impl(result, root_schema, schema, keys, &mut pointed);
-            if pointed && local_schema.one_of.is_some() {
+            if pointed && !keys.is_empty() && local_schema.one_of.is_some() {
                 break;
             }
         }
     } else {
-        let (key, keys) = keys.shift();
-        match key {
+        match keys.shift() {
             None => {
                 result.push(local_schema);
                 *pointed = true;
             }
-            Some(key) => match key {
+            Some((key, keys)) => match key {
                 KeyOrIndex::Index(index) => {
                     if let Some(local_schema) = local_schema.items.as_ref() {
                         match local_schema.value.as_ref() {
