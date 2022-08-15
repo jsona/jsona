@@ -20,7 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 jsona = { path = "../jsona", version = "0.4" }
 jsona-schema-validator = { path = "../jsona-schema-validator", version = "0.1"}
-globset = "0.4"
+globset = { version = "0.4", default-features = false }
 arc-swap = "1.5"
 parking_lot = "0.12"
 ahash = { version = "0.7", features = ["serde"] }

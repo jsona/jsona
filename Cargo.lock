@@ -432,7 +432,6 @@ dependencies = [
  "aho-corasick",
  "bstr",
  "fnv",
- "log",
  "regex",
 ]
 
