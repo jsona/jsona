@@ -660,7 +660,7 @@ fn sanitize_label(mut value: String) -> String {
 }
 
 fn stringify_value(value: &Value) -> String {
-    serde_json::to_string(value).unwrap()
+    serde_json::to_string(value).unwrap_or_default()
 }
 
 #[derive(Debug, Default)]

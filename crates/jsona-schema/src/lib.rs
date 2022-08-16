@@ -86,6 +86,9 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     if exist_annotation(&scope, "@example") {
         schema.examples = Some(vec![scope.node.to_plain_json()])
     }
+    if exist_annotation(&scope, "@default") {
+        schema.default = Some(scope.node.to_plain_json())
+    }
     let schema_type = schema.schema_type.as_ref().unwrap();
     if schema_type == "object" {
         if let Node::Object(obj) = &scope.node {
