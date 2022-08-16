@@ -9,7 +9,7 @@ use codespan_reporting::{
 };
 use itertools::Itertools;
 use jsona::{dom, parser, rowan::TextRange};
-use jsona_util::{environment::Environment, schema::NodeValidationError};
+use jsona_util::{environment::Environment, schema::JSONASchemaValidationError};
 use std::ops::Range;
 use tokio::io::AsyncWriteExt;
 
@@ -90,7 +90,7 @@ impl<E: Environment> App<E> {
     pub(crate) async fn print_schema_errors(
         &self,
         file: &SimpleFile<&str, &str>,
-        errors: &[NodeValidationError],
+        errors: &[JSONASchemaValidationError],
     ) -> Result<(), anyhow::Error> {
         let config = codespan_reporting::term::Config::default();
 
