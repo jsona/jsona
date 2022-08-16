@@ -144,8 +144,7 @@ impl SchemaOrSchemaArray {
 impl Schema {
     pub fn pointer(&self, keys: &Keys) -> Vec<&Schema> {
         let mut result = vec![];
-        let mut pointed = false;
-        pointer_impl(&mut result, self, self, keys, &mut pointed);
+        pointer_impl(&mut result, self, self, keys);
         result
     }
     pub fn is_object(&self) -> bool {
@@ -191,7 +190,6 @@ fn pointer_impl<'a>(
     root_schema: &'a Schema,
     local_schema: &'a Schema,
     keys: &Keys,
-    pointed: &mut bool,
 ) {
     let local_schema = match local_schema.ref_value.as_ref() {
         Some(ref_value) => {
@@ -217,29 +215,24 @@ fn pointer_impl<'a>(
         .or(local_schema.any_of.as_ref())
         .or(local_schema.all_of.as_ref())
     {
-        let mut pointed = false;
         for schema in schemas.iter() {
-            pointer_impl(result, root_schema, schema, keys, &mut pointed);
-            if pointed && !keys.is_empty() && local_schema.one_of.is_some() {
-                break;
-            }
+            pointer_impl(result, root_schema, schema, keys);
         }
     } else {
         match keys.shift() {
             None => {
                 result.push(local_schema);
-                *pointed = true;
             }
             Some((key, keys)) => match key {
                 KeyOrIndex::Index(index) => {
                     if let Some(local_schema) = local_schema.items.as_ref() {
                         match local_schema.value.as_ref() {
                             Either::Left(local_schema) => {
-                                pointer_impl(result, root_schema, local_schema, &keys, pointed)
+                                pointer_impl(result, root_schema, local_schema, &keys)
                             }
                             Either::Right(schemas) => {
                                 if let Some(local_schema) = schemas.get(index) {
-                                    pointer_impl(result, root_schema, local_schema, &keys, pointed)
+                                    pointer_impl(result, root_schema, local_schema, &keys)
                                 }
                             }
                         }
@@ -251,13 +244,13 @@ fn pointer_impl<'a>(
                         .as_ref()
                         .and_then(|v| v.get(key.value()))
                     {
-                        pointer_impl(result, root_schema, local_schema, &keys, pointed)
+                        pointer_impl(result, root_schema, local_schema, &keys)
                     }
                     if let Some(schemas) = local_schema.pattern_properties.as_ref() {
                         for (pat, local_schema) in schemas.iter() {
                             if let Ok(re) = Regex::new(pat) {
-                                if re.is_match(key.value()).is_ok() {
-                                    pointer_impl(result, root_schema, local_schema, &keys, pointed)
+                                if let Ok(true) = re.is_match(key.value()) {
+                                    pointer_impl(result, root_schema, local_schema, &keys)
                                 }
                             }
                         }
@@ -267,7 +260,7 @@ fn pointer_impl<'a>(
                         .as_ref()
                         .and_then(|v| v.value.as_ref().right())
                     {
-                        pointer_impl(result, root_schema, local_schema, &keys, pointed)
+                        pointer_impl(result, root_schema, local_schema, &keys)
                     }
                 }
                 _ => {}
