@@ -1,9 +1,10 @@
 use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
-use jsona::dom::{KeyOrIndex, Keys};
+use jsona::dom::{KeyOrIndex, Keys, Node};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::{collections::HashSet, fmt::Display};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct Schema {
@@ -21,7 +22,7 @@ pub struct Schema {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "type")]
-    pub schema_type: Option<String>,
+    pub schema_type: Option<OneOrMultiTypes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nullable: Option<bool>,
 
@@ -49,7 +50,7 @@ pub struct Schema {
     pub format: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub items: Option<SchemaOrSchemaArray>,
+    pub items: Option<OneOrMultiSchemas>,
     #[serde(rename = "maxItems", skip_serializing_if = "Option::is_none")]
     pub max_items: Option<u32>,
     #[serde(rename = "minItems", skip_serializing_if = "Option::is_none")]
@@ -125,15 +126,119 @@ impl Default for BoolOrSchema {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(transparent)]
-pub struct SchemaOrSchemaArray {
-    #[serde(with = "either::serde_untagged")]
-    pub value: Either<Box<Schema>, Vec<Schema>>,
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum SchemaType {
+    String,
+    Number,
+    Boolean,
+    Null,
+    Object,
+    Array,
 }
 
-impl SchemaOrSchemaArray {
-    pub fn to_vec(&self) -> Vec<&Schema> {
+impl SchemaType {
+    pub fn from_node(node: &Node) -> Option<Self> {
+        let schema_type = match &node {
+            Node::Null(v) => {
+                if v.is_valid() {
+                    SchemaType::Null
+                } else {
+                    return None;
+                }
+            }
+            Node::Bool(_) => SchemaType::Boolean,
+            Node::Number(_) => SchemaType::Number,
+            Node::String(_) => SchemaType::String,
+            Node::Array(_) => SchemaType::Array,
+            Node::Object(_) => SchemaType::Object,
+        };
+        Some(schema_type)
+    }
+}
+
+impl Display for SchemaType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let type_str = match self {
+            SchemaType::String => "string",
+            SchemaType::Number => "number",
+            SchemaType::Boolean => "boolean",
+            SchemaType::Null => "null",
+            SchemaType::Object => "object",
+            SchemaType::Array => "array",
+        };
+        f.write_str(type_str)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct OneOrMultiTypes {
+    #[serde(with = "either::serde_untagged")]
+    value: Either<SchemaType, Vec<SchemaType>>,
+}
+
+impl OneOrMultiTypes {
+    pub fn new(items: impl Iterator<Item = SchemaType>) -> Self {
+        let mut items: Vec<SchemaType> = items.collect();
+        if items.len() > 1 {
+            Self {
+                value: Either::Right(items),
+            }
+        } else {
+            Self {
+                value: Either::Left(items.remove(0)),
+            }
+        }
+    }
+    pub fn contains(&self, target: &SchemaType) -> bool {
+        match self.value.as_ref() {
+            Either::Left(value) => value == target,
+            Either::Right(values) => values.iter().any(|v| v == target),
+        }
+    }
+    pub fn types(&self) -> HashSet<SchemaType> {
+        match self.value.as_ref() {
+            Either::Left(value) => [value.clone()].into(),
+            Either::Right(values) => values.iter().cloned().collect(),
+        }
+    }
+    pub fn len(&self) -> usize {
+        match self.value.as_ref() {
+            Either::Left(_) => 1,
+            Either::Right(values) => values.len(),
+        }
+    }
+}
+
+impl From<SchemaType> for OneOrMultiTypes {
+    fn from(schema_type: SchemaType) -> Self {
+        Self {
+            value: Either::Left(schema_type),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(transparent)]
+pub struct OneOrMultiSchemas {
+    #[serde(with = "either::serde_untagged")]
+    value: Either<Box<Schema>, Vec<Schema>>,
+}
+
+impl OneOrMultiSchemas {
+    pub fn new(mut items: Vec<Schema>) -> Self {
+        if items.len() > 1 {
+            Self {
+                value: Either::Right(items),
+            }
+        } else {
+            Self {
+                value: Either::Left(Box::new(items.remove(0))),
+            }
+        }
+    }
+    pub fn as_ref_vec(&self) -> Vec<&Schema> {
         match self.value.as_ref() {
             Either::Left(schema) => vec![schema],
             Either::Right(schemas) => schemas.iter().collect(),
@@ -147,41 +252,56 @@ impl Schema {
         pointer_impl(&mut result, self, self, keys);
         result
     }
-    pub fn is_object(&self) -> bool {
+    pub fn maybe_object(&self) -> bool {
         self.schema_type
             .as_ref()
-            .map(|v| v == "object")
+            .map(|v| v.contains(&SchemaType::Object))
             .unwrap_or_default()
     }
-    pub fn is_array(&self) -> bool {
+    pub fn maybe_array(&self) -> bool {
         self.schema_type
             .as_ref()
-            .map(|v| v == "array")
+            .map(|v| v.contains(&SchemaType::Array))
             .unwrap_or_default()
     }
-    pub fn is_string(&self) -> bool {
+    pub fn maybe_string(&self) -> bool {
         self.schema_type
             .as_ref()
-            .map(|v| v == "string")
+            .map(|v| v.contains(&SchemaType::String))
             .unwrap_or_default()
     }
-    pub fn is_number(&self) -> bool {
+    pub fn maybe_number(&self) -> bool {
         self.schema_type
             .as_ref()
-            .map(|v| v == "number")
+            .map(|v| v.contains(&SchemaType::Number))
             .unwrap_or_default()
     }
-    pub fn is_null(&self) -> bool {
+    pub fn maybe_null(&self) -> bool {
         self.schema_type
             .as_ref()
-            .map(|v| v == "null")
+            .map(|v| v.contains(&SchemaType::Null))
             .unwrap_or_default()
     }
-    pub fn is_boolean(&self) -> bool {
+    pub fn maybe_boolean(&self) -> bool {
         self.schema_type
             .as_ref()
-            .map(|v| v == "boolean")
+            .map(|v| v.contains(&SchemaType::Boolean))
             .unwrap_or_default()
+    }
+    pub fn one_type(&self) -> Option<SchemaType> {
+        self.schema_type
+            .as_ref()
+            .and_then(|v| v.value.as_ref().left())
+            .cloned()
+    }
+    pub fn types(&self) -> HashSet<SchemaType> {
+        self.schema_type
+            .as_ref()
+            .map(|v| v.types())
+            .unwrap_or_default()
+    }
+    pub fn debug_string(&self) -> String {
+        serde_json::to_string(&self).unwrap_or_default()
     }
 }
 
@@ -191,23 +311,9 @@ fn pointer_impl<'a>(
     local_schema: &'a Schema,
     keys: &Keys,
 ) {
-    let local_schema = match local_schema.ref_value.as_ref() {
-        Some(ref_value) => {
-            if ref_value == "#" {
-                root_schema
-            } else {
-                match root_schema.defs.as_ref().and_then(|defs| {
-                    Regex::new(r#"^#/\$defs/(\w+)$"#)
-                        .ok()
-                        .and_then(|v| v.captures(ref_value).ok().flatten().and_then(|v| v.get(1)))
-                        .and_then(|v| defs.get(v.as_str()))
-                }) {
-                    Some(v) => v,
-                    None => return,
-                }
-            }
-        }
-        None => local_schema,
+    let local_schema = match resolve(root_schema, local_schema) {
+        Some(v) => v,
+        None => return,
     };
     if let Some(schemas) = local_schema
         .one_of
@@ -267,4 +373,26 @@ fn pointer_impl<'a>(
             },
         }
     }
+}
+
+fn resolve<'a>(root_schema: &'a Schema, local_schema: &'a Schema) -> Option<&'a Schema> {
+    let schema = match local_schema.ref_value.as_ref() {
+        Some(ref_value) => {
+            if ref_value == "#" {
+                root_schema
+            } else {
+                match root_schema.defs.as_ref().and_then(|defs| {
+                    Regex::new(r#"^#/\$defs/(\w+)$"#)
+                        .ok()
+                        .and_then(|v| v.captures(ref_value).ok().flatten().and_then(|v| v.get(1)))
+                        .and_then(|v| defs.get(v.as_str()))
+                }) {
+                    Some(v) => v,
+                    None => return None,
+                }
+            }
+        }
+        None => local_schema,
+    };
+    Some(schema)
 }

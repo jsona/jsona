@@ -1,9 +1,8 @@
 mod error;
 mod schema;
 
-use either::Either;
 use indexmap::IndexMap;
-use schema::SchemaOrSchemaArray;
+use schema::OneOrMultiSchemas;
 use std::{cell::RefCell, rc::Rc};
 
 use jsona::{
@@ -13,7 +12,7 @@ use jsona::{
 use serde::de::DeserializeOwned;
 
 pub use error::Error;
-pub use schema::Schema;
+pub use schema::{Schema, SchemaType};
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn from_str(value: &str) -> Result<Schema> {
@@ -79,7 +78,6 @@ fn parse_node(scope: Scope) -> Result<Schema> {
         });
     }
     let mut schema: Schema = parse_object_annotation(&scope, "@schema")?.unwrap_or_default();
-    set_node_type(&scope, &mut schema);
     if let Some(describe) = parse_str_annotation(&scope, "@describe")? {
         schema.description = Some(describe);
     }
@@ -89,9 +87,17 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     if exist_annotation(&scope, "@default") {
         schema.default = Some(scope.node.to_plain_json())
     }
-    let schema_type = schema.schema_type.as_ref().unwrap();
-    if schema_type == "object" {
-        if let Node::Object(obj) = &scope.node {
+    let schema_types = schema.types();
+    let node_type = SchemaType::from_node(&scope.node);
+    if schema_types.is_empty() {
+        schema.schema_type = node_type.map(Into::into);
+    } else if let Some(node_type) = node_type {
+        if !schema_types.contains(&node_type) {
+            return Err(Error::mismatch_type(scope.keys));
+        }
+    }
+    match &scope.node {
+        Node::Object(obj) => {
             for (key, child) in obj.value().read().kv_iter() {
                 let child_scope = scope.spawn(key.into(), child.clone());
                 let key = key.value();
@@ -118,55 +124,35 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                     }
                 }
             }
-        } else {
-            return Err(Error::mismatch_type(scope.keys.clone()));
         }
-    } else if schema_type == "array" && scope.node.is_array() {
-        if let Node::Array(arr) = &scope.node {
+        Node::Array(arr) => {
             let arr = arr.value().read();
-            if arr.len() > 0 && schema.items.is_none() {
-                let compound = parse_str_annotation(&scope, "@compound")?;
-                match compound {
-                    Some(compound) => {
-                        schema.schema_type = None;
-                        let mut schemas = vec![];
-                        for (i, child) in arr.iter().enumerate() {
-                            let child_scope = scope.spawn(i.into(), child.clone());
-                            schemas.push(parse_node(child_scope)?);
-                        }
-                        match compound.as_str() {
-                            "anyOf" => schema.any_of = Some(schemas),
-                            "oneOf" => schema.one_of = Some(schemas),
-                            "allOf" => schema.all_of = Some(schemas),
-                            _ => {
-                                return Err(Error::invalid_value(
-                                    scope.keys.join(KeyOrIndex::annotation("@compound")),
-                                ));
-                            }
+            if arr.len() > 0 {
+                let mut schemas = vec![];
+                for (i, child) in arr.iter().enumerate() {
+                    let child_scope = scope.spawn(i.into(), child.clone());
+                    schemas.push(parse_node(child_scope)?);
+                }
+                if let Some(compound) = parse_str_annotation(&scope, "@compound")? {
+                    schema.schema_type = None;
+                    match compound.as_str() {
+                        "anyOf" => schema.any_of = Some(schemas),
+                        "oneOf" => schema.one_of = Some(schemas),
+                        "allOf" => schema.all_of = Some(schemas),
+                        _ => {
+                            return Err(Error::invalid_value(
+                                scope.keys.join(KeyOrIndex::annotation("@compound")),
+                            ));
                         }
                     }
-                    None => {
-                        if arr.len() == 1 {
-                            let child_scope = scope.spawn(0_usize.into(), arr[0].clone());
-                            schema.items = Some(SchemaOrSchemaArray {
-                                value: Either::Left(parse_node(child_scope)?.into()),
-                            })
-                        } else {
-                            let mut schemas = vec![];
-                            for (i, child) in arr.iter().enumerate() {
-                                let child_scope = scope.spawn(i.into(), child.clone());
-                                schemas.push(parse_node(child_scope)?);
-                            }
-                            schema.items = Some(SchemaOrSchemaArray {
-                                value: Either::Right(schemas),
-                            })
-                        }
-                    }
+                } else if arr.len() == 1 {
+                    schema.items = Some(OneOrMultiSchemas::new(schemas));
+                } else {
+                    schema.items = Some(OneOrMultiSchemas::new(schemas))
                 }
             }
-        } else {
-            return Err(Error::mismatch_type(scope.keys.clone()));
         }
+        _ => {}
     }
     if exist_annotation(&scope, "@anytype") {
         schema.schema_type = None;
@@ -210,18 +196,4 @@ fn parse_str_annotation(scope: &Scope, name: &str) -> Result<Option<String>> {
         .try_get_as_string(&key)
         .map_err(|_| Error::mismatch_type(scope.keys.clone().join(key)))?;
     Ok(value.map(|v| v.value().to_string()))
-}
-
-fn set_node_type(scope: &Scope, schema: &mut Schema) {
-    if schema.schema_type.is_none() {
-        let value = match &scope.node {
-            Node::Null(_) => "null",
-            Node::Bool(_) => "boolean",
-            Node::Number(_) => "number",
-            Node::String(_) => "string",
-            Node::Array(_) => "array",
-            Node::Object(_) => "object",
-        };
-        schema.schema_type = Some(value.to_string());
-    }
 }
