@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use jsona::{
-    dom::{visit_annotations, DomNode, Key, Keys, Node, VisitControl, Visitor},
+    dom::{visit_annotations, DomNode, Key, KeyOrIndex, Keys, Node, VisitControl, Visitor},
     util::quote,
 };
 use jsona_schema::{Schema, SchemaType};
@@ -16,7 +16,7 @@ use lsp_types::{
     Command, CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse,
     CompletionTextEdit, Documentation, InsertTextFormat, MarkupContent, TextEdit,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::World;
 use crate::{
@@ -68,6 +68,10 @@ pub async fn completion<E: Environment>(
         ScopeKind::AnnotationKey => {
             Keys::single(Key::annotation(query.key.as_ref().unwrap().text()))
         }
+        ScopeKind::Array => {
+            let idx = query.index_at().unwrap_or_default();
+            keys.join(KeyOrIndex::Index(idx))
+        }
         _ => keys.clone(),
     };
 
@@ -76,7 +80,10 @@ pub async fn completion<E: Environment>(
         ?query,
         "completion keys={} schemas={}",
         keys,
-        // schemas.as_ref().and_then(|v| serde_json::to_string(&v).ok()).unwrap_or_default()
+        // schemas
+        //     .as_ref()
+        //     .and_then(|v| serde_json::to_string(&v).ok())
+        //     .unwrap_or_default()
         schemas.is_some()
     );
 
@@ -84,7 +91,7 @@ pub async fn completion<E: Environment>(
         ScopeKind::AnnotationKey => {
             let props = node.annotations().map(|v| v.map_keys()).unwrap_or_default();
             match schemas.as_ref() {
-                Some(schemas) => complete_annotations_and_properties(doc, &query, &props, schemas),
+                Some(schemas) => complete_key(doc, &query, &props, schemas),
                 None => complete_annotations_schemaless(doc, &query, &props),
             }
         }
@@ -94,17 +101,17 @@ pub async fn completion<E: Environment>(
                 .map(|v| v.properties_keys())
                 .unwrap_or_default();
             match schemas.as_ref() {
-                Some(schemas) => complete_annotations_and_properties(doc, &query, &props, schemas),
+                Some(schemas) => complete_key(doc, &query, &props, schemas),
                 None => complete_properties_schemaless(doc, &query, &props, &keys),
             }
         }
         ScopeKind::Array => match schemas.as_ref() {
-            Some(schemas) => complete_array(doc, &query, schemas),
-            None => complete_array_schemaless(doc, &query, &keys),
+            Some(schemas) => complete_value(doc, &query, schemas),
+            None => complete_value_schemaless(doc, &query, &keys, true),
         },
         ScopeKind::Value => match schemas.as_ref() {
             Some(schemas) => complete_value(doc, &query, schemas),
-            None => complete_value_schemaless(doc, &query, &keys),
+            None => complete_value_schemaless(doc, &query, &keys, false),
         },
         _ => return Ok(None),
     };
@@ -112,14 +119,13 @@ pub async fn completion<E: Environment>(
     Ok(result)
 }
 
-fn complete_annotations_and_properties(
+fn complete_key(
     doc: &DocumentState,
     query: &Query,
     exist_props: &[String],
     schemas: &[Schema],
 ) -> Option<CompletionResponse> {
     let mut comps = CompletionMap::default();
-    let is_annotation = query.scope == ScopeKind::AnnotationKey;
     for schema in schemas.iter() {
         if !schema.maybe_object() {
             continue;
@@ -131,49 +137,12 @@ fn complete_annotations_and_properties(
                     if exist_props.contains(prop_key) {
                         continue;
                     }
-                    comps.add(completion_item_from_prop(
-                        doc,
-                        query,
-                        prop_key,
-                        prop_value,
-                        is_annotation,
-                    ))
+                    comps.add_key(prop_key, prop_value);
                 }
             }
         }
     }
-    comps.into_response()
-}
-
-fn complete_array(
-    doc: &DocumentState,
-    query: &Query,
-    schemas: &[Schema],
-) -> Option<CompletionResponse> {
-    let mut comps = CompletionMap::default();
-    let index = query.index_at().unwrap_or_default();
-    let mut types: HashSet<SchemaType> = HashSet::default();
-    let mut new_schemas = vec![];
-    for schema in schemas.iter() {
-        if let Some(items) = schema.items.as_ref() {
-            let items = items.as_ref_vec();
-            match items.len() {
-                1 => {
-                    new_schemas.push(items[0].clone());
-                }
-                len if len > index => {
-                    new_schemas.push(items[index].clone());
-                }
-                _ => continue,
-            }
-        }
-    }
-    complete_value_impl(&mut comps, &mut types, query, &new_schemas);
-    if query.value.is_none() {
-        complete_value_type(&mut comps, &types, query);
-    }
-    comps.set_item_text_edit(doc, query);
-    comps.into_response()
+    comps.into_key_completions(doc, query)
 }
 
 fn complete_value(
@@ -182,13 +151,10 @@ fn complete_value(
     schemas: &[Schema],
 ) -> Option<CompletionResponse> {
     let mut comps = CompletionMap::default();
-    let mut types: HashSet<SchemaType> = HashSet::default();
-    complete_value_impl(&mut comps, &mut types, query, schemas);
-    if query.value.is_none() {
-        complete_value_type(&mut comps, &types, query);
+    for schema in schemas.iter() {
+        comps.add_schema(schema);
     }
-    comps.set_item_text_edit(doc, query);
-    comps.into_response()
+    comps.into_schema_completions(doc, query)
 }
 
 fn complete_annotations_schemaless(
@@ -197,32 +163,17 @@ fn complete_annotations_schemaless(
     exist_props: &[String],
 ) -> Option<CompletionResponse> {
     let mut comps = CompletionMap::default();
-    let mut exist_anno_keys: HashSet<String> = HashSet::default();
-    exist_anno_keys.insert("@".to_string());
-    if let Some(key) = query.key.as_ref() {
-        exist_anno_keys.insert(key.to_string());
-    }
     for (anno_keys, anno_value) in visit_annotations(&doc.dom) {
         if let Some(anno_key) = anno_keys.last_annotation_key() {
             let anno_key = anno_key.value().to_string();
-            if exist_anno_keys.contains(&anno_key) {
+            if &anno_key == "@" || exist_props.contains(&anno_key) {
                 continue;
             }
-            exist_anno_keys.insert(anno_key.clone());
-            if exist_props.contains(&anno_key) {
-                continue;
-            }
-            let anno_schema = schema_from_node(&anno_value);
-            comps.add(completion_item_from_prop(
-                doc,
-                query,
-                &anno_key,
-                &anno_schema,
-                true,
-            ))
+            let anno_schema = node_to_schema(&anno_value);
+            comps.add_key(&anno_key, &anno_schema)
         }
     }
-    comps.into_response()
+    comps.into_key_completions(doc, query)
 }
 
 fn complete_properties_schemaless(
@@ -236,7 +187,6 @@ fn complete_properties_schemaless(
         None => return None,
         Some(v) => v,
     };
-    let mut exist_keys: HashSet<String> = HashSet::default();
     let visitor = Visitor::new(&doc.dom, parent_key, |keys, node, parent_key| {
         match keys.last() {
             Some(key) => match key.as_property_key() {
@@ -259,83 +209,27 @@ fn complete_properties_schemaless(
         };
         for (key, value) in obj.value().read().kv_iter() {
             let key = key.value().to_string();
-            if exist_keys.contains(&key) {
-                continue;
-            }
-            exist_keys.insert(key.clone());
             if exist_props.contains(&key) {
                 continue;
             }
-            let value_schema = schema_from_node(value);
-            comps.add(completion_item_from_prop(
-                doc,
-                query,
-                &key,
-                &value_schema,
-                false,
-            ))
+            let schema = node_to_schema(value);
+            comps.add_key(&key, &schema);
         }
     }
-    comps.into_response()
-}
-
-fn complete_array_schemaless(
-    doc: &DocumentState,
-    query: &Query,
-    keys: &Keys,
-) -> Option<CompletionResponse> {
-    let mut comps = CompletionMap::default();
-    let parent_key = match keys.last_property_key() {
-        None => return None,
-        Some(v) => v,
-    };
-    let mut exist_labels: HashSet<String> = HashSet::default();
-    let visitor = Visitor::new(&doc.dom, parent_key, |keys, node, parent_key| {
-        match keys.last() {
-            Some(key) => match key.as_property_key() {
-                Some(key) => {
-                    if key.value() == parent_key.value() && node.is_array() {
-                        VisitControl::AddIter
-                    } else {
-                        VisitControl::NotAddIter
-                    }
-                }
-                _ => VisitControl::NotAddNotIter,
-            },
-            _ => VisitControl::NotAddIter,
-        }
-    });
-    for (_, value) in visitor.into_iter() {
-        let arr = match value.as_array() {
-            Some(v) => v,
-            None => continue,
-        };
-        for value in arr.value().read().iter() {
-            if let Some(comp_item) = completion_item_from_node(query, value) {
-                if exist_labels.contains(&comp_item.label) {
-                    continue;
-                }
-                exist_labels.insert(comp_item.label.clone());
-                comps.add(comp_item);
-            }
-        }
-    }
-    comps.set_item_text_edit(doc, query);
-
-    comps.into_response()
+    comps.into_key_completions(doc, query)
 }
 
 fn complete_value_schemaless(
     doc: &DocumentState,
     query: &Query,
     keys: &Keys,
+    is_array: bool,
 ) -> Option<CompletionResponse> {
     let mut comps = CompletionMap::default();
     let parent_key = match keys.last_property_key() {
         None => return None,
         Some(v) => v,
     };
-    let mut exist_labels: HashSet<String> = HashSet::default();
     let visitor = Visitor::new(&doc.dom, parent_key, |keys, _, parent_key| {
         match keys.last() {
             Some(key) => match key.as_property_key() {
@@ -351,297 +245,377 @@ fn complete_value_schemaless(
             _ => VisitControl::NotAddIter,
         }
     });
-    for (_, value) in visitor.into_iter() {
-        if let Some(comp_item) = completion_item_from_node(query, &value) {
-            if exist_labels.contains(&comp_item.label) {
+    if is_array {
+        for (visitor_keys, value) in visitor.into_iter() {
+            if &visitor_keys == keys {
                 continue;
             }
-            exist_labels.insert(comp_item.label.clone());
-            comps.add(comp_item);
-        }
-    }
-    comps.set_item_text_edit(doc, query);
-    comps.into_response()
-}
-
-fn completion_item_from_node(query: &Query, node: &Node) -> Option<CompletionItem> {
-    let (label, value) = match node {
-        Node::Null(_) => ("null".to_string(), "null".to_string()),
-        Node::Bool(v) => (v.value().to_string(), v.value().to_string()),
-        Node::Number(v) => (v.value().to_string(), v.value().to_string()),
-        Node::String(v) => {
-            let value = match v.syntax() {
-                Some(s) => s.to_string(),
-                None => r#""""#.into(),
+            let arr = match value.as_array() {
+                Some(v) => v,
+                None => continue,
             };
-            (value.clone(), value)
-        }
-        Node::Array(_) => ("[]".to_string(), insert_text_for_value(&json!({}))),
-        Node::Object(_) => ("{}".to_string(), insert_text_for_value(&json!([]))),
-    };
-    let separator = if query.add_separator { "," } else { "" };
-    let space = if query.add_space { " " } else { "" };
-    let schema = schema_from_node(node);
-    Some(CompletionItem {
-        label,
-        kind: Some(suggestion_kind(&schema)),
-        insert_text: Some(format!("{}{}{}", space, value, separator)),
-        insert_text_format: Some(InsertTextFormat::PLAIN_TEXT),
-        ..Default::default()
-    })
-}
-
-fn complete_value_impl(
-    comps: &mut CompletionMap,
-    types: &mut HashSet<SchemaType>,
-    query: &Query,
-    schemas: &[Schema],
-) {
-    for schema in schemas.iter() {
-        let mut comp_added = false;
-        if let Some(value) = schema.const_value.as_ref() {
-            comps.add(completion_item_from_value(query, schema, value));
-            comp_added = true;
-        }
-        if let Some(enum_value) = schema.enum_value.as_ref() {
-            for value in enum_value {
-                comps.add(completion_item_from_value(query, schema, value));
-            }
-            comp_added = true;
-        }
-        if let Some(value) = schema.default.as_ref() {
-            comps.add(completion_item_from_value(query, schema, value));
-            comp_added = true;
-        }
-        if let Some(examples) = schema.examples.as_ref() {
-            for value in examples {
-                comps.add(completion_item_from_value(query, schema, value));
-            }
-            comp_added = true;
-        }
-        if !comp_added {
-            if let Some(schema_type) = schema.schema_type.as_ref() {
-                types.extend(schema_type.types().into_iter());
+            for value in arr.value().read().iter() {
+                comps.add_node(value);
             }
         }
-    }
-}
-
-fn complete_value_type(comps: &mut CompletionMap, types: &HashSet<SchemaType>, query: &Query) {
-    let mut items = vec![];
-    for schema_type in types {
-        match schema_type {
-            SchemaType::Boolean => {
-                items.push(("true", "true"));
-                items.push(("false", "false"));
-            }
-            SchemaType::Null => {
-                items.push(("null", "null"));
-            }
-            SchemaType::String => {
-                items.push((r#""""#, r#""$1""#));
-            }
-            SchemaType::Number => {
-                items.push(("0", "${1:0}"));
-            }
-            SchemaType::Object => {
-                items.push(("{}", "{$1}"));
-            }
-            SchemaType::Array => {
-                items.push(("[]", "[$1]"));
-            }
-        }
-    }
-    for (label, text) in items {
-        comps.add(completion_item_from_literal(query, label, text));
-    }
-}
-
-fn completion_item_from_prop(
-    doc: &DocumentState,
-    query: &Query,
-    prop_key: &str,
-    prop_value: &Schema,
-    is_annotation: bool,
-) -> CompletionItem {
-    let (insert_text, suggest) =
-        insert_text_for_property(query, prop_key, prop_value, is_annotation);
-
-    let text_edit = query.key.as_ref().map(|r| {
-        CompletionTextEdit::Edit(TextEdit {
-            range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),
-            new_text: insert_text.to_string(),
-        })
-    });
-
-    let command = if suggest {
-        Some(Command::new(
-            "Suggest".into(),
-            "editor.action.triggerSuggest".into(),
-            None,
-        ))
     } else {
-        None
-    };
-    CompletionItem {
-        label: sanitize_label(prop_key.to_string()),
-        kind: Some(CompletionItemKind::PROPERTY),
-        insert_text: Some(insert_text),
-        text_edit,
-        insert_text_format: Some(InsertTextFormat::SNIPPET),
-        command,
-        documentation: make_doc(prop_value),
-        ..Default::default()
-    }
-}
-
-fn completion_item_from_value(query: &Query, schema: &Schema, value: &Value) -> CompletionItem {
-    let separator = if query.add_separator { "," } else { "" };
-    let space = if query.add_space { " " } else { "" };
-    CompletionItem {
-        label: sanitize_label(stringify_value(value)),
-        kind: Some(suggestion_kind(schema)),
-        insert_text: Some(format!(
-            "{}{}{}",
-            space,
-            insert_text_for_value(value),
-            separator
-        )),
-        insert_text_format: Some(InsertTextFormat::SNIPPET),
-        documentation: make_doc(schema),
-        ..Default::default()
-    }
-}
-
-fn completion_item_from_literal(query: &Query, label: &str, text: &str) -> CompletionItem {
-    let separator = if query.add_separator { "," } else { "" };
-    let space = if query.add_space { " " } else { "" };
-    CompletionItem {
-        label: label.into(),
-        kind: Some(CompletionItemKind::VALUE),
-        insert_text: Some(format!("{}{}{}", space, text, separator)),
-        insert_text_format: Some(InsertTextFormat::SNIPPET),
-        ..Default::default()
-    }
-}
-
-fn make_doc(schema: &Schema) -> Option<Documentation> {
-    if let Some(docs) = schema.description.as_ref() {
-        return Some(Documentation::MarkupContent(MarkupContent {
-            kind: lsp_types::MarkupKind::Markdown,
-            value: docs.into(),
-        }));
-    }
-    None
-}
-
-fn insert_text_for_property(
-    query: &Query,
-    prop_key: &str,
-    schema: &Schema,
-    is_annotation: bool,
-) -> (String, bool) {
-    let prop_key = if is_annotation {
-        prop_key.to_string()
-    } else {
-        quote(prop_key, false)
-    };
-    let space = if query.compact { "" } else { " " };
-    if !query.add_value {
-        return (prop_key, false);
-    }
-    let value = match insert_text_for_schema(schema) {
-        Some(value) => value,
-        None => return (prop_key, false),
-    };
-    let suggest = value == "$1";
-    if is_annotation {
-        if value == "${1:null}" {
-            return (prop_key, false);
+        for (visitor_keys, value) in visitor.into_iter() {
+            if &visitor_keys == keys {
+                continue;
+            }
+            comps.add_node(&value);
         }
-        (format!("{}({})", prop_key, value), suggest)
-    } else {
-        (format!("{}:{}{},", prop_key, space, value), suggest)
+    }
+    comps.into_node_completions(doc, query)
+}
+
+#[derive(Debug, Default)]
+struct CompletionMap {
+    keys: IndexMap<String, CompletionKeyData>,
+    values: IndexMap<String, CompletionValueData>,
+    types_add: IndexSet<SchemaType>,
+    types_all: HashSet<SchemaType>,
+}
+
+#[derive(Debug)]
+struct CompletionKeyData {
+    types: HashSet<SchemaType>,
+    document: Option<String>,
+}
+
+#[derive(Debug)]
+struct CompletionValueData {
+    plain: bool,
+    value: String,
+    kind: CompletionItemKind,
+}
+
+impl CompletionMap {
+    fn add_key(&mut self, key: &str, schema: &Schema) {
+        if let Some(key_data) = self.keys.get_mut(key) {
+            key_data.types.extend(schema.types());
+            if let (None, Some(description)) =
+                (key_data.document.as_ref(), schema.description.as_ref())
+            {
+                key_data.document = Some(description.clone());
+            }
+        } else {
+            self.keys.insert(
+                key.to_string(),
+                CompletionKeyData {
+                    types: schema.types(),
+                    document: schema.description.clone(),
+                },
+            );
+        }
+    }
+
+    fn add_node(&mut self, node: &Node) {
+        match node {
+            Node::Null(_) => {
+                self.add_null_value();
+            }
+            Node::Bool(_) => {
+                self.add_bool_value();
+            }
+            Node::Number(v) => {
+                let value = v.value().to_string();
+                self.add_number_value(value);
+            }
+            Node::String(v) => {
+                let value = match v.syntax() {
+                    Some(s) => s.to_string(),
+                    None => quote(v.value(), true),
+                };
+                self.add_string_value(value);
+            }
+            Node::Array(_) => {
+                self.add_array_value();
+            }
+            Node::Object(_) => {
+                self.add_object_value();
+            }
+        }
+    }
+
+    fn add_schema(&mut self, schema: &Schema) {
+        let values = collect_schema_values(schema);
+        self.types_all.extend(schema.types().into_iter());
+        for value in values {
+            match value {
+                Value::Null => {
+                    self.add_null_value();
+                }
+                Value::Bool(_) => {
+                    self.add_bool_value();
+                }
+                Value::Number(v) => self.add_number_value(v.to_string()),
+                Value::String(v) => self.add_string_value(quote(v.as_str(), true)),
+                Value::Array(_) => {
+                    self.add_array_value();
+                }
+                Value::Object(_) => {
+                    self.add_object_value();
+                }
+            }
+        }
+    }
+
+    fn into_key_completions(
+        mut self,
+        doc: &DocumentState,
+        query: &Query,
+    ) -> Option<CompletionResponse> {
+        if self.keys.is_empty() {
+            return None;
+        }
+        let mut output = vec![];
+        let is_annotation = query.scope == ScopeKind::AnnotationKey;
+        let space = if query.compact { "" } else { " " };
+        for (key, data) in self.keys.drain(..) {
+            let CompletionKeyData {
+                document: description,
+                types,
+            } = data;
+            let key = if is_annotation {
+                key.to_string()
+            } else {
+                quote(&key, false)
+            };
+            let mut value = "$1".into();
+            let mut command = None;
+            let mut is_null = false;
+            if query.add_value && types.len() == 1 {
+                let schema_type = types.iter().next().unwrap();
+                is_null = schema_type == &SchemaType::Null;
+                value = insert_text_from_type(schema_type).to_string();
+            }
+            if value == "$1" {
+                command = Some(Command::new(
+                    "Suggest".into(),
+                    "editor.action.triggerSuggest".into(),
+                    None,
+                ));
+            }
+            let label = sanitize_label(key.clone());
+            let insert_text = if !query.add_value || (is_annotation && is_null) {
+                key
+            } else if is_annotation {
+                format!("{}({})", key, value)
+            } else {
+                format!("{}:{}{}", key, space, value)
+            };
+            let text_edit = query.key.as_ref().map(|r| {
+                CompletionTextEdit::Edit(TextEdit {
+                    range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),
+                    new_text: insert_text.to_string(),
+                })
+            });
+            output.push(CompletionItem {
+                label,
+                kind: Some(CompletionItemKind::PROPERTY),
+                insert_text: Some(insert_text),
+                text_edit,
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
+                command,
+                documentation: to_document(&description),
+                ..Default::default()
+            });
+        }
+        if output.is_empty() {
+            return None;
+        }
+        Some(CompletionResponse::Array(output))
+    }
+
+    fn into_node_completions(
+        mut self,
+        doc: &DocumentState,
+        query: &Query,
+    ) -> Option<CompletionResponse> {
+        if self.values.is_empty() {
+            return None;
+        }
+        let mut output = vec![];
+        let separator = if query.add_separator { "," } else { "" };
+        let space = if query.add_space { " " } else { "" };
+        for (label, data) in self.values.drain(..) {
+            let CompletionValueData { plain, kind, value } = data;
+            let format = if plain {
+                InsertTextFormat::PLAIN_TEXT
+            } else {
+                InsertTextFormat::SNIPPET
+            };
+            let insert_text = format!("{}{}{}", space, value, separator);
+            let text_edit = query.value.as_ref().map(|r| {
+                CompletionTextEdit::Edit(TextEdit {
+                    range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),
+                    new_text: insert_text.to_string(),
+                })
+            });
+            output.push(CompletionItem {
+                label,
+                kind: Some(kind),
+                insert_text: Some(insert_text),
+                insert_text_format: Some(format),
+                text_edit,
+                ..Default::default()
+            })
+        }
+        if output.is_empty() {
+            return None;
+        }
+        Some(CompletionResponse::Array(output))
+    }
+
+    fn into_schema_completions(
+        mut self,
+        doc: &DocumentState,
+        query: &Query,
+    ) -> Option<CompletionResponse> {
+        let mut types_miss = vec![];
+        for schema_type in self.types_all.iter() {
+            if self.types_add.contains(schema_type) {
+                continue;
+            }
+            types_miss.push(schema_type.clone());
+        }
+        for schema_type in types_miss.into_iter() {
+            match schema_type {
+                SchemaType::String => {
+                    self.add_string_value(r#""""#.into());
+                }
+                SchemaType::Number => {
+                    self.add_number_value("0".into());
+                }
+                SchemaType::Boolean => {
+                    self.add_bool_value();
+                }
+                SchemaType::Null => {
+                    self.add_null_value();
+                }
+                SchemaType::Object => {
+                    self.add_object_value();
+                }
+                SchemaType::Array => {
+                    self.add_array_value();
+                }
+            }
+        }
+        self.into_node_completions(doc, query)
+    }
+
+    fn add_null_value(&mut self) {
+        self.types_add.insert(SchemaType::Null);
+        self.values.insert(
+            "null".into(),
+            CompletionValueData {
+                plain: true,
+                value: "null".into(),
+                kind: CompletionItemKind::VALUE,
+            },
+        );
+    }
+    fn add_bool_value(&mut self) {
+        self.types_add.insert(SchemaType::Boolean);
+        self.values.insert(
+            "true".into(),
+            CompletionValueData {
+                plain: true,
+                value: "true".into(),
+                kind: CompletionItemKind::VALUE,
+            },
+        );
+        self.values.insert(
+            "false".into(),
+            CompletionValueData {
+                plain: true,
+                value: "false".into(),
+                kind: CompletionItemKind::VALUE,
+            },
+        );
+    }
+    fn add_number_value(&mut self, value: String) {
+        self.types_add.insert(SchemaType::Number);
+        let label = sanitize_label(value.clone());
+        self.values.insert(
+            label,
+            CompletionValueData {
+                plain: true,
+                value,
+                kind: CompletionItemKind::VALUE,
+            },
+        );
+    }
+    fn add_string_value(&mut self, value: String) {
+        self.types_add.insert(SchemaType::String);
+        let label = sanitize_label(value.clone());
+        self.values.insert(
+            label,
+            CompletionValueData {
+                plain: true,
+                value,
+                kind: CompletionItemKind::VALUE,
+            },
+        );
+    }
+    fn add_array_value(&mut self) {
+        self.types_add.insert(SchemaType::Array);
+        self.values.insert(
+            "[]".into(),
+            CompletionValueData {
+                plain: false,
+                value: insert_text_from_type(&SchemaType::Array).to_string(),
+                kind: CompletionItemKind::VALUE,
+            },
+        );
+    }
+    fn add_object_value(&mut self) {
+        self.types_add.insert(SchemaType::Array);
+        self.values.insert(
+            "{}".into(),
+            CompletionValueData {
+                plain: false,
+                value: insert_text_from_type(&SchemaType::Object).to_string(),
+                kind: CompletionItemKind::MODULE,
+            },
+        );
     }
 }
 
-fn insert_text_for_schema(schema: &Schema) -> Option<String> {
-    let mut value = String::new();
-    let mut num_proposals = 0;
-    if let Some(enum_value) = schema.enum_value.as_ref() {
-        if value.is_empty() && enum_value.len() == 1 {
-            value = insert_text_for_guess_value(&enum_value[0]);
-        }
-        num_proposals += enum_value.len();
-    }
-    if let Some(const_value) = schema.const_value.as_ref() {
-        if value.is_empty() {
-            value = insert_text_for_guess_value(const_value);
-        }
-        num_proposals += 1
-    }
-    if let Some(default) = schema.default.as_ref() {
-        if value.is_empty() {
-            value = insert_text_for_guess_value(default);
-        }
-        num_proposals += 1
-    }
-    if let Some(examples) = schema.examples.as_ref() {
-        if value.is_empty() && examples.len() == 1 {
-            value = insert_text_for_guess_value(&examples[0]);
-        }
-        num_proposals += examples.len();
-    }
-    if num_proposals == 0 {
-        value = match schema.one_type() {
-            Some(SchemaType::Boolean) => "$1",
-            Some(SchemaType::String) => r#""$1""#,
-            Some(SchemaType::Object) => "{$1}",
-            Some(SchemaType::Array) => "[$1]",
-            Some(SchemaType::Number) => "${1:0}",
-            Some(SchemaType::Null) => "${1:null}",
-            _ => "",
-        }
-        .to_string();
-    }
-    if value.is_empty() || num_proposals > 1 {
-        value = "$1".to_string();
-    }
-    Some(value)
-}
-
-fn insert_text_for_guess_value(value: &Value) -> String {
-    match value {
-        Value::Null | Value::Number(_) | Value::Bool(_) | Value::String(_) => {
-            format!("${{1:{}}}", value)
-        }
-        Value::Array(_) | Value::Object(_) => insert_text_for_value(value),
+fn insert_text_from_type(schema_type: &SchemaType) -> &'static str {
+    match schema_type {
+        SchemaType::String => r#""$1""#,
+        SchemaType::Number => "$1",
+        SchemaType::Boolean => "$1",
+        SchemaType::Null => "${1:null}",
+        SchemaType::Object => "{$1}",
+        SchemaType::Array => "[$1]",
     }
 }
 
-fn insert_text_for_value(value: &Value) -> String {
-    let text = stringify_value(value);
-    if text == "{}" {
-        return "{$1}".into();
-    } else if text == "[]" {
-        return "[$l]".into();
-    }
-    text
-}
-
-fn schema_from_node(node: &Node) -> Schema {
+fn node_to_schema(node: &Node) -> Schema {
     Schema {
         schema_type: SchemaType::from_node(node).map(|v| v.into()),
         ..Default::default()
     }
 }
 
-fn suggestion_kind(schema: &Schema) -> CompletionItemKind {
-    if let Some(SchemaType::Object) = schema.one_type() {
-        CompletionItemKind::MODULE
-    } else {
-        CompletionItemKind::VALUE
+fn collect_schema_values(schema: &Schema) -> Vec<&Value> {
+    let mut values = vec![];
+    if let Some(value) = schema.const_value.as_ref() {
+        values.push(value);
     }
+    if let Some(value) = schema.default.as_ref() {
+        values.push(value);
+    }
+    if let Some(value) = schema.enum_value.as_ref() {
+        values.extend(value);
+    }
+    if let Some(value) = schema.examples.as_ref() {
+        values.extend(value);
+    }
+    values
 }
 
 fn sanitize_label(mut value: String) -> String {
@@ -654,42 +628,12 @@ fn sanitize_label(mut value: String) -> String {
     value
 }
 
-fn stringify_value(value: &Value) -> String {
-    serde_json::to_string(value).unwrap_or_default()
-}
-
-#[derive(Debug, Default)]
-struct CompletionMap {
-    items: IndexMap<String, CompletionItem>,
-}
-
-impl CompletionMap {
-    fn into_response(self) -> Option<CompletionResponse> {
-        if self.is_empty() {
-            return None;
-        }
-        Some(CompletionResponse::Array(
-            self.items.into_iter().map(|(_, v)| v).collect(),
-        ))
+fn to_document(data: &Option<String>) -> Option<Documentation> {
+    if let Some(doc) = data.as_ref() {
+        return Some(Documentation::MarkupContent(MarkupContent {
+            kind: lsp_types::MarkupKind::Markdown,
+            value: doc.into(),
+        }));
     }
-    fn is_empty(&self) -> bool {
-        self.items.is_empty()
-    }
-    fn add(&mut self, item: CompletionItem) {
-        if !self.items.contains_key(&item.label) {
-            self.items.insert(item.label.clone(), item);
-        }
-    }
-    fn set_item_text_edit(&mut self, doc: &DocumentState, query: &Query) {
-        for (_, item) in self.items.iter_mut() {
-            if let Some(insert_text) = item.insert_text.as_ref() {
-                item.text_edit = query.value.as_ref().map(|r| {
-                    CompletionTextEdit::Edit(TextEdit {
-                        range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),
-                        new_text: insert_text.to_string(),
-                    })
-                });
-            }
-        }
-    }
+    None
 }
