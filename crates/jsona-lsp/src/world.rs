@@ -13,9 +13,7 @@ use jsona_util::{
     config::Config,
     environment::Environment,
     schema::{
-        associations::{
-            priority, source, AssociationRule, SchemaAssociation, DEFAULT_SCHEMASTORE_URI,
-        },
+        associations::{priority, source, AssociationRule, SchemaAssociation},
         Schemas,
     },
     util::to_file_path,
@@ -196,20 +194,15 @@ impl<E: Environment> WorkspaceState<E> {
                 }
             }
         }
-        let store_url = self
-            .lsp_config
-            .schema
-            .store_url
-            .as_ref()
-            .unwrap_or(&DEFAULT_SCHEMASTORE_URI);
+        let store_url = self.lsp_config.schema.store_url.clone();
 
         if let Err(error) = self
             .schemas
             .associations()
-            .add_from_schemastore(store_url, &root_path)
+            .add_from_schemastore(&store_url, &root_path)
             .await
         {
-            tracing::error!(%error, url=?store_url, "failed to load schemastore");
+            tracing::error!(%error, url=?store_url.map(|v| v.to_string()), "failed to load schemastore");
         }
 
         self.emit_initialize_workspace(context.clone()).await;
@@ -278,13 +271,9 @@ impl<E: Environment> WorkspaceState<E> {
         }
     }
 
-    pub(crate) async fn schemas_at_path(&self, file: &Url, path: &Keys) -> Option<Vec<Schema>> {
+    pub(crate) async fn query_schemas(&self, file: &Url, path: &Keys) -> Option<Vec<Schema>> {
         let schema_association = self.schemas.associations().query_for(file)?;
-        match self
-            .schemas
-            .schemas_at_path(&schema_association.url, path)
-            .await
-        {
+        match self.schemas.query(&schema_association.url, path).await {
             Ok(v) => Some(v),
             Err(error) => {
                 tracing::error!(?error, "failed to query schemas");

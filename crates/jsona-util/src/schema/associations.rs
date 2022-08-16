@@ -19,7 +19,7 @@ use crate::{
     HashMap,
 };
 
-pub static DEFAULT_SCHEMASTORE_URI: Lazy<Url> = Lazy::new(|| {
+static DEFAULT_SCHEMASTORE_URI: Lazy<Url> = Lazy::new(|| {
     Url::parse("https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json").unwrap()
 });
 
@@ -72,7 +72,12 @@ impl<E: Environment> SchemaAssociations<E> {
         self.cache.lock().clear();
     }
 
-    pub async fn add_from_schemastore(&self, url: &Url, base: &Path) -> Result<(), anyhow::Error> {
+    pub async fn add_from_schemastore(
+        &self,
+        url: &Option<Url>,
+        base: &Path,
+    ) -> Result<(), anyhow::Error> {
+        let url = url.as_ref().unwrap_or(&DEFAULT_SCHEMASTORE_URI);
         let base = to_unix(remove_tail_slash(base.display().to_string()));
         let schemastore = self.load_schemastore(url).await?;
         for schema in &schemastore.0 {
