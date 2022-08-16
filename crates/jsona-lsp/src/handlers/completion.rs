@@ -70,7 +70,7 @@ pub async fn completion<E: Environment>(
         keys.clone()
     };
 
-    let schemas = ws.schemas_at_path(&document_uri, &query_keys).await;
+    let schemas = ws.query_schemas(&document_uri, &query_keys).await;
     tracing::debug!(
         ?query,
         "completion keys={} schemas={}",

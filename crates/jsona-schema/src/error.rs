@@ -2,7 +2,7 @@ use jsona::dom::Keys;
 use std::fmt;
 
 /// An error that can occur during validation.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Error {
     pub keys: Keys,
     /// Type of validation error.
@@ -10,7 +10,7 @@ pub struct Error {
 }
 
 /// Kinds of errors that may happen during validation
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ErrorKind {
     InvalidFile,
     InvalidValue,

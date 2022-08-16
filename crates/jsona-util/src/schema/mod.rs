@@ -11,16 +11,13 @@ use self::associations::SchemaAssociations;
 use self::fetcher::Fetcher;
 use crate::{environment::Environment, HashMap};
 
-pub use jsona_schema_validator::{
-    JSONASchemaValidator, JSONASchemaValue, NodeValidationError, Schema,
-};
+pub use jsona_schema_validator::{JSONASchemaValidationError, JSONASchemaValidator, Schema};
 
 #[derive(Clone)]
 pub struct Schemas<E: Environment> {
     associations: SchemaAssociations<E>,
     fetcher: Fetcher<E>,
     validators: Arc<Mutex<HashMap<Url, Arc<JSONASchemaValidator>>>>,
-    schemas: Arc<Mutex<HashMap<Url, Arc<JSONASchemaValue>>>>,
 }
 
 impl<E: Environment> Schemas<E> {
@@ -30,7 +27,6 @@ impl<E: Environment> Schemas<E> {
             associations: SchemaAssociations::new(env, fetcher.clone()),
             fetcher,
             validators: Arc::new(Mutex::new(HashMap::default())),
-            schemas: Arc::new(Mutex::new(HashMap::default())),
         }
     }
 
@@ -50,35 +46,20 @@ impl<E: Environment> Schemas<E> {
         &self,
         schema_uri: &Url,
         value: &Node,
-    ) -> Result<Vec<NodeValidationError>, anyhow::Error> {
-        let validator = match self.get_validator(schema_uri) {
-            Some(s) => s,
-            None => {
-                let schema = self
-                    .load_schema(schema_uri)
-                    .await
-                    .map_err(|err| anyhow!("failed to load schema {schema_uri} {}", err))?;
-                self.add_schema(schema_uri, schema.clone());
-                self.add_validator(schema_uri.clone(), &schema)
-                    .map_err(|err| anyhow!("load schema {schema_uri} throw {}", err))?
-            }
-        };
+    ) -> Result<Vec<JSONASchemaValidationError>, anyhow::Error> {
+        let validator = self.load_validator(schema_uri).await?;
         Ok(validator.validate(value))
     }
 
-    pub fn add_schema(&self, schema_uri: &Url, schema: Arc<JSONASchemaValue>) {
-        drop(self.schemas.lock().insert(schema_uri.clone(), schema));
-    }
-
-    pub async fn load_schema(
+    pub async fn load_validator(
         &self,
         schema_uri: &Url,
-    ) -> Result<Arc<JSONASchemaValue>, anyhow::Error> {
-        if let Some(s) = self.schemas.lock().get(schema_uri).cloned() {
+    ) -> Result<Arc<JSONASchemaValidator>, anyhow::Error> {
+        if let Some(s) = self.validators.lock().get(schema_uri).cloned() {
             return Ok(s);
         }
 
-        let schema: Arc<JSONASchemaValue> =
+        let schema: Arc<JSONASchemaValidator> =
             match self.fetcher.fetch(schema_uri).await.and_then(|v| {
                 std::str::from_utf8(&v)
                     .map_err(|v| anyhow!("{}", v))
@@ -86,12 +67,12 @@ impl<E: Environment> Schemas<E> {
             }) {
                 Ok(s) => Arc::new(s),
                 Err(error) => {
-                    tracing::warn!(?error, "failed to fetch remote schema");
+                    tracing::warn!(?error, "failed to use remote jsonaschema");
                     return Err(error);
                 }
             };
 
-        self.schemas
+        self.validators
             .lock()
             .insert(schema_uri.clone(), schema.clone());
 
@@ -99,27 +80,9 @@ impl<E: Environment> Schemas<E> {
     }
 
     #[tracing::instrument(skip_all, fields(%schema_uri))]
-    pub async fn schemas_at_path(
-        &self,
-        schema_uri: &Url,
-        path: &Keys,
-    ) -> Result<Vec<Schema>, anyhow::Error> {
-        let schema = self.load_schema(schema_uri).await?;
-        let schemas = schema.pointer(path).into_iter().cloned().collect();
+    pub async fn query(&self, schema_uri: &Url, path: &Keys) -> Result<Vec<Schema>, anyhow::Error> {
+        let validator = self.load_validator(schema_uri).await?;
+        let schemas = validator.pointer(path).into_iter().cloned().collect();
         Ok(schemas)
-    }
-
-    fn get_validator(&self, schema_uri: &Url) -> Option<Arc<JSONASchemaValidator>> {
-        self.validators.lock().get(schema_uri).cloned()
-    }
-
-    fn add_validator(
-        &self,
-        schema_uri: Url,
-        schema: &JSONASchemaValue,
-    ) -> Result<Arc<JSONASchemaValidator>, anyhow::Error> {
-        let v = Arc::new(JSONASchemaValidator::new(schema)?);
-        self.validators.lock().insert(schema_uri, v.clone());
-        Ok(v)
     }
 }

@@ -56,7 +56,7 @@ pub(crate) async fn hover<E: Environment>(
         None => return Ok(None),
     };
 
-    let schemas = match ws.schemas_at_path(document_uri, &keys).await {
+    let schemas = match ws.query_schemas(document_uri, &keys).await {
         Some(v) => v,
         None => return Ok(None),
     };

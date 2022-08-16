@@ -10,7 +10,6 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 thiserror = "1"
-indexmap = { version = "~1.6", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 jsona = { path = "../jsona", version = "0.4" }

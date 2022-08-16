@@ -154,12 +154,6 @@ example.format() {
     cargo run -p jsona --example format -- $argc_jsona_file
 }
 
-# @cmd Jsona node to_string
-# @arg jsona_file!
-example.to_string() {
-    cargo run -p jsona --example to_string -- $argc_jsona_file
-}
-
 # @cmd Convert jsona jsonschema to plain jsonschema
 # @arg jsona_file!
 # @arg pointer
@@ -170,8 +164,14 @@ example.to-json-schema() {
 # @cmd Get jsona schema value
 # @arg jsona_file!
 # @arg pointer
-example.jsona-schema-value() {
-    cargo run -p jsona-schema-validator --example jsona-schema-value -- $argc_jsona_file $argc_pointer
+example.query-schema() {
+    cargo run -p jsona-schema-validator --example query-schema -- $argc_jsona_file $argc_pointer
+}
+# @cmd Validate jsona file with a schema file
+# @arg schema_file!
+# @arg jsona_file!
+example.validate() {
+    cargo run -p jsona-schema-validator --example validate -- $argc_schema_file $argc_jsona_file
 }
 
 eval "$(argc --argc-eval $0 "$@")"

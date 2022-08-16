@@ -692,7 +692,6 @@ dependencies = [
 name = "jsona-schema-validator"
 version = "0.1.1"
 dependencies = [
- "indexmap",
  "jsona",
  "jsona-schema",
  "jsonschema",
