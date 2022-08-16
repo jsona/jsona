@@ -5,7 +5,7 @@ use crate::parser;
 use crate::private::Sealed;
 use crate::syntax::{SyntaxElement, SyntaxKind};
 use crate::util::shared::Shared;
-use crate::util::{quote, unquote, QuoteType};
+use crate::util::{quote, unquote};
 
 use indexmap::IndexMap;
 use once_cell::unsync::OnceCell;
@@ -457,7 +457,6 @@ pub(crate) struct StringInner {
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
-    pub(crate) repr: StringRepr,
     pub(crate) value: OnceCell<StdString>,
 }
 
@@ -468,7 +467,6 @@ impl StringInner {
             syntax: None,
             node_syntax: None,
             annotations,
-            repr: Default::default(),
             value: value.into(),
         }
     }
@@ -486,22 +484,13 @@ impl String {
             self.inner
                 .syntax
                 .as_ref()
-                .map(|s| {
-                    let quote_type = match self.inner.repr {
-                        StringRepr::Double => QuoteType::Double,
-                        StringRepr::Single => QuoteType::Single,
-                        StringRepr::Backtick => QuoteType::Backtick,
-                    };
-
-                    let string = s.as_token().unwrap().text();
-                    match unquote(string, quote_type) {
-                        Ok(s) => s,
-                        Err(_) => {
-                            self.inner.errors.update(|errors| {
-                                errors.push(Error::InvalidEscapeSequence { syntax: s.clone() })
-                            });
-                            StdString::new()
-                        }
+                .map(|s| match unquote(&s.to_string()) {
+                    Ok(s) => s,
+                    Err(_) => {
+                        self.inner.errors.update(|errors| {
+                            errors.push(Error::InvalidEscapeSequence { syntax: s.clone() })
+                        });
+                        StdString::new()
                     }
                 })
                 .unwrap_or_default()
@@ -668,15 +657,7 @@ impl Key {
                     if self.is_annotation() {
                         return s.to_string();
                     }
-                    let quote_type = match s.text().chars().next() {
-                        Some('\'') => QuoteType::Single,
-                        Some('"') => QuoteType::Double,
-                        Some('`') => QuoteType::Backtick,
-                        _ => QuoteType::None,
-                    };
-
-                    let string = s.text();
-                    match unquote(string, quote_type) {
+                    match unquote(s.text()) {
                         Ok(s) => s,
                         Err(_) => {
                             self.inner.errors.update(|errors| {

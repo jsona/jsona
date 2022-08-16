@@ -454,8 +454,8 @@ mod tests {
         assert_parse_keys!(".foo*");
         assert_parse_keys!(".foo.*");
         assert_parse_keys!(".foo.*.bar");
-        assert_parse_keys!(r#".foo."ba-z""#, ".foo.'ba-z'");
-        assert_parse_keys!(r#".foo."ba z""#, ".foo.'ba z'");
+        assert_parse_keys!(r#".foo."ba-z""#, r#".foo."ba-z""#);
+        assert_parse_keys!(r#".foo."ba z""#, r#".foo."ba z""#);
         assert_parse_keys!(".foo.1");
         assert_parse_keys!(".foo.1.baz");
         assert_parse_keys!(r#".foo."1".baz"#, ".foo.1.baz");

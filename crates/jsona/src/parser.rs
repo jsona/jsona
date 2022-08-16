@@ -2,7 +2,7 @@
 
 use crate::dom;
 use crate::syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode};
-use crate::util::check_escape;
+use crate::util::validate_quote;
 use logos::{Lexer, Logos};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 use std::collections::HashSet;
@@ -589,7 +589,7 @@ impl<'p> Parser<'p> {
         if let Err(err_indices) = validates::string(self.lexer.slice()) {
             indexes.extend(err_indices);
         };
-        if let Err(err_indices) = check_escape(self.lexer.slice()) {
+        if let Err(err_indices) = validate_quote(self.lexer.slice()) {
             indexes.extend(err_indices);
         };
         let span = self.lexer.span();

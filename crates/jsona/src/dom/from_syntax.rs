@@ -5,7 +5,7 @@ use super::{
     keys::KeyOrIndex,
     node::{
         Annotations, AnnotationsInner, ArrayInner, BoolInner, Key, KeyInner, KeyKind, Map, Node,
-        NullInner, NumberInner, NumberRepr, ObjectInner, StringInner, StringRepr,
+        NullInner, NumberInner, NumberRepr, ObjectInner, StringInner,
     },
 };
 use serde_json::Number as JsonNumber;
@@ -219,7 +219,6 @@ fn scalar_from_syntax(
             syntax: Some(syntax),
             node_syntax: Some(root),
             annotations,
-            repr: StringRepr::Single,
             value: Default::default(),
         }
         .wrap()
@@ -229,7 +228,6 @@ fn scalar_from_syntax(
             syntax: Some(syntax),
             node_syntax: Some(root),
             annotations,
-            repr: StringRepr::Double,
             value: Default::default(),
         }
         .wrap()
@@ -239,7 +237,6 @@ fn scalar_from_syntax(
             syntax: Some(syntax),
             node_syntax: Some(root),
             annotations,
-            repr: StringRepr::Backtick,
             value: Default::default(),
         }
         .wrap()
