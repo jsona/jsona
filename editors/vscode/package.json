@@ -101,7 +101,7 @@
         },
         "jsona.schema.storeUrl": {
           "type": "string",
-          "default": null,
+          "default": "https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json",
           "description": "URL of jsona schema store catalog to use"
         },
         "jsona.schema.cache": {
@@ -112,25 +112,25 @@
         "jsona.formatter.indentString": {
           "scope": "resource",
           "type": "string",
-          "default": null,
+          "default": "  ",
           "description": "Indentation to use, should be tabs or spaces but technically could be anything."
         },
         "jsona.formatter.trailingNewline": {
           "scope": "resource",
           "type": "boolean",
-          "default": null,
+          "default": true,
           "description": "Add trailing newline to the source."
         },
         "jsona.formatter.trailingComma": {
           "scope": "resource",
           "type": "boolean",
-          "default": null,
+          "default": true,
           "description": "Put trailing commas for multiline arrays and objects."
         },
         "jsona.formatter.formatKey": {
           "scope": "resource",
           "type": "boolean",
-          "default": null,
+          "default": true,
           "description": "Remove unnecessary quote or choose better quote for property."
         }
       }
