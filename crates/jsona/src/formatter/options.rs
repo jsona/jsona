@@ -160,7 +160,7 @@ impl Default for Options {
             indent_string: "  ".into(),
             trailing_comma: true,
             trailing_newline: true,
-            format_key: false,
+            format_key: true,
         }
     }
 }
