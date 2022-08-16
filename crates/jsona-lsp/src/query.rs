@@ -51,13 +51,52 @@ impl Query {
             .as_ref()
             .and_then(|t| Query::prev_none_ws_comment(t.syntax.clone()))
         {
+            let mut fallback = || {
+                if let Some(node) = token.parent_ancestors().find(|v| {
+                    matches!(
+                        v.kind(),
+                        SyntaxKind::KEY
+                            | SyntaxKind::SCALAR
+                            | SyntaxKind::OBJECT
+                            | SyntaxKind::ARRAY
+                    )
+                }) {
+                    node_at_offset = node.text_range().start();
+                    match &node.kind() {
+                        SyntaxKind::KEY => {
+                            key = node
+                                .children_with_tokens()
+                                .find(|v| v.kind().is_key())
+                                .and_then(|v| v.as_token().cloned());
+                            add_value = !token
+                                .siblings_with_tokens(Direction::Next)
+                                .any(|v| v.kind() == SyntaxKind::COLON);
+                            kind = ScopeKind::PropertyKey;
+                        }
+                        SyntaxKind::SCALAR => {
+                            kind = ScopeKind::Value;
+                            add_separator = value_add_separator(&node);
+                            value = Some(node);
+                        }
+                        SyntaxKind::OBJECT => kind = ScopeKind::Object,
+                        SyntaxKind::ARRAY => kind = ScopeKind::Array,
+                        _ => {}
+                    };
+                }
+            };
             match token.kind() {
                 SyntaxKind::ANNOTATION_KEY => {
-                    add_value = !token
+                    let exist_value = token
                         .siblings_with_tokens(Direction::Next)
                         .any(|v| v.kind() == SyntaxKind::ANNOTATION_VALUE);
-                    kind = ScopeKind::AnnotationKey;
-                    key = Some(token);
+                    if !exist_value && !token.text_range().contains_inclusive(offset) {
+                        // out a tag annotation
+                        fallback()
+                    } else {
+                        add_value = !exist_value;
+                        kind = ScopeKind::AnnotationKey;
+                        key = Some(token);
+                    }
                 }
                 SyntaxKind::COLON => {
                     node_at_offset = token.text_range().start();
@@ -105,39 +144,7 @@ impl Query {
                 SyntaxKind::BRACKET_START => {
                     kind = ScopeKind::Array;
                 }
-                _ => {
-                    if let Some(node) = token.parent_ancestors().find(|v| {
-                        matches!(
-                            v.kind(),
-                            SyntaxKind::KEY
-                                | SyntaxKind::SCALAR
-                                | SyntaxKind::OBJECT
-                                | SyntaxKind::ARRAY
-                        )
-                    }) {
-                        node_at_offset = node.text_range().start();
-                        match &node.kind() {
-                            SyntaxKind::KEY => {
-                                key = node
-                                    .children_with_tokens()
-                                    .find(|v| v.kind().is_key())
-                                    .and_then(|v| v.as_token().cloned());
-                                add_value = !token
-                                    .siblings_with_tokens(Direction::Next)
-                                    .any(|v| v.kind() == SyntaxKind::COLON);
-                                kind = ScopeKind::PropertyKey;
-                            }
-                            SyntaxKind::SCALAR => {
-                                kind = ScopeKind::Value;
-                                add_separator = value_add_separator(&node);
-                                value = Some(node);
-                            }
-                            SyntaxKind::OBJECT => kind = ScopeKind::Object,
-                            SyntaxKind::ARRAY => kind = ScopeKind::Array,
-                            _ => {}
-                        };
-                    }
-                }
+                _ => fallback(),
             };
         }
 
