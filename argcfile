@@ -87,8 +87,6 @@ js() {
 # @cmd Build vscode extension
 # @arg kind[node|browser|vsix|all]
 vscode() {
-    export RUST_LOG="debug"
-    export LOG_TOPICS="lsp2host,host2lsp"
     pushd editors/vscode > /dev/null
     if [[ "$1" == "browser" ]]; then
         yarn build:browser-server

@@ -70,9 +70,9 @@ function log(topic: "lsp2host" | "host2lsp" | "fetchFile", message: any) {
     if (typeof message === "object") {
       console.log(topic, JSON.stringify(message));
       if (message?.jsonrpc && message?.method)  {
-        console.log(topic, message.method, JSON.stringify(message, null, 2));
+        console.log(topic, message.method, message);
       } else {
-        console.log(topic, JSON.stringify(message, null, 2));
+        console.log(topic, message);
       }
     } else {
       console.log(topic, message);
