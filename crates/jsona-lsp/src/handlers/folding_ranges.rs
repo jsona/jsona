@@ -22,7 +22,7 @@ pub(crate) async fn folding_ranges<E: Environment>(
 
     let workspaces = context.workspaces.read().await;
     let document_uri = &p.text_document.uri;
-    let (_, doc) = workspaces.try_get_ws_doc(document_uri)?;
+    let (_, doc) = workspaces.try_get_document(document_uri)?;
 
     let syntax = doc.parse.clone().into_syntax();
 

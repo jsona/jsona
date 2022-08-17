@@ -15,7 +15,7 @@ pub(crate) async fn format<E: Environment>(
 
     let workspaces = context.workspaces.read().await;
     let document_uri = &p.text_document.uri;
-    let (ws, doc) = workspaces.try_get_ws_doc(document_uri)?;
+    let (ws, doc) = workspaces.try_get_document(document_uri)?;
 
     let doc_path = Path::new(p.text_document.uri.as_str());
 

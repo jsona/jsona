@@ -44,15 +44,18 @@ impl<E: Environment> std::ops::DerefMut for Workspaces<E> {
 }
 
 impl<E: Environment> Workspaces<E> {
-    pub fn by_document(&self, document_uri: &Url) -> Option<&WorkspaceState<E>> {
+    pub fn by_document(&self, document_uri: &Url) -> &WorkspaceState<E> {
         self.0
             .iter()
-            .filter(|(key, _)| document_uri.as_str().starts_with(key.as_str()))
+            .filter(|(key, _)| {
+                document_uri.as_str().starts_with(key.as_str()) || *key == &*DEFAULT_WORKSPACE_URI
+            })
             .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
             .map(|(_, ws)| ws)
+            .unwrap()
     }
 
-    pub fn by_document_mut(&mut self, url: &Url) -> Option<&mut WorkspaceState<E>> {
+    pub fn by_document_mut(&mut self, url: &Url) -> &mut WorkspaceState<E> {
         self.0
             .iter_mut()
             .filter(|(key, _)| {
@@ -60,20 +63,14 @@ impl<E: Environment> Workspaces<E> {
             })
             .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
             .map(|(_, ws)| ws)
+            .unwrap()
     }
 
-    pub fn try_get_ws(&self, document_uri: &Url) -> Result<&WorkspaceState<E>, rpc::Error> {
-        self.by_document(document_uri).ok_or_else(|| {
-            tracing::debug!(%document_uri, "failed to get workspace");
-            rpc::Error::invalid_params()
-        })
-    }
-
-    pub fn try_get_ws_doc(
+    pub fn try_get_document(
         &self,
         document_uri: &Url,
     ) -> Result<(&WorkspaceState<E>, &DocumentState), rpc::Error> {
-        let ws = self.try_get_ws(document_uri)?;
+        let ws = self.by_document(document_uri);
         let doc = ws.try_get_document(document_uri)?;
         Ok((ws, doc))
     }
@@ -97,7 +94,14 @@ impl<E: Environment> WorldState<E> {
         );
         Self {
             id,
-            workspaces: AsyncRwLock::new(Workspaces(IndexMap::default())),
+            workspaces: {
+                let mut m = IndexMap::default();
+                m.insert(
+                    DEFAULT_WORKSPACE_URI.clone(),
+                    WorkspaceState::new(env.clone(), DEFAULT_WORKSPACE_URI.clone()),
+                );
+                AsyncRwLock::new(Workspaces(m))
+            },
             initialization_options: Default::default(),
             default_config: Default::default(),
             env,
@@ -158,8 +162,10 @@ impl<E: Environment> WorkspaceState<E> {
             self.schemas.set_cache_path(None);
         }
 
-        self.load_config(&context.env, &*context.world().default_config.load())
-            .await?;
+        if self.root != *DEFAULT_WORKSPACE_URI {
+            self.load_config(&context.env, &*context.world().default_config.load())
+                .await?;
+        }
 
         self.schemas.associations().clear();
 
@@ -261,6 +267,7 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         self.jsona_config.prepare(config_path)?;
+		tracing::debug!("Use jsona_config {:#?}", self.jsona_config);
 
         Ok(())
     }

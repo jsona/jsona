@@ -23,7 +23,7 @@ pub(crate) async fn hover<E: Environment>(
 
     let workspaces = context.workspaces.read().await;
     let document_uri = &p.text_document_position_params.text_document.uri;
-    let (ws, doc) = workspaces.try_get_ws_doc(document_uri)?;
+    let (ws, doc) = workspaces.try_get_document(document_uri)?;
     if !ws.lsp_config.schema.enabled {
         return Ok(None);
     }
