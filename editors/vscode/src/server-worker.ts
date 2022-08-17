@@ -12,31 +12,36 @@ const reader = new BrowserMessageReader(worker);
 
 let jsona: JsonaLsp;
 
-let conn = {
-  idx: 0,
+let com = {
+  idx: -1,
   waitings: {} as Record<number, { resolve: (value) => any, reject: (reason?) => void }>,
   timeouts: {} as Record<number, any>,
   async readFile(fsPath: string) {
-    let id = conn.idx - 1;
-    let req: RpcMessage = { jsonrpc: "2.0", method: "fs/readFile", id, params: { fsPath }};
+    return com.send({ method: "fs/readFile", params: { fsPath }});
+  },
+  send(req:  Partial<RpcMessage>) {
+    const id = com.idx--;
+    req.jsonrpc = "2.0";
+    req.id = id;
     return new Promise<Uint8Array>((resolveFn, rejectFn) => {
       const resolve = v => {
-        conn.clean(id);
+        com.clean(id);
         return resolveFn(v)
       }
       const reject = v => {
-        conn.clean(id);
+        com.clean(id);
         return rejectFn(v)
       }
-      conn.timeouts[id] = setTimeout(() => reject("Operation timeout"), 10000);
-      conn.waitings[id] = { resolve, reject  }
-      writer.write(req)
+      com.timeouts[id] = setTimeout(() => reject("Operation timeout"), 10000);
+      com.waitings[id] = { resolve, reject  }
+      log('lsp2host', req);
+      writer.write(req as RpcMessage)
     })
   },
-  clean(id: number) {
-    delete conn.waitings[id];
-    clearTimeout(conn.timeouts[id]);
-    delete conn.timeouts[id];
+  clean(id: number | string) {
+    delete com.waitings[id];
+    clearTimeout(com.timeouts[id]);
+    delete com.timeouts[id];
   }
 }
 
@@ -54,7 +59,7 @@ reader.listen(async (message: RpcMessage) => {
         },
         glob: () => [],
         now: () => new Date(),
-        readFile: conn.readFile,
+        readFile: com.readFile,
         writeFile: () => Promise.reject("not implemented write_file"),
         stderr: async (bytes: Uint8Array) => {
           console.log(new TextDecoder().decode(bytes));
@@ -94,7 +99,7 @@ reader.listen(async (message: RpcMessage) => {
 
   log('host2lsp', message);
   if (typeof message.id === "number" && message.id < 0) {
-    const wait = conn.waitings[message.id];
+    const wait = com.waitings[message.id];
     if (wait) {
       if (message?.error) {
         wait.reject(message.error?.message || "Unknown error")
