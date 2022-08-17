@@ -225,7 +225,10 @@ impl Query {
                     if let Some(t) = next_token {
                         if matches!(
                             t.kind(),
-                            SyntaxKind::COMMA | SyntaxKind::BRACE_END | SyntaxKind::BRACKET_END
+                            SyntaxKind::COMMA
+                                | SyntaxKind::BRACE_END
+                                | SyntaxKind::BRACKET_END
+                                | SyntaxKind::PARENTHESES_END
                         ) {
                             add_comma = false;
                         }
