@@ -144,8 +144,6 @@ impl<E: Environment> WorkspaceState<E> {
             tracing::error!(?error, "invalid configuration");
         }
 
-        tracing::debug!("Use jsona_config {:#?}", self.lsp_config);
-
         if self.lsp_config.schema.cache {
             self.schemas
                 .set_cache_path(context.initialization_options.load().cache_path.clone());
@@ -255,7 +253,6 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         self.jsona_config.prepare(config_path)?;
-        tracing::debug!("using jsona config: {:#?}", self.jsona_config);
 
         Ok(())
     }
