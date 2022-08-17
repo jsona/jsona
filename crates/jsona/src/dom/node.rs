@@ -588,14 +588,6 @@ impl Object {
     pub fn value(&self) -> &Shared<Map> {
         &self.inner.properties
     }
-
-    pub fn properties_keys(&self) -> Vec<StdString> {
-        self.value()
-            .read()
-            .kv_iter()
-            .map(|(k, _)| k.to_string())
-            .collect()
-    }
 }
 
 #[derive(Debug)]
@@ -685,7 +677,7 @@ impl Key {
         self.syntax().map(|v| v.text_range())
     }
 
-    pub fn to_raw_string(&self) -> StdString {
+    pub fn to_origin_string(&self) -> StdString {
         match self.syntax() {
             Some(v) => v.to_string(),
             None => self.value().to_string(),

@@ -95,9 +95,15 @@ pub async fn completion<E: Environment>(
             }
         }
         ScopeKind::PropertyKey | ScopeKind::Object => {
-            let props = node
+            let props: Vec<String> = node
                 .as_object()
-                .map(|v| v.properties_keys())
+                .map(|v| {
+                    v.value()
+                        .read()
+                        .kv_iter()
+                        .map(|(k, _)| k.value().to_string())
+                        .collect()
+                })
                 .unwrap_or_default();
             match schemas.as_ref() {
                 Some(schemas) => complete_key(doc, &query, &props, schemas),
