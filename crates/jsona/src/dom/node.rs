@@ -3,7 +3,7 @@ use super::keys::{KeyOrIndex, Keys};
 use super::visitor::{VisitControl, Visitor};
 use crate::parser;
 use crate::private::Sealed;
-use crate::syntax::{SyntaxElement, SyntaxKind};
+use crate::syntax::SyntaxElement;
 use crate::util::shared::Shared;
 use crate::util::{quote, unquote};
 
@@ -401,18 +401,19 @@ impl Number {
                     let text = s.as_token().unwrap().text().replace('_', "");
 
                     match self.inner.repr {
-                        NumberRepr::Dec => {
-                            if s.kind() == SyntaxKind::FLOAT {
-                                match text.parse::<f64>().ok().and_then(JsonNumber::from_f64) {
-                                    Some(v) => v,
-                                    None => {
-                                        self.inner.errors.update(|errors| {
-                                            errors.push(Error::InvalidNumber { syntax: s.clone() })
-                                        });
-                                        JsonNumber::from_f64(0.0).unwrap()
-                                    }
+                        NumberRepr::Float => {
+                            match text.parse::<f64>().ok().and_then(JsonNumber::from_f64) {
+                                Some(v) => v,
+                                None => {
+                                    self.inner.errors.update(|errors| {
+                                        errors.push(Error::InvalidNumber { syntax: s.clone() })
+                                    });
+                                    JsonNumber::from_f64(0.0).unwrap()
                                 }
-                            } else if text.starts_with('-') {
+                            }
+                        }
+                        NumberRepr::Dec => {
+                            if text.starts_with('-') {
                                 JsonNumber::from(text.parse::<i64>().unwrap_or_default())
                             } else {
                                 JsonNumber::from(text.parse::<u64>().unwrap_or_default())
@@ -435,19 +436,23 @@ impl Number {
                 .unwrap_or_else(|| JsonNumber::from(0))
         })
     }
+    pub fn is_integer(&self) -> bool {
+        self.inner.repr != NumberRepr::Float
+    }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum NumberRepr {
     Dec,
     Bin,
     Oct,
     Hex,
+    Float,
 }
 
 impl Default for NumberRepr {
     fn default() -> Self {
-        Self::Dec
+        Self::Float
     }
 }
 

@@ -132,7 +132,7 @@ fn complete_key(
 ) -> Option<CompletionResponse> {
     let mut comps = CompletionMap::default();
     for schema in schemas.iter() {
-        if !schema.maybe_object() {
+        if !schema.maybe_type(&SchemaType::Object) {
             continue;
         }
         match schema.properties.as_ref() {
@@ -490,6 +490,9 @@ impl CompletionMap {
                     self.add_string_value(r#""""#.into());
                 }
                 SchemaType::Number => {
+                    self.add_number_value("0.0".into());
+                }
+                SchemaType::Integer => {
                     self.add_number_value("0".into());
                 }
                 SchemaType::Boolean => {
@@ -591,6 +594,7 @@ fn insert_text_from_type(schema_type: &SchemaType) -> &'static str {
     match schema_type {
         SchemaType::String => r#""$1""#,
         SchemaType::Number => "$1",
+        SchemaType::Integer => "$1",
         SchemaType::Boolean => "$1",
         SchemaType::Null => "${1:null}",
         SchemaType::Object => "{$1}",

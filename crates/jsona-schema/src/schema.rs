@@ -132,6 +132,7 @@ pub enum SchemaType {
     String,
     Number,
     Boolean,
+    Integer,
     Null,
     Object,
     Array,
@@ -148,7 +149,13 @@ impl SchemaType {
                 }
             }
             Node::Bool(_) => SchemaType::Boolean,
-            Node::Number(_) => SchemaType::Number,
+            Node::Number(v) => {
+                if v.is_integer() {
+                    SchemaType::Integer
+                } else {
+                    SchemaType::Number
+                }
+            }
             Node::String(_) => SchemaType::String,
             Node::Array(_) => SchemaType::Array,
             Node::Object(_) => SchemaType::Object,
@@ -162,6 +169,7 @@ impl Display for SchemaType {
         let type_str = match self {
             SchemaType::String => "string",
             SchemaType::Number => "number",
+            SchemaType::Integer => "integer",
             SchemaType::Boolean => "boolean",
             SchemaType::Null => "null",
             SchemaType::Object => "object",
@@ -252,40 +260,10 @@ impl Schema {
         pointer_impl(&mut result, self, self, keys);
         result
     }
-    pub fn maybe_object(&self) -> bool {
+    pub fn maybe_type(&self, schema_type: &SchemaType) -> bool {
         self.schema_type
             .as_ref()
-            .map(|v| v.contains(&SchemaType::Object))
-            .unwrap_or_default()
-    }
-    pub fn maybe_array(&self) -> bool {
-        self.schema_type
-            .as_ref()
-            .map(|v| v.contains(&SchemaType::Array))
-            .unwrap_or_default()
-    }
-    pub fn maybe_string(&self) -> bool {
-        self.schema_type
-            .as_ref()
-            .map(|v| v.contains(&SchemaType::String))
-            .unwrap_or_default()
-    }
-    pub fn maybe_number(&self) -> bool {
-        self.schema_type
-            .as_ref()
-            .map(|v| v.contains(&SchemaType::Number))
-            .unwrap_or_default()
-    }
-    pub fn maybe_null(&self) -> bool {
-        self.schema_type
-            .as_ref()
-            .map(|v| v.contains(&SchemaType::Null))
-            .unwrap_or_default()
-    }
-    pub fn maybe_boolean(&self) -> bool {
-        self.schema_type
-            .as_ref()
-            .map(|v| v.contains(&SchemaType::Boolean))
+            .map(|v| v.contains(schema_type))
             .unwrap_or_default()
     }
     pub fn one_type(&self) -> Option<SchemaType> {
