@@ -136,6 +136,7 @@ impl Query {
                 SyntaxKind::BRACKET_START => {
                     kind = ScopeKind::Array;
                 }
+                SyntaxKind::BRACE_END | SyntaxKind::BRACKET_END => {}
                 _ => fallback(),
             };
         }
