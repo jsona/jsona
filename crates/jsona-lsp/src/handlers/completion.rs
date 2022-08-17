@@ -55,7 +55,7 @@ pub async fn completion<E: Environment>(
         }
     };
 
-    let query = Query::at(&doc.dom, offset);
+    let query = Query::at(&doc.dom, offset, true);
     if query.scope == ScopeKind::Unknown {
         return Ok(None);
     }
@@ -78,18 +78,17 @@ pub async fn completion<E: Environment>(
     let schemas = ws.query_schemas(&document_uri, &query_keys).await;
     tracing::debug!(
         ?query,
-        "completion keys={} schemas={}",
+        "completion keys={} schemas={:?}",
         keys,
-        // schemas
-        //     .as_ref()
-        //     .and_then(|v| serde_json::to_string(&v).ok())
-        //     .unwrap_or_default()
-        schemas.is_some()
+        schemas.as_ref().map(|v| v.len())
     );
 
     let result = match &query.scope {
         ScopeKind::AnnotationKey => {
-            let props = node.annotations().map(|v| v.map_keys()).unwrap_or_default();
+            let mut props = node.annotations().map(|v| v.map_keys()).unwrap_or_default();
+            if let Some(key) = query.key.as_ref() {
+                props.push(key.to_string());
+            }
             match schemas.as_ref() {
                 Some(schemas) => complete_key(doc, &query, &props, schemas),
                 None => complete_annotations_schemaless(doc, &query, &props),
@@ -371,7 +370,7 @@ impl CompletionMap {
         }
         let mut output = vec![];
         let is_annotation = query.scope == ScopeKind::AnnotationKey;
-        let space = if query.compact { "" } else { " " };
+        let (space, comma) = query.space_and_comma();
         for (key, data) in self.keys.drain(..) {
             let CompletionKeyData {
                 document: description,
@@ -403,7 +402,7 @@ impl CompletionMap {
             } else if is_annotation {
                 format!("{}({})", key, value)
             } else {
-                format!("{}:{}{}", key, space, value)
+                format!("{}:{}{}{}", key, space, value, comma)
             };
             let text_edit = query.key.as_ref().map(|r| {
                 CompletionTextEdit::Edit(TextEdit {
@@ -437,8 +436,7 @@ impl CompletionMap {
             return None;
         }
         let mut output = vec![];
-        let separator = if query.add_separator { "," } else { "" };
-        let space = if query.add_space { " " } else { "" };
+        let (space, comma) = query.space_and_comma();
         for (label, data) in self.values.drain(..) {
             let CompletionValueData { plain, kind, value } = data;
             let format = if plain {
@@ -446,7 +444,7 @@ impl CompletionMap {
             } else {
                 InsertTextFormat::SNIPPET
             };
-            let insert_text = format!("{}{}{}", space, value, separator);
+            let insert_text = format!("{}{}{}", space, value, comma);
             let text_edit = query.value.as_ref().map(|r| {
                 CompletionTextEdit::Edit(TextEdit {
                     range: doc.mapper.range(r.text_range()).unwrap().into_lsp(),

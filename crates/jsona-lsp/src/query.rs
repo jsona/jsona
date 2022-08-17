@@ -24,29 +24,25 @@ pub struct Query {
     pub value: Option<SyntaxNode>,
     /// Whether add value for property/annotationKey completion
     pub add_value: bool,
-    /// Whether insert space in value completion
-    pub add_space: bool,
-    /// Is compact node
-    pub compact: bool,
-    /// Whether insert separator
-    pub add_separator: bool,
 }
 
 impl Query {
-    pub fn at(root: &Node, offset: TextSize) -> Self {
+    pub fn at(root: &Node, offset: TextSize, is_completion: bool) -> Self {
         let syntax = root.node_syntax().cloned().unwrap().into_node().unwrap();
         let before = offset
             .checked_sub(TextSize::from(1))
             .and_then(|offset| Self::position_info_at(&syntax, offset));
-        let compact = is_compact_node(&before);
+        let after = if offset >= syntax.text_range().end() {
+            None
+        } else {
+            Self::position_info_at(&syntax, offset)
+        };
 
         let mut kind = ScopeKind::Unknown;
         let mut node_at_offset = offset;
         let mut key = None;
         let mut value = None;
-        let mut add_separator = false;
         let mut add_value = true;
-        let mut add_space = false;
         if let Some(token) = before
             .as_ref()
             .and_then(|t| Query::prev_none_ws_comment(t.syntax.clone()))
@@ -68,14 +64,22 @@ impl Query {
                                 .children_with_tokens()
                                 .find(|v| v.kind().is_key())
                                 .and_then(|v| v.as_token().cloned());
-                            add_value = !token
+                            add_value = !node
                                 .siblings_with_tokens(Direction::Next)
                                 .any(|v| v.kind() == SyntaxKind::COLON);
+                            if is_completion {
+                                if let Some(offset) = node
+                                    .parent()
+                                    .and_then(|v| v.parent())
+                                    .and_then(|v| v.text_range().start().checked_add(1.into()))
+                                {
+                                    node_at_offset = offset;
+                                }
+                            }
                             kind = ScopeKind::PropertyKey;
                         }
                         SyntaxKind::SCALAR => {
                             kind = ScopeKind::Value;
-                            add_separator = value_add_separator(&node);
                             value = Some(node);
                         }
                         SyntaxKind::OBJECT => kind = ScopeKind::Object,
@@ -111,18 +115,6 @@ impl Query {
                             None
                         }
                     });
-                    if !is_compact_node(&before)
-                        && before
-                            .as_ref()
-                            .map(|v| v.syntax.kind() == SyntaxKind::COLON)
-                            .unwrap_or_default()
-                    {
-                        add_space = true;
-                    }
-                    add_separator = match value.as_ref() {
-                        Some(v) => value_add_separator(v),
-                        None => colon_add_separator(token),
-                    };
                 }
                 SyntaxKind::PARENTHESES_START => {
                     kind = ScopeKind::Value;
@@ -151,17 +143,10 @@ impl Query {
         Query {
             offset,
             before,
-            after: if offset >= syntax.text_range().end() {
-                None
-            } else {
-                Self::position_info_at(&syntax, offset)
-            },
+            after,
             scope: kind,
             node_at_offset,
             add_value,
-            add_separator,
-            add_space,
-            compact,
             key,
             value,
         }
@@ -198,6 +183,63 @@ impl Query {
                 }
                 index
             })
+    }
+
+    pub fn space_and_comma(&self) -> (&'static str, &'static str) {
+        let mut add_comma = true;
+        let mut add_space = false;
+        if self.scope != ScopeKind::AnnotationKey {
+            if let Some(token) = self.before.as_ref().map(|v| &v.syntax) {
+                if let Some(parent) = token.parent_ancestors().find(|v| {
+                    matches!(
+                        v.kind(),
+                        SyntaxKind::ANNOTATION_VALUE | SyntaxKind::OBJECT | SyntaxKind::ARRAY
+                    )
+                }) {
+                    let mut found = false;
+                    let mut exist_new_line = false;
+                    let mut prev_token = None;
+                    let mut next_token = None;
+                    for event in parent.preorder_with_tokens() {
+                        if let WalkEvent::Enter(ele) = event {
+                            if let Some(t) = ele.as_token() {
+                                if t.text().contains(|p| p == '\r' || p == '\n') {
+                                    exist_new_line = true;
+                                }
+                                if found && !t.kind().is_ws_or_comment() {
+                                    next_token = Some(t.clone());
+                                    break;
+                                }
+                                if !found {
+                                    if t.text_range().contains_inclusive(self.offset) {
+                                        found = true;
+                                    } else {
+                                        prev_token = Some(t.clone())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if let Some(t) = next_token {
+                        if matches!(
+                            t.kind(),
+                            SyntaxKind::COMMA | SyntaxKind::BRACE_END | SyntaxKind::BRACKET_END
+                        ) {
+                            add_comma = false;
+                        }
+                    }
+                    if exist_new_line {
+                        add_space = !(self.scope == ScopeKind::Value
+                            && prev_token
+                                .map(|v| v.kind() == SyntaxKind::COLON)
+                                .unwrap_or_default());
+                    }
+                }
+            }
+        }
+        let space = if add_space { " " } else { "" };
+        let comma = if add_comma { "," } else { "" };
+        (space, comma)
     }
 
     fn position_info_at(syntax: &SyntaxNode, offset: TextSize) -> Option<PositionInfo> {
@@ -283,55 +325,4 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
         _ => {}
     }
     Some((keys, node.clone()))
-}
-
-fn value_add_separator(node: &SyntaxNode) -> bool {
-    for syntax in node.siblings_with_tokens(Direction::Next) {
-        match syntax.kind() {
-            SyntaxKind::NEWLINE => return true,
-            SyntaxKind::COMMA => return false,
-            SyntaxKind::WHITESPACE | SyntaxKind::LINE_COMMENT => {}
-            _ => return false,
-        }
-    }
-    false
-}
-
-fn colon_add_separator(mut token: SyntaxToken) -> bool {
-    loop {
-        match token.next_token() {
-            Some(tok) => match tok.kind() {
-                SyntaxKind::NEWLINE => return true,
-                SyntaxKind::COMMA => return false,
-                SyntaxKind::WHITESPACE | SyntaxKind::LINE_COMMENT => {
-                    token = tok;
-                    continue;
-                }
-                _ => return false,
-            },
-            None => return false,
-        }
-    }
-}
-
-fn is_compact_node(before: &Option<PositionInfo>) -> bool {
-    if let Some(token) = before.as_ref().map(|v| &v.syntax) {
-        if let Some(parent) = token.parent_ancestors().find(|v| {
-            matches!(
-                v.kind(),
-                SyntaxKind::ANNOTATION_VALUE | SyntaxKind::OBJECT | SyntaxKind::ARRAY
-            )
-        }) {
-            for event in parent.preorder_with_tokens() {
-                if let WalkEvent::Enter(ele) = event {
-                    if let Some(t) = ele.as_token() {
-                        if t.kind() == SyntaxKind::NEWLINE {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    true
 }

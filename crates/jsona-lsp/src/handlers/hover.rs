@@ -46,7 +46,7 @@ pub(crate) async fn hover<E: Environment>(
         }
     };
 
-    let query = Query::at(&doc.dom, offset);
+    let query = Query::at(&doc.dom, offset, false);
     if query.scope == ScopeKind::Unknown || (query.key.is_none() && query.value.is_none()) {
         return Ok(None);
     }
