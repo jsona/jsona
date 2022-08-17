@@ -31,7 +31,7 @@ jobs:
       run: |
         version=$(npm version minor --no-git-tag-version | tr -d 'v')
         patch=${{ github.run_number }}
-        version_new=${version%.*}.$((patch + 100))
+        version_new=${version%.*}.$((patch * 2))
         sed -i 's/^  "version": "'$version'",/  "version": "'$version_new'",/' package.json
       working-directory: editors/vscode
 
@@ -51,5 +51,5 @@ jobs:
         files: editors/vscode/jsona.vsix
 
     - name: Publish Extension
-      run: npx vsce publish --pat ${{ secrets.MARKETPLACE_TOKEN }} --packagePath jsona.vsix --pre-release
+      run: npx vsce publish --pat ${{ secrets.VSCODE_MARKETPLACE_TOKEN }} --packagePath jsona.vsix --pre-release
       working-directory: editors/vscode
