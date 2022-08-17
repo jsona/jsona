@@ -85,7 +85,7 @@ js() {
 }
 
 # @cmd Build vscode extension
-# @arg kind[node|browser|vsix|all]
+# @arg kind[node|browser|package]
 vscode() {
     pushd editors/vscode > /dev/null
     if [[ "$1" == "browser" ]]; then
@@ -93,7 +93,7 @@ vscode() {
         yarn build:browser-extension
     elif [[ "$1" == "node" ]]; then
         yarn build:node
-    elif [[ "$1" == "vsix" ]]; then
+    elif [[ "$1" == "package" ]]; then
         yarn package
         ls -alh *.vsix
     else
