@@ -44,35 +44,38 @@ impl<E: Environment> std::ops::DerefMut for Workspaces<E> {
 }
 
 impl<E: Environment> Workspaces<E> {
-    pub fn by_document(&self, url: &Url) -> &WorkspaceState<E> {
+    pub fn by_document(&self, document_uri: &Url) -> Option<&WorkspaceState<E>> {
         self.0
             .iter()
-            .filter(|(key, _)| url.as_str().starts_with(key.as_str()))
+            .filter(|(key, _)| document_uri.as_str().starts_with(key.as_str()))
             .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
-            .map_or_else(
-                || {
-                    tracing::warn!(document_uri = %url, "using detached workspace");
-                    self.0.get(&*DEFAULT_WORKSPACE_URI).unwrap()
-                },
-                |(_, ws)| ws,
-            )
+            .map(|(_, ws)| ws)
     }
 
-    pub fn by_document_mut(&mut self, url: &Url) -> &mut WorkspaceState<E> {
+    pub fn by_document_mut(&mut self, url: &Url) -> Option<&mut WorkspaceState<E>> {
         self.0
             .iter_mut()
             .filter(|(key, _)| {
                 url.as_str().starts_with(key.as_str()) || *key == &*DEFAULT_WORKSPACE_URI
             })
             .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
-            .map(|(k, ws)| {
-                if k == &*DEFAULT_WORKSPACE_URI {
-                    tracing::warn!(document_uri = %url, "using detached workspace");
-                }
+            .map(|(_, ws)| ws)
+    }
 
-                ws
-            })
-            .unwrap()
+    pub fn try_get_ws(&self, document_uri: &Url) -> Result<&WorkspaceState<E>, rpc::Error> {
+        self.by_document(document_uri).ok_or_else(|| {
+            tracing::debug!(%document_uri, "failed to get workspace");
+            rpc::Error::invalid_params()
+        })
+    }
+
+    pub fn try_get_ws_doc(
+        &self,
+        document_uri: &Url,
+    ) -> Result<(&WorkspaceState<E>, &DocumentState), rpc::Error> {
+        let ws = self.try_get_ws(document_uri)?;
+        let doc = ws.try_get_document(document_uri)?;
+        Ok((ws, doc))
     }
 }
 
@@ -128,10 +131,14 @@ impl<E: Environment> WorkspaceState<E> {
 }
 
 impl<E: Environment> WorkspaceState<E> {
-    pub(crate) fn document(&self, url: &Url) -> Result<&DocumentState, rpc::Error> {
-        self.documents
-            .get(url)
-            .ok_or_else(rpc::Error::invalid_params)
+    pub(crate) fn try_get_document(
+        &self,
+        document_uri: &Url,
+    ) -> Result<&DocumentState, rpc::Error> {
+        self.documents.get(document_uri).ok_or_else(|| {
+            tracing::debug!(%document_uri, "not found document in workspace");
+            rpc::Error::invalid_params()
+        })
     }
 
     #[tracing::instrument(skip_all, fields(%self.root))]

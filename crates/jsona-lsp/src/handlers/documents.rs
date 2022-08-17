@@ -28,7 +28,13 @@ pub(crate) async fn document_open<E: Environment>(
 
     let mut workspaces = context.workspaces.write().await;
     let document_uri = &p.text_document.uri;
-    let ws = workspaces.by_document_mut(document_uri);
+    let ws = match workspaces.by_document_mut(document_uri) {
+        Some(ws) => ws,
+        None => {
+            tracing::debug!(%document_uri, "failed to get workspace");
+            return;
+        }
+    };
     let dom = parse.clone().into_dom();
 
     if ws.lsp_config.schema.enabled {
@@ -66,7 +72,13 @@ pub(crate) async fn document_change<E: Environment>(
 
     let mut workspaces = context.workspaces.write().await;
     let document_uri = &p.text_document.uri;
-    let ws = workspaces.by_document_mut(document_uri);
+    let ws = match workspaces.by_document_mut(document_uri) {
+        Some(ws) => ws,
+        None => {
+            tracing::debug!(%document_uri, "failed to get workspace");
+            return;
+        }
+    };
     let dom = parse.clone().into_dom();
 
     ws.documents
@@ -97,7 +109,13 @@ pub(crate) async fn document_close<E: Environment>(
 
     let mut workspaces = context.workspaces.write().await;
     let document_uri = &p.text_document.uri;
-    let ws = workspaces.by_document_mut(document_uri);
+    let ws = match workspaces.by_document_mut(document_uri) {
+        Some(ws) => ws,
+        None => {
+            tracing::debug!(%document_uri, "failed to get workspace");
+            return;
+        }
+    };
 
     ws.documents.remove(document_uri);
     drop(workspaces);

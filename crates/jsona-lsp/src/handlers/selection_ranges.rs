@@ -16,14 +16,7 @@ pub(crate) async fn selection_ranges<E: Environment>(
 
     let workspaces = context.workspaces.read().await;
     let document_uri = &p.text_document.uri;
-    let ws = workspaces.by_document(document_uri);
-    let doc = match ws.document(document_uri) {
-        Ok(d) => d,
-        Err(error) => {
-            tracing::debug!(%error, "failed to get document from workspace");
-            return Ok(None);
-        }
-    };
+    let (_, doc) = workspaces.try_get_ws_doc(document_uri)?;
 
     Ok(Some(
         p.positions

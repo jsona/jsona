@@ -16,7 +16,8 @@ pub async fn list_schemas<E: Environment>(
     let p = params.required()?;
 
     let workspaces = context.workspaces.read().await;
-    let ws = workspaces.by_document(&p.document_uri);
+    let document_uri = p.document_uri;
+    let ws = workspaces.try_get_ws(&document_uri)?;
 
     let associations = ws.schemas.associations().read();
 
@@ -40,13 +41,14 @@ pub async fn associated_schema<E: Environment>(
     let p = params.required()?;
 
     let workspaces = context.workspaces.read().await;
-    let ws = workspaces.by_document(&p.document_uri);
+    let document_uri = p.document_uri;
+    let ws = workspaces.try_get_ws(&document_uri)?;
 
     Ok(AssociatedSchemaResponse {
         schema: ws
             .schemas
             .associations()
-            .query_for(&p.document_uri)
+            .query_for(&document_uri)
             .map(|s| SchemaInfo {
                 url: s.url.clone(),
                 meta: s.meta.clone(),

@@ -20,14 +20,10 @@ pub(crate) async fn document_symbols<E: Environment>(
 
     let workspaces = context.workspaces.read().await;
     let document_uri = &p.text_document.uri;
-    let ws = workspaces.by_document(document_uri);
-    let doc = match ws.document(document_uri) {
-        Ok(d) => d,
-        Err(error) => {
-            tracing::debug!(%error, "failed to get document from workspace");
-            return Ok(None);
-        }
-    };
+    let (ws, doc) = workspaces.try_get_ws_doc(document_uri)?;
+    if !ws.lsp_config.schema.enabled {
+        return Ok(None);
+    }
 
     Ok(Some(DocumentSymbolResponse::Nested(create_symbols(doc))))
 }
