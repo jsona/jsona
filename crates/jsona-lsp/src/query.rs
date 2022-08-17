@@ -221,6 +221,7 @@ impl Query {
                             }
                         }
                     }
+
                     if let Some(t) = next_token {
                         if matches!(
                             t.kind(),
@@ -229,11 +230,18 @@ impl Query {
                             add_comma = false;
                         }
                     }
-                    if exist_new_line {
-                        add_space = !(self.scope == ScopeKind::Value
-                            && prev_token
-                                .map(|v| v.kind() == SyntaxKind::COLON)
-                                .unwrap_or_default());
+                    if exist_new_line
+                        && !(self.scope == ScopeKind::Value
+                            && (self
+                                .before
+                                .as_ref()
+                                .map(|v| v.syntax.kind().is_ws_or_comment())
+                                .unwrap_or_default()
+                                || prev_token
+                                    .map(|v| v.kind().is_ws_or_comment())
+                                    .unwrap_or_default()))
+                    {
+                        add_space = true
                     }
                 }
             }
