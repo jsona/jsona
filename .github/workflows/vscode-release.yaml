@@ -11,6 +11,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
     - uses: actions/checkout@v3
 
@@ -18,22 +22,23 @@ jobs:
       with:
         node-version: '14'
         cache: 'yarn'
+        cache-dependency-path: editors/vscode/yarn.lock
 
     - run: yarn install --frozen-lockfile
-      working-directory: editors/vscode     
+      working-directory: editors/vscode
     - run: yarn package -o jsona.vsix
-      working-directory: editors/vscode     
+      working-directory: editors/vscode
 
     - name: Publish Release
       uses: softprops/action-gh-release@v0.1.5
       if: ${{ startsWith(github.ref, 'refs/tags/') }}
       with:
         draft: false
-        files: editors/vscode/jsona.vsix
+        files: jsona.vsix
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish Extension
       run: npx vsce publish --pat ${{ secrets.MARKETPLACE_TOKEN }} --packagePath jsona.vsix
-      working-directory: editors/vscode     
+      working-directory: editors/vscode

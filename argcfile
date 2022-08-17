@@ -120,13 +120,14 @@ publish.crate() {
 
 # @cmd Publish to npm
 publish.npm() {
-    for name in ${PKGS[@]}; do
+    for name in ${NPMS[@]}; do
         online_ver=$(npm show @jsona/$name version)
         pkg_ver=$(node -p "require('./js/"$name"/package.json').version")
         if [[ "$online_ver" != "$pkg_ver" ]]; then
             read -p "Upgrade $name from $online_ver to $pkg_ver (y/n)? " choice
             if [[ "$choice" == y ]]; then
                 (cd js/$name && npm publish)
+                sleep 30
             fi
         else
             echo @jsona/$name:$pkg_ver is up to date

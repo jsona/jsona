@@ -7,17 +7,17 @@
   resolved "https://registry.yarnpkg.com/@esbuild/linux-loong64/-/linux-loong64-0.15.0.tgz#7ca859765361a92a60669a1794e9c1837d427d97"
   integrity sha512-7ChD3qsxRPIPp9bfjspZiM/x8B1UZL7IKwp0YdnC1kKsDCB5Q8/TexedeeEbkI9inlunu8Lll2lP2wnkiXTCLA==
 
-"@jsona/lsp@^0.1.5":
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/@jsona/lsp/-/lsp-0.1.5.tgz#656b9e252840a9e6d49063c9000be9c7a85f6eaf"
-  integrity sha512-4cKhViqchyKmVucipS1/+esM6roaIJqJFOlykkHmIkXW20ouVzLNTBi8F3s7IAbDDAbFaFVnCUlmsuxxt2+sVg==
+"@jsona/lsp@^0.1.6":
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/@jsona/lsp/-/lsp-0.1.6.tgz#d9670f3d40e2fc8f2b0f2f395841c6e0fa888759"
+  integrity sha512-N7kxCuhK+4L9+JOioKDgCD/axe3r6PV5K/ZpHtlCLtjqrz+qqFhGvttFIKHfxFSADBaM5lRyvgzbqhQ6wAVtfQ==
   dependencies:
-    "@jsona/util-types" "^0.1.1"
+    "@jsona/util-types" "^0.1.2"
 
-"@jsona/util-types@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@jsona/util-types/-/util-types-0.1.1.tgz#ef03e946af6597af0370e1f488712e8244425116"
-  integrity sha512-9AWdbhfOZELt/GqqU5zPX0tUI+OItak3N7gsBTHlu4+Wr7ggP0YibLdPYNe58Dn670eN5BSEWhMIY41oQwDt0Q==
+"@jsona/util-types@^0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@jsona/util-types/-/util-types-0.1.2.tgz#e14a9ded7496e3afeee2415e1bbc2877854115a3"
+  integrity sha512-RYUl5PeYq8vq9EbHwGjOTWsXySspnSAe0DFuH+J2S/1+Rmw58/UyPcXKFZJ1sesMte5WzOtZn46iawDGZ9pRdg==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
