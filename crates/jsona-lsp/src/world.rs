@@ -171,7 +171,8 @@ impl<E: Environment> WorkspaceState<E> {
             .associations()
             .add_from_config(&self.jsona_config);
 
-        let root_path = PathBuf::from(to_file_path(&self.root).unwrap_or_else(|| "/".into()));
+        let root_path =
+            PathBuf::from(to_file_path(&self.root).ok_or_else(|| anyhow!("invalid root URL"))?);
 
         for (schema_uri, list) in &self.lsp_config.schema.associations {
             match schema_uri.parse::<Url>() {

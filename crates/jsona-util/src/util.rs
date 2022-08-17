@@ -248,7 +248,7 @@ pub fn to_file_path(url: &Url) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    macro_rules! asset_to_file_uri {
+    macro_rules! assert_to_file_uri {
         ($o:expr, $p:expr) => {
             assert_eq!(to_file_uri($p, &None).unwrap().to_string(), $o);
         };
@@ -269,17 +269,17 @@ mod tests {
 
     #[test]
     fn test_to_file_uri() {
-        asset_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1");
-        asset_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1\\");
-        asset_to_file_uri!("file:///c%3A/dir1/a/b", "a\\b", "C:\\dir1\\");
-        asset_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1");
-        asset_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1/");
-        asset_to_file_uri!("file:///dir1/a/b", "a\\b", "/dir1/");
-        asset_to_file_uri!("file:///a/b", "/a/b", "/dir1");
-        asset_to_file_uri!("file:///a/b", "/a/b");
-        asset_to_file_uri!("file:///a/b", "file:///a/b", "/dir1");
-        asset_to_file_uri!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
-        asset_to_file_uri!("http://example.com/a/b", "http://example.com/a/b");
+        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1");
+        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1\\");
+        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a\\b", "C:\\dir1\\");
+        assert_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1");
+        assert_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1/");
+        assert_to_file_uri!("file:///dir1/a/b", "a\\b", "/dir1/");
+        assert_to_file_uri!("file:///a/b", "/a/b", "/dir1");
+        assert_to_file_uri!("file:///a/b", "/a/b");
+        assert_to_file_uri!("file:///a/b", "file:///a/b", "/dir1");
+        assert_to_file_uri!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
+        assert_to_file_uri!("http://example.com/a/b", "http://example.com/a/b");
     }
 
     #[test]
@@ -287,5 +287,9 @@ mod tests {
         assert_to_file_path!("file:///c%3A/a/b", "C:\\a\\b");
         assert_to_file_path!("file:///C%3A/a/b", "C:\\a\\b");
         assert_to_file_path!("file:///dir1/a/b", "/dir1/a/b");
+        assert_to_file_path!(
+            "vscode-vfs://github/jsona/schemastore",
+            "/jsona/schemastore"
+        );
     }
 }

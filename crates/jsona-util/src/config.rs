@@ -1,5 +1,7 @@
-use std::path::Path;
-use std::{fmt::Debug, path::PathBuf};
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{anyhow, bail};
 use jsona::dom::Node;
@@ -8,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::environment::Environment;
-use crate::util::path_utils::to_unix;
 use crate::util::{path_utils, to_file_uri, GlobRule};
 
 pub const CONFIG_FILE_NAMES: &[&str] = &[".jsona"];
@@ -143,7 +144,7 @@ impl Config {
     }
 
     pub fn is_included<T: AsRef<str>>(&self, path: T) -> bool {
-        let path = to_unix(path);
+        let path = path_utils::to_unix(path);
         self.file_rule
             .as_ref()
             .map(|r| r.is_match(path))

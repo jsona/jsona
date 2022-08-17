@@ -41,7 +41,7 @@ chrome() {
 
 # @cmd Build vscode extension
 build() {
-    js all
+    wasmjs all
     vscode package
 }
 
@@ -60,10 +60,10 @@ install() {
     fi
 }
 
-# @cmd Build js
+# @cmd Build wasm and js
 # @flag --debug
 # @arg name[core|util-types|lsp|all]
-js() {
+wasmjs() {
     __run() {
         name=$1
         yarn --cwd js workspace @jsona/$name build
@@ -95,7 +95,8 @@ vscode() {
         yarn build:node
     elif [[ "$1" == "package" ]]; then
         yarn package
-        ls -alh *.vsix
+        pkg_ver=$(node -p "require('./package.json').version")
+        ls -alh vscode-jsona-$pkg_ver.vsix
     else
         yarn build
     fi
