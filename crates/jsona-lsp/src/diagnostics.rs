@@ -162,7 +162,7 @@ fn collect_dom_errors(
 
                     diags.push(Diagnostic {
                         range,
-                        severity: Some(DiagnosticSeverity::ERROR),
+                        severity: Some(DiagnosticSeverity::WARNING),
                         source: Some(NAME.into()),
                         message: error.to_string(),
                         related_information: Some(Vec::from([DiagnosticRelatedInformation {
@@ -177,7 +177,7 @@ fn collect_dom_errors(
 
                     diags.push(Diagnostic {
                         range: other_range,
-                        severity: Some(DiagnosticSeverity::HINT),
+                        severity: Some(DiagnosticSeverity::WARNING),
                         source: Some(NAME.into()),
                         message: error.to_string(),
                         related_information: Some(Vec::from([DiagnosticRelatedInformation {
