@@ -10,7 +10,7 @@ use std::{
 use url::Url;
 
 const FILE_PROTOCOL: &str = "file://";
-static RE_URI_PROTOCOL: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+://)").unwrap());
+static RE_URI_PROTOCOL: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([A-Za-z_-]+://)").unwrap());
 
 #[derive(Clone)]
 pub struct GlobRule {
@@ -291,5 +291,12 @@ mod tests {
             "vscode-vfs://github/jsona/schemastore",
             "/jsona/schemastore"
         );
+    }
+
+    #[test]
+    fn test_is_url() {
+        assert!(is_url("file:///c%3A/a/b"));
+        assert!(is_url("vscode-test-web://mount"));
+        assert!(is_url("vscode-vfs://github/jsona/jsona"));
     }
 }

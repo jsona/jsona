@@ -267,7 +267,7 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         self.jsona_config.prepare(config_path)?;
-		tracing::debug!("Use jsona_config {:#?}", self.jsona_config);
+        tracing::debug!("Use jsona_config {:#?}", self.jsona_config);
 
         Ok(())
     }

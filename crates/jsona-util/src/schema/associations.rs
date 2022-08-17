@@ -58,6 +58,7 @@ impl<E: Environment> SchemaAssociations<E> {
         }
     }
     pub fn add(&self, rule: AssociationRule, assoc: SchemaAssociation) {
+        tracing::debug!("add an association {:?} {:?}", rule, assoc);
         self.associations.write().push((rule, assoc));
         self.cache.lock().clear();
     }

@@ -233,18 +233,26 @@ impl Query {
                             add_comma = false;
                         }
                     }
-                    if exist_new_line
-                        && !(self.scope == ScopeKind::Value
-                            && (self
-                                .before
-                                .as_ref()
-                                .map(|v| v.syntax.kind().is_ws_or_comment())
-                                .unwrap_or_default()
-                                || prev_token
-                                    .map(|v| v.kind().is_ws_or_comment())
-                                    .unwrap_or_default()))
-                    {
-                        add_space = true
+                    if exist_new_line {
+                        match self.scope {
+                            ScopeKind::Array => {}
+                            ScopeKind::Value => {
+                                if !(self
+                                    .before
+                                    .as_ref()
+                                    .map(|v| v.syntax.kind().is_ws_or_comment())
+                                    .unwrap_or_default()
+                                    || prev_token
+                                        .map(|v| v.kind().is_ws_or_comment())
+                                        .unwrap_or_default())
+                                {
+                                    add_space = true
+                                }
+                            }
+                            _ => {
+                                add_space = true;
+                            }
+                        }
                     }
                 }
             }
