@@ -84,6 +84,6 @@ This page contains a list of formatting options the formatter accepts.
 | option           | description                                                                    | default  |
 | :--------------- | :----------------------------------------------------------------------------- | :------- |
 | indent_string    | Indentation to use, should be tabs or spaces but technically could be anything | 2 spaces |
-| trailing_comma   | Put trailing commas for multiline arrays/objects                               | true     |
-| trailing_newline | Add trailing newline to the source                                             | true     |
+| trailing_comma   | Put trailing commas for multiline arrays/objects                               | false    |
+| trailing_newline | Add trailing newline to the source                                             | false    |
 | format_key       | Remove unnecessary quote or choose better quote for property.                  | false    |

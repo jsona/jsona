@@ -118,19 +118,19 @@
         "jsona.formatter.trailingNewline": {
           "scope": "resource",
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Add trailing newline to the source."
         },
         "jsona.formatter.trailingComma": {
           "scope": "resource",
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Put trailing commas for multiline arrays and objects."
         },
         "jsona.formatter.formatKey": {
           "scope": "resource",
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Remove unnecessary quote or choose better quote for property."
         }
       }

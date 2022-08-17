@@ -158,9 +158,9 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             indent_string: "  ".into(),
-            trailing_comma: true,
-            trailing_newline: true,
-            format_key: true,
+            trailing_comma: false,
+            trailing_newline: false,
+            format_key: false,
         }
     }
 }
