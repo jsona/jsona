@@ -64,11 +64,10 @@ async function updateSchemaIndicator(c: BaseLanguageClient, editor: vscode.TextE
         const res = await c.sendRequest("jsona/associatedSchema", {
           documentUri: documentUrl.toString(),
         }) as Lsp.Client.RequestResponse<"jsona/associatedSchema">;
-        if (res?.schema?.url) {
-          let schema = res.schema;
-          schemaIndicator.text =
-            schema.meta?.name ?? schema.url?.split("/").slice(-1)[0] ?? "no schema";
-          schemaIndicator.tooltip = `JSONA Schema: ${schema.url}`;
+        let url = res?.schema?.url;
+        if (url) {
+          schemaIndicator.text = url.split("/").slice(-1)[0]?.replace(/.jsona$/ , "") ?? "noschema";
+          schemaIndicator.tooltip = `JSONA Schema: ${url}`;
         } else {
           resetSchemaIndicator(schemaIndicator);
         }
@@ -80,7 +79,7 @@ async function updateSchemaIndicator(c: BaseLanguageClient, editor: vscode.TextE
 }
 
 function resetSchemaIndicator(schemaIndicator: vscode.StatusBarItem) {
-  schemaIndicator.text = "no schema";
+  schemaIndicator.text = "noschema";
   schemaIndicator.tooltip = "Select JSONA Schema";
   schemaIndicator.command = "jsona.selectSchema";
 }

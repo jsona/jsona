@@ -10,44 +10,43 @@ use jsona_util::{
 };
 use serde_json::json;
 use tokio::io::AsyncReadExt;
-use url::Url;
 
 impl<E: Environment> App<E> {
     pub async fn execute_lint(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
-        if !cmd.no_schema {
-            if let Some(schema_uri) = &cmd.schema {
-                let url: Url = self
-                    .env
-                    .to_file_uri(schema_uri)
-                    .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_uri))?;
-                self.schemas.associations().add(
-                    AssociationRule::glob("**")?,
-                    SchemaAssociation {
-                        meta: json!({"source": "command-line"}),
-                        url,
-                        priority: 999,
-                    },
-                );
-            } else if let Some(store) = &cmd.schemastore {
-                if !store.is_empty() {
-                    let url = self
-                        .env
-                        .to_file_uri(store)
-                        .ok_or_else(|| anyhow!("invalid schemastore {store}"))?;
-
-                    self.schemas
-                        .associations()
-                        .add_from_schemastore(&Some(url), &self.env.root_uri())
-                        .await
-                        .with_context(|| "failed to load schema store")?;
-                };
-            } else {
+        if let Some(store) = &cmd.schemastore {
+            if store.is_empty() || store == "-" {
                 self.schemas
                     .associations()
                     .add_from_schemastore(&None, &self.env.root_uri())
                     .await
                     .with_context(|| "failed to load schema store")?;
+            } else {
+                let url = self
+                    .env
+                    .to_file_uri(store)
+                    .ok_or_else(|| anyhow!("invalid schemastore {store}"))?;
+
+                self.schemas
+                    .associations()
+                    .add_from_schemastore(&Some(url), &self.env.root_uri())
+                    .await
+                    .with_context(|| "failed to load schema store")?;
             }
+        }
+        if let Some(name) = &cmd.schema {
+            let url = self
+                .schemas
+                .associations()
+                .to_schema_url(name)
+                .ok_or_else(|| anyhow!("invalid schema `{}`", name))?;
+            self.schemas.associations().add(
+                AssociationRule::glob("**")?,
+                SchemaAssociation {
+                    meta: json!({"source": "command-line"}),
+                    url,
+                    priority: 999,
+                },
+            );
         }
 
         if cmd.files.is_empty() {
@@ -140,16 +139,14 @@ pub struct LintCommand {
     pub general: GeneralArgs,
 
     /// URL to the schema to be used for validation.
+    ///
+    /// If schemastore passed, schema name can be used.
     #[clap(long)]
     pub schema: Option<String>,
 
-    /// URL to a schema store (index).
+    /// URL to a schema store (index), pass "-" to point to default schema store.
     #[clap(long)]
     pub schemastore: Option<String>,
-
-    /// Disable all schema validations.
-    #[clap(long)]
-    pub no_schema: bool,
 
     /// Paths or glob patterns to JSONA documents.
     pub files: Vec<String>,

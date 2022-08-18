@@ -1,7 +1,8 @@
 use anyhow::anyhow;
 use jsona::dom::{KeyOrIndex, Node};
 use once_cell::sync::Lazy;
-use parking_lot::{Mutex, RwLock, RwLockReadGuard};
+use parking_lot::{RwLock, RwLockReadGuard};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{fmt::Debug, sync::Arc};
@@ -17,6 +18,7 @@ use crate::{
 static DEFAULT_SCHEMASTORE_URI: Lazy<Url> = Lazy::new(|| {
     Url::parse("https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json").unwrap()
 });
+static RE_SCHEMA_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([A-Za-z_-]+)$").unwrap());
 
 pub const SCHEMA_KEY: &str = "@jsonaschema";
 
@@ -32,7 +34,7 @@ pub mod source {
     pub const STORE: &str = "store";
     pub const CONFIG: &str = "config";
     pub const LSP_CONFIG: &str = "lsp_config";
-    pub const SCHEMA_FIELD: &str = "$schema";
+    pub const SCHEMA_FIELD: &str = "@jsonaschema";
 }
 
 #[derive(Clone)]
@@ -40,7 +42,8 @@ pub struct SchemaAssociations<E: Environment> {
     env: E,
     fetcher: Fetcher<E>,
     associations: Arc<RwLock<Vec<(AssociationRule, SchemaAssociation)>>>,
-    cache: Arc<Mutex<HashMap<Url, Option<Arc<SchemaAssociation>>>>>,
+    cache: Arc<RwLock<HashMap<Url, Option<Arc<SchemaAssociation>>>>>,
+    schema_refs: Arc<RwLock<HashMap<String, Url>>>,
 }
 
 impl<E: Environment> SchemaAssociations<E> {
@@ -49,13 +52,14 @@ impl<E: Environment> SchemaAssociations<E> {
             env,
             fetcher,
             associations: Default::default(),
-            cache: Arc::new(Mutex::new(HashMap::default())),
+            cache: Arc::new(RwLock::new(HashMap::default())),
+            schema_refs: Arc::new(RwLock::new(HashMap::default())),
         }
     }
     pub fn add(&self, rule: AssociationRule, assoc: SchemaAssociation) {
         tracing::debug!("add an association {:?} {:?}", rule, assoc);
         self.associations.write().push((rule, assoc));
-        self.cache.lock().clear();
+        self.cache.write().clear();
     }
 
     pub fn read(&self) -> RwLockReadGuard<'_, Vec<(AssociationRule, SchemaAssociation)>> {
@@ -64,7 +68,8 @@ impl<E: Environment> SchemaAssociations<E> {
 
     pub fn clear(&self) {
         self.associations.write().clear();
-        self.cache.lock().clear();
+        self.cache.write().clear();
+        self.schema_refs.write().clear();
     }
 
     pub async fn add_from_schemastore(
@@ -75,6 +80,14 @@ impl<E: Environment> SchemaAssociations<E> {
         let url = url.as_ref().unwrap_or(&DEFAULT_SCHEMASTORE_URI);
         let schemastore = self.load_schemastore(url).await?;
         for schema in &schemastore.0 {
+            if self
+                .schema_refs
+                .write()
+                .insert(schema.name.clone(), schema.url.clone())
+                .is_some()
+            {
+                tracing::warn!("schema name {} already exist", schema.name);
+            }
             let include = schema
                 .file_match
                 .iter()
@@ -124,27 +137,34 @@ impl<E: Environment> SchemaAssociations<E> {
                 _ => true,
             });
         if dirty {
-            self.cache.lock().clear();
+            self.cache.write().clear();
         }
         if let Some(url) = node
             .get(&KeyOrIndex::annotation(SCHEMA_KEY))
             .and_then(|v| v.as_string().cloned())
+            .and_then(|v| self.to_schema_url(v.value()))
         {
-            if let Some(url) = self.env.to_file_uri(url.value()) {
-                self.add(
-                    AssociationRule::Url(doc_url.clone()),
-                    SchemaAssociation {
-                        url,
-                        priority: priority::SCHEMA_FIELD,
-                        meta: json!({ "source": source::SCHEMA_FIELD }),
-                    },
-                );
-            }
+            self.add(
+                AssociationRule::Url(doc_url.clone()),
+                SchemaAssociation {
+                    url,
+                    priority: priority::SCHEMA_FIELD,
+                    meta: json!({ "source": source::SCHEMA_FIELD }),
+                },
+            )
+        }
+    }
+
+    pub fn to_schema_url(&self, schema_ref: &str) -> Option<Url> {
+        if RE_SCHEMA_NAME.is_match(schema_ref) {
+            self.schema_refs.read().get(schema_ref).cloned()
+        } else {
+            self.env.to_file_uri(schema_ref)
         }
     }
 
     pub fn query_for(&self, file: &Url) -> Option<Arc<SchemaAssociation>> {
-        if let Some(assoc) = self.cache.lock().get(file).cloned() {
+        if let Some(assoc) = self.cache.read().get(file).cloned() {
             return assoc;
         }
         let assoc = self
@@ -160,7 +180,7 @@ impl<E: Environment> SchemaAssociations<E> {
             })
             .max_by_key(|assoc| assoc.priority)
             .map(Arc::new);
-        self.cache.lock().insert(file.clone(), assoc.clone());
+        self.cache.write().insert(file.clone(), assoc.clone());
         assoc
     }
 

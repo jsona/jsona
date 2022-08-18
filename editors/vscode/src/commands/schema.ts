@@ -36,21 +36,21 @@ export function register(ctx: vscode.ExtensionContext, c: BaseLanguageClient) {
         if (!selection) {
           return;
         }
-        writeSchemaAssociations(selection.url, documentUri);
+        writeSchemaAssociations(selection?.meta?.name || selection.url, documentUri);
       }
     )
   );
 }
 
-function writeSchemaAssociations(schemaUrl: string, fileUrl: string) {
+function writeSchemaAssociations(schemaRef: string, fileUrl: string) {
     const associations: Record<string, string[]> = vscode.workspace.getConfiguration("jsona").get("schema.associations");
     const newAssociations = Object.assign({}, associations);
     deleteExistingAssociationFile(newAssociations, fileUrl);
-    let schemaAssociations = newAssociations[schemaUrl];
+    let schemaAssociations = newAssociations[schemaRef];
     if (!schemaAssociations) {
-      newAssociations[schemaUrl] = [fileUrl];
+      newAssociations[schemaRef] = [fileUrl];
     } else {
-      newAssociations[schemaUrl] = [...schemaAssociations, fileUrl];
+      newAssociations[schemaRef] = [...schemaAssociations, fileUrl];
     }
    vscode.workspace.getConfiguration("jsona").update("schema.associations", newAssociations);
 }

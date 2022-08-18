@@ -161,9 +161,20 @@ impl<E: Environment> WorkspaceState<E> {
             return Ok(());
         }
 
-        for (schema_uri, list) in &self.lsp_config.schema.associations {
-            match schema_uri.parse::<Url>() {
-                Ok(schema_uri) => {
+        let store_url = self.lsp_config.schema.store_url.clone();
+
+        if let Err(error) = self
+            .schemas
+            .associations()
+            .add_from_schemastore(&store_url, &Some(self.root.clone()))
+            .await
+        {
+            tracing::error!(%error, url=?store_url.map(|v| v.to_string()), "failed to load schemastore");
+        }
+
+        for (name, items) in &self.lsp_config.schema.associations {
+            match self.schemas.associations().to_schema_url(name) {
+                Some(schema_uri) => {
                     let assoc = SchemaAssociation {
                         url: schema_uri.clone(),
                         meta: json!({
@@ -171,7 +182,7 @@ impl<E: Environment> WorkspaceState<E> {
                         }),
                         priority: priority::LSP_CONFIG,
                     };
-                    match AssociationRule::batch(list, &Some(self.root.clone())) {
+                    match AssociationRule::batch(items, &Some(self.root.clone())) {
                         Ok(rules) => {
                             for rule in rules {
                                 self.schemas.associations().add(rule, assoc.clone())
@@ -182,20 +193,10 @@ impl<E: Environment> WorkspaceState<E> {
                         }
                     }
                 }
-                Err(error) => {
-                    tracing::error!(%error, %schema_uri, "failed to add schema associations");
+                None => {
+                    tracing::error!(%name, "failed to add schema associations");
                 }
             }
-        }
-        let store_url = self.lsp_config.schema.store_url.clone();
-
-        if let Err(error) = self
-            .schemas
-            .associations()
-            .add_from_schemastore(&store_url, &Some(self.root.clone()))
-            .await
-        {
-            tracing::error!(%error, url=?store_url.map(|v| v.to_string()), "failed to load schemastore");
         }
 
         self.emit_initialize_workspace(context.clone()).await;
