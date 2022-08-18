@@ -302,7 +302,12 @@ mod tests {
         assert_association_rule!("file:///home/u1/p1/abc", ["abc"], "file:///home/u1", true);
         assert_association_rule!("file:///home/u1/p1/abc", ["*abc"], "file:///home/u1", true);
         assert_association_rule!("file:///home/u1/p1/abc", ["*/abc"], "file:///home/u1", true);
-        assert_association_rule!("file:///home/u1/p1/abc", ["**/abc"], "file:///home/u1", true);
+        assert_association_rule!(
+            "file:///home/u1/p1/abc",
+            ["**/abc"],
+            "file:///home/u1",
+            true
+        );
         assert_association_rule!("file:///c%3A/abc", ["abc"], "file:///c%3A/abc", true);
         assert_association_rule!("file:///c%3A/abc", ["abc"], "file:///c%3A", true);
     }
