@@ -128,7 +128,7 @@ publish.npm() {
             read -p "Upgrade $name from $online_ver to $pkg_ver (y/n)? " choice
             if [[ "$choice" == y ]]; then
                 (cd js/$name && npm publish)
-                sleep 30
+                sleep 15
             fi
         else
             echo @jsona/$name:$pkg_ver is up to date

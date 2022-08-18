@@ -1,6 +1,6 @@
 [package]
 name = "jsona-lsp"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Language server for JSONA"
 homepage = "https://jsona.github.io/jsona/lsp"
@@ -24,9 +24,9 @@ parking_lot = "0.12"
 regex = "1.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-jsona = { path = "../jsona", version = "0.4" }
-jsona-util = { path = "../jsona-util", version = "0.2" }
-jsona-schema = { path = "../jsona-schema", version = "0.1" }
+jsona = { path = "../jsona", version = "0.5" }
+jsona-util = { path = "../jsona-util", version = "0.3" }
+jsona-schema = { path = "../jsona-schema", version = "0.2" }
 time = { version = "0.3", features = ["formatting", "parsing"] }
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }

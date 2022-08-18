@@ -1,6 +1,6 @@
 [package]
 name = "jsona-wasm-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 publish = false
 
@@ -16,10 +16,10 @@ clap = { version = "3.2", features = ["derive"], optional = true }
 console_error_panic_hook = "0.1"
 futures = "0.3"
 js-sys = "0.3"
-jsona = { path = "../jsona", version = "0.4" }
-jsona-util = { path = "../jsona-util", version = "0.2" }
-jsona-lsp = { path = "../jsona-lsp", version = "0.2", optional = true }
-jsona-cli = { path = "../jsona-cli", version = "0.4", optional = true }
+jsona = { path = "../jsona", version = "0.5" }
+jsona-util = { path = "../jsona-util", version = "0.3" }
+jsona-lsp = { path = "../jsona-lsp", version = "0.3", optional = true }
+jsona-cli = { path = "../jsona-cli", version = "0.5", optional = true }
 lsp-async-stub = { version = "0.6", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

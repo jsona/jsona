@@ -609,7 +609,7 @@ dependencies = [
 
 [[package]]
 name = "jsona"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "arc-swap",
  "indexmap",
@@ -623,7 +623,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-cli"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-ctrlc",
@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-lsp"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -671,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-schema"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "either",
  "fancy-regex 0.10.0",
@@ -684,7 +684,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-schema-validator"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "jsona",
  "jsona-schema",
@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-util"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ahash",
  "anyhow",
@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-wasm-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -751,7 +751,7 @@ dependencies = [
 
 [[package]]
 name = "jsona-wasm-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "jsona",
  "wasm-bindgen",

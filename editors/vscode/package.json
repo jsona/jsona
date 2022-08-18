@@ -158,8 +158,8 @@
     "build": "rimraf dist && yarn build:node && yarn build:browser-extension && yarn build:browser-server"
   },
   "dependencies": {
-    "@jsona/lsp": "^0.1.7",
-    "@jsona/util-types": "^0.1.3",
+    "@jsona/lsp": "^0.1.8",
+    "@jsona/util-types": "^0.1.4",
     "esbuild": "^0.15.0",
     "node-fetch": "^3.2.10",
     "typescript": "^4.7.4",
