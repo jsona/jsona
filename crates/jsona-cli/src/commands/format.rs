@@ -4,8 +4,8 @@ use anyhow::anyhow;
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::{formatter, parser};
-use jsona_util::{config::Config, environment::Environment};
-use std::{mem, path::Path};
+use jsona_util::environment::Environment;
+use std::mem;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 impl<E: Environment> App<E> {
@@ -22,7 +22,6 @@ impl<E: Environment> App<E> {
         let mut source = String::new();
         self.env.stdin().read_to_string(&mut source).await?;
 
-        let config = self.load_config(&cmd.general).await?;
         let display_path = cmd.stdin_filepath.as_deref().unwrap_or("-");
 
         let p = parser::parse(&source);
@@ -35,7 +34,7 @@ impl<E: Environment> App<E> {
                 return Err(anyhow!("no formatting was done due to syntax errors"));
             }
         }
-        let format_opts = self.format_options(&config, &cmd, Path::new(display_path))?;
+        let format_opts = self.format_options(&cmd)?;
 
         let formatted = formatter::format_syntax(p.into_syntax(), format_opts);
 
@@ -58,21 +57,17 @@ impl<E: Environment> App<E> {
             tracing::warn!("using `--stdin-filepath` has no effect unless input comes from stdin")
         }
 
-        let config = self.load_config(&cmd.general).await?;
-
         let cwd = self
             .env
             .cwd()
             .ok_or_else(|| anyhow!("could not figure the current working directory"))?;
 
-        let files = self
-            .collect_files(&cwd, &config, mem::take(&mut cmd.files).into_iter())
-            .await?;
+        let files = self.collect_files(&cwd, mem::take(&mut cmd.files).into_iter())?;
 
         let mut result = Ok(());
 
         for path in files {
-            let format_opts = self.format_options(&config, &cmd, &path)?;
+            let format_opts = self.format_options(&cmd)?;
 
             let f = self.env.read_file(&path).await?;
             let source = String::from_utf8_lossy(&f).into_owned();
@@ -109,15 +104,8 @@ impl<E: Environment> App<E> {
         result
     }
 
-    fn format_options(
-        &self,
-        config: &Config,
-        cmd: &FormatCommand,
-        path: &Path,
-    ) -> Result<formatter::Options, anyhow::Error> {
+    fn format_options(&self, cmd: &FormatCommand) -> Result<formatter::Options, anyhow::Error> {
         let mut format_opts = formatter::Options::default();
-        config.update_format_options(path, &mut format_opts);
-
         format_opts.update_from_str(cmd.options.iter().filter_map(|s| {
             let mut split = s.split('=');
             let k = split.next();

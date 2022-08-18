@@ -76,17 +76,6 @@
           },
           "default": null
         },
-        "jsona.configFile.path": {
-          "description": "An absolute, or workspace relative path to the Jsona configuration file.",
-          "type": "string",
-          "scope": "resource"
-        },
-        "jsona.configFile.enabled": {
-          "description": "Whether to enable the usage of a Jsona configuration file.",
-          "type": "boolean",
-          "scope": "resource",
-          "default": true
-        },
         "jsona.schema.enabled": {
           "description": "Enable completion and validation based on JSON schemas.",
           "type": "boolean",

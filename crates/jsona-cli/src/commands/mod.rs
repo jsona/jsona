@@ -11,7 +11,6 @@ mod queries;
 
 use clap::{crate_version, ArgEnum, Args, Parser, Subcommand};
 use jsona_util::environment::Environment;
-use std::path::PathBuf;
 
 impl<E: Environment> App<E> {
     pub async fn execute(&mut self, args: AppArgs) -> Result<(), anyhow::Error> {
@@ -69,19 +68,7 @@ pub struct AppArgs {
 }
 
 #[derive(Debug, Clone, Args)]
-pub struct GeneralArgs {
-    /// Path to the Jsona configuration file.
-    #[clap(long, short)]
-    pub config: Option<PathBuf>,
-
-    /// Set a cache path.
-    #[clap(long)]
-    pub cache_path: Option<PathBuf>,
-
-    /// Do not search for a configuration file.
-    #[clap(long)]
-    pub no_auto_config: bool,
-}
+pub struct GeneralArgs {}
 
 #[derive(Clone, Subcommand)]
 pub enum JsonaCommand {
