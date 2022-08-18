@@ -37,7 +37,7 @@ impl<E: Environment> App<E> {
             let url = self
                 .schemas
                 .associations()
-                .to_schema_url(name)
+                .get_schema_url(name)
                 .ok_or_else(|| anyhow!("invalid schema `{}`", name))?;
             self.schemas.associations().add(
                 AssociationRule::glob("**")?,

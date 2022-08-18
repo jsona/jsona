@@ -82,12 +82,12 @@ impl GlobRule {
 pub mod path_utils {
     use std::{borrow::Cow, path::Path};
 
-    pub fn join_path<T: AsRef<str>>(path: T, base: &Path) -> String {
+    pub fn join_path<T: AsRef<str>, U: AsRef<Path>>(path: T, base: U) -> String {
         let path: &str = path.as_ref();
         if is_absolute(path) {
             return path.to_string();
         }
-        let base = remove_tail_slash(base.display().to_string());
+        let base = remove_tail_slash(base.as_ref().display().to_string());
         if is_window(&base) {
             let (driver, base_path) = base.split_at(2);
             let path = path.replace('/', "\\");
@@ -170,7 +170,7 @@ pub fn to_file_uri(path: &str, base: &Option<Url>) -> Option<Url> {
             path.to_string()
         } else {
             let base = base.as_ref().and_then(to_file_path)?;
-            path_utils::join_path(path, Path::new(&base))
+            path_utils::join_path(path, &base)
         };
         format!("{}{}", FILE_PROTOCOL, encode_url(full_path))
     };

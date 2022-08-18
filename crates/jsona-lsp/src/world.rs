@@ -169,7 +169,7 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         for (name, items) in &self.lsp_config.schema.associations {
-            match self.schemas.associations().to_schema_url(name) {
+            match self.schemas.associations().get_schema_url(name) {
                 Some(schema_uri) => {
                     let assoc = SchemaAssociation {
                         url: schema_uri.clone(),

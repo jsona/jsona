@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use jsona::dom::{KeyOrIndex, Node};
+use jsona_schema::{Schema, SchemaType};
 use once_cell::sync::Lazy;
 use parking_lot::{RwLock, RwLockReadGuard};
 use regex::Regex;
@@ -15,12 +16,19 @@ use crate::{
     HashMap,
 };
 
+pub const SCHEMA_REF_KEY: &str = "@jsonaschema";
+
+pub static SCHEMA_REF_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
+    schema_type: Some(SchemaType::String.into()),
+    description: Some("A ref to jsona schema".into()),
+    ..Default::default()
+});
+
 static DEFAULT_SCHEMASTORE_URI: Lazy<Url> = Lazy::new(|| {
     Url::parse("https://cdn.jsdelivr.net/npm/@jsona/schemastore@latest/index.json").unwrap()
 });
-static RE_SCHEMA_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([A-Za-z_-]+)$").unwrap());
 
-pub const SCHEMA_KEY: &str = "@jsonaschema";
+static RE_SCHEMA_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([A-Za-z_-]+)$").unwrap());
 
 pub mod priority {
     pub const STORE: usize = 30;
@@ -43,7 +51,7 @@ pub struct SchemaAssociations<E: Environment> {
     fetcher: Fetcher<E>,
     associations: Arc<RwLock<Vec<(AssociationRule, SchemaAssociation)>>>,
     cache: Arc<RwLock<HashMap<Url, Option<Arc<SchemaAssociation>>>>>,
-    schema_refs: Arc<RwLock<HashMap<String, Url>>>,
+    store_schema_urls: Arc<RwLock<HashMap<String, Url>>>,
 }
 
 impl<E: Environment> SchemaAssociations<E> {
@@ -53,7 +61,7 @@ impl<E: Environment> SchemaAssociations<E> {
             fetcher,
             associations: Default::default(),
             cache: Arc::new(RwLock::new(HashMap::default())),
-            schema_refs: Arc::new(RwLock::new(HashMap::default())),
+            store_schema_urls: Arc::new(RwLock::new(HashMap::default())),
         }
     }
     pub fn add(&self, rule: AssociationRule, assoc: SchemaAssociation) {
@@ -69,7 +77,7 @@ impl<E: Environment> SchemaAssociations<E> {
     pub fn clear(&self) {
         self.associations.write().clear();
         self.cache.write().clear();
-        self.schema_refs.write().clear();
+        self.store_schema_urls.write().clear();
     }
 
     pub async fn add_from_schemastore(
@@ -82,7 +90,7 @@ impl<E: Environment> SchemaAssociations<E> {
         tracing::info!(%url, "use schema store");
         for schema in &schemastore.0 {
             if self
-                .schema_refs
+                .store_schema_urls
                 .write()
                 .insert(schema.name.clone(), schema.url.clone())
                 .is_some()
@@ -141,9 +149,9 @@ impl<E: Environment> SchemaAssociations<E> {
             self.cache.write().clear();
         }
         if let Some(url) = node
-            .get(&KeyOrIndex::annotation(SCHEMA_KEY))
+            .get(&KeyOrIndex::annotation(SCHEMA_REF_KEY))
             .and_then(|v| v.as_string().cloned())
-            .and_then(|v| self.to_schema_url(v.value()))
+            .and_then(|v| self.get_schema_url(v.value()))
         {
             self.add(
                 AssociationRule::Url(doc_url.clone()),
@@ -156,11 +164,25 @@ impl<E: Environment> SchemaAssociations<E> {
         }
     }
 
-    pub fn to_schema_url(&self, schema_ref: &str) -> Option<Url> {
+    pub fn get_schema_url(&self, schema_ref: &str) -> Option<Url> {
         if RE_SCHEMA_NAME.is_match(schema_ref) {
-            self.schema_refs.read().get(schema_ref).cloned()
+            self.store_schema_urls.read().get(schema_ref).cloned()
         } else {
             self.env.to_file_uri(schema_ref)
+        }
+    }
+
+    pub fn schema_key_complete_schema(&self) -> Schema {
+        let enum_value: Vec<_> = self
+            .store_schema_urls
+            .read()
+            .keys()
+            .map(|v| json!(v))
+            .collect();
+        Schema {
+            schema_type: Some(SchemaType::String.into()),
+            enum_value: Some(enum_value),
+            ..Default::default()
         }
     }
 

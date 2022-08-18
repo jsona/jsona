@@ -6,7 +6,10 @@ use jsona::{
     util::quote,
 };
 use jsona_schema::{Schema, SchemaType};
-use jsona_util::environment::Environment;
+use jsona_util::{
+    environment::Environment,
+    schema::associations::{SCHEMA_REF_KEY, SCHEMA_REF_SCHEMA},
+};
 use lsp_async_stub::{
     rpc::Error,
     util::{LspExt, Position},
@@ -66,7 +69,16 @@ pub async fn completion<E: Environment>(
         _ => keys.clone(),
     };
 
-    let schemas = ws.query_schemas(&document_uri, &query_keys).await;
+    let schemas = if query.scope == ScopeKind::Value
+        && keys
+            .last_annotation_key()
+            .map(|v| v.value() == SCHEMA_REF_KEY)
+            .unwrap_or_default()
+    {
+        Some(vec![ws.schemas.associations().schema_key_complete_schema()])
+    } else {
+        ws.query_schemas(&document_uri, &query_keys).await
+    };
     tracing::debug!(
         ?query,
         "completion keys={} schemas={:?}",
@@ -169,6 +181,7 @@ fn complete_annotations_schemaless(
             comps.add_key(&anno_key, &anno_schema)
         }
     }
+    comps.add_key(SCHEMA_REF_KEY, &SCHEMA_REF_SCHEMA);
     comps.into_key_completions(doc, query)
 }
 
