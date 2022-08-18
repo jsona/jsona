@@ -2,7 +2,6 @@ use jsona::formatter;
 use jsona_util::environment::Environment;
 use lsp_async_stub::{rpc::Error, util::LspExt, Context, Params};
 use lsp_types::{DocumentFormattingParams, TextEdit};
-use std::path::Path;
 
 use crate::World;
 
@@ -17,8 +16,6 @@ pub(crate) async fn format<E: Environment>(
     let document_uri = &p.text_document.uri;
     let (ws, doc) = workspaces.try_get_document(document_uri)?;
 
-    let doc_path = Path::new(p.text_document.uri.as_str());
-
     let mut format_opts = formatter::Options {
         indent_string: if p.options.insert_spaces {
             " ".repeat(p.options.tab_size as usize)
@@ -31,9 +28,6 @@ pub(crate) async fn format<E: Environment>(
     if let Some(v) = p.options.insert_final_newline {
         format_opts.trailing_newline = v;
     }
-
-    ws.jsona_config
-        .update_format_options(doc_path, &mut format_opts);
 
     format_opts.update_camel(ws.lsp_config.formatter.clone());
 

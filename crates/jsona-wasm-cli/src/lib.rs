@@ -1,8 +1,7 @@
 use environment::WasmEnvironment;
 use jsona::{formatter, parser::parse};
-use jsona_util::{config::Config, schema::Schemas};
+use jsona_util::schema::Schemas;
 use serde::Serialize;
-use url::Url;
 use wasm_bindgen::prelude::*;
 
 mod environment;
@@ -33,28 +32,9 @@ pub fn initialize() {
 }
 
 #[wasm_bindgen]
-pub fn format(
-    _env: JsValue,
-    jsona: &str,
-    options: JsValue,
-    config: JsValue,
-) -> Result<String, JsError> {
-    let mut config = if config.is_undefined() {
-        Config::default()
-    } else {
-        config.into_serde()?
-    };
-
-    // let env = WasmEnvironment::from(env);
-    config
-        .prepare(None)
-        .map_err(|err| JsError::new(&err.to_string()))?;
-
+pub fn format(_env: JsValue, jsona: &str, options: JsValue) -> Result<String, JsError> {
     let camel_opts: formatter::OptionsIncompleteCamel = options.into_serde()?;
     let mut options = formatter::Options::default();
-    if let Some(cfg_opts) = config.formatting.clone() {
-        options.update(cfg_opts);
-    }
     options.update_camel(camel_opts);
 
     let syntax = parse(jsona);
@@ -63,17 +43,8 @@ pub fn format(
 }
 
 #[wasm_bindgen]
-pub async fn lint(env: JsValue, jsona: String, config: JsValue) -> Result<JsValue, JsError> {
-    let mut config = if config.is_undefined() {
-        Config::default()
-    } else {
-        config.into_serde()?
-    };
+pub async fn lint(env: JsValue, jsona: String, schema_url: String) -> Result<JsValue, JsError> {
     let env = WasmEnvironment::from(env);
-    config
-        .prepare(None)
-        .map_err(|err| JsError::new(&err.to_string()))?;
-
     let syntax = parse(&jsona);
 
     if !syntax.errors.is_empty() {
@@ -107,29 +78,26 @@ pub async fn lint(env: JsValue, jsona: String, config: JsValue) -> Result<JsValu
     }
 
     let schemas = Schemas::new(env);
-    schemas.associations().add_from_config(&config);
 
-    if let Some(schema) = schemas
-        .associations()
-        .query_for(&Url::parse("file:///__.jsona").unwrap())
-    {
-        let schema_errors = schemas
-            .validate(&schema.url, &dom)
-            .await
-            .map_err(|err| JsError::new(&err.to_string()))?;
+    if let Ok(url) = schema_url.parse() {
+        if let Some(schema) = schemas.associations().query_for(&url) {
+            let schema_errors = schemas
+                .validate(&schema.url, &dom)
+                .await
+                .map_err(|err| JsError::new(&err.to_string()))?;
 
-        return Ok(JsValue::from_serde(&LintResult {
-            errors: schema_errors
-                .into_iter()
-                .map(|err| LintError {
-                    range: None,
-                    error: err.to_string(),
-                })
-                .collect(),
-        })?);
+            return Ok(JsValue::from_serde(&LintResult {
+                errors: schema_errors
+                    .into_iter()
+                    .map(|err| LintError {
+                        range: None,
+                        error: err.to_string(),
+                    })
+                    .collect(),
+            })?);
+        }
     }
-
-    todo!()
+    Ok(JsValue::from_serde(&LintResult { errors: vec![] })?)
 }
 
 #[cfg(feature = "cli")]

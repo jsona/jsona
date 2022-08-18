@@ -10,7 +10,6 @@ use jsona::{
 };
 use jsona_schema::Schema;
 use jsona_util::{
-    config::Config,
     environment::Environment,
     schema::{
         associations::{priority, source, AssociationRule, SchemaAssociation},
@@ -81,7 +80,6 @@ pub struct WorldState<E: Environment> {
     pub(crate) id: String,
     pub(crate) workspaces: AsyncRwLock<Workspaces<E>>,
     pub(crate) initialization_options: ArcSwap<InitializationOptions>,
-    pub(crate) default_config: ArcSwap<Config>,
 }
 
 pub static DEFAULT_WORKSPACE_URI: Lazy<Url> = Lazy::new(|| Url::parse("root:///").unwrap());
@@ -103,21 +101,14 @@ impl<E: Environment> WorldState<E> {
                 AsyncRwLock::new(Workspaces(m))
             },
             initialization_options: Default::default(),
-            default_config: Default::default(),
             env,
         }
-    }
-
-    /// Set the world state's default config.
-    pub fn set_default_config(&self, default_config: Arc<Config>) {
-        self.default_config.store(default_config);
     }
 }
 
 pub struct WorkspaceState<E: Environment> {
     pub(crate) root: Url,
     pub(crate) documents: HashMap<lsp_types::Url, DocumentState>,
-    pub(crate) jsona_config: Config,
     pub(crate) schemas: Schemas<E>,
     pub(crate) lsp_config: LspConfig,
 }
@@ -127,7 +118,6 @@ impl<E: Environment> WorkspaceState<E> {
         Self {
             root,
             documents: Default::default(),
-            jsona_config: Default::default(),
             schemas: Schemas::new(env),
             lsp_config: LspConfig::default(),
         }
@@ -162,20 +152,11 @@ impl<E: Environment> WorkspaceState<E> {
             self.schemas.set_cache_path(None);
         }
 
-        if self.root != *DEFAULT_WORKSPACE_URI {
-            self.load_config(&context.env, &*context.world().default_config.load())
-                .await?;
-        }
-
         self.schemas.associations().clear();
 
         if !self.lsp_config.schema.enabled {
             return Ok(());
         }
-
-        self.schemas
-            .associations()
-            .add_from_config(&self.jsona_config);
 
         let root_path =
             PathBuf::from(to_file_path(&self.root).ok_or_else(|| anyhow!("invalid root URL"))?);
@@ -218,56 +199,6 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         self.emit_initialize_workspace(context.clone()).await;
-
-        Ok(())
-    }
-
-    pub(crate) async fn load_config(
-        &mut self,
-        env: &impl Environment,
-        default_config: &Config,
-    ) -> Result<(), anyhow::Error> {
-        if !self.lsp_config.config_file.enabled {
-            self.jsona_config = default_config.clone();
-            return Ok(());
-        }
-
-        let mut config_path = self.lsp_config.config_file.path.clone();
-        if let Some(path) = config_path.as_ref() {
-            if path.as_os_str().is_empty() {
-                config_path = None;
-            }
-        }
-
-        if let Some(path) = config_path.as_ref() {
-            tracing::info!(path = ?path, "read config file");
-            match Config::from_file(path, env).await {
-                Ok(config) => {
-                    self.jsona_config = config;
-                }
-                Err(err) => {
-                    config_path = None;
-                    tracing::error!("failed to read config {}", err);
-                }
-            }
-        } else {
-            let root_path =
-                PathBuf::from(to_file_path(&self.root).ok_or_else(|| anyhow!("invalid root URL"))?);
-
-            match Config::find_and_load(&root_path, env).await {
-                Ok((path, config)) => {
-                    tracing::info!(path = ?path, "found config file");
-                    self.jsona_config = config;
-                    config_path = Some(path);
-                }
-                Err(err) => {
-                    tracing::error!("failed to load config {}", err);
-                }
-            }
-        }
-
-        self.jsona_config.prepare(config_path)?;
-        tracing::debug!("Use jsona_config {:#?}", self.jsona_config);
 
         Ok(())
     }

@@ -35,8 +35,6 @@ pub trait Environment: Clone + Send + Sync + 'static {
     fn stdout(&self) -> Self::Stdout;
     fn stderr(&self) -> Self::Stderr;
 
-    fn glob_files(&self, glob: &str) -> Result<Vec<PathBuf>, anyhow::Error>;
-
     async fn read_file(&self, path: &Path) -> Result<Vec<u8>, anyhow::Error>;
 
     async fn write_file(&self, path: &Path, bytes: &[u8]) -> Result<(), anyhow::Error>;

@@ -16,9 +16,6 @@ use url::Url;
 
 impl<E: Environment> App<E> {
     pub async fn execute_lint(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
-        self.schemas.set_cache_path(cmd.general.cache_path.clone());
-        let config = self.load_config(&cmd.general).await?;
-
         let root = self.env.cwd().unwrap_or_else(|| PathBuf::from("/"));
         if !cmd.no_schema {
             if let Some(schema_uri) = cmd.schema.clone() {
@@ -33,8 +30,6 @@ impl<E: Environment> App<E> {
                     },
                 );
             } else {
-                self.schemas.associations().add_from_config(&config);
-
                 if let Some(store) = &cmd.schemastore {
                     self.schemas
                         .associations()
@@ -69,21 +64,10 @@ impl<E: Environment> App<E> {
 
     #[tracing::instrument(skip_all)]
     async fn lint_files(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
-        let config = self.config.as_ref().unwrap();
-
-        let cwd = self
-            .env
-            .cwd()
-            .ok_or_else(|| anyhow!("could not figure the current working directory"))?;
-
-        let files = self
-            .collect_files(&cwd, config, cmd.files.into_iter())
-            .await?;
-
         let mut result = Ok(());
 
-        for file in files {
-            if let Err(error) = self.lint_file(&file).await {
+        for file in &cmd.files {
+            if let Err(error) = self.lint_file(Path::new(&file)).await {
                 tracing::error!(%error, path = ?file, "invalid file");
                 result = Err(anyhow!("some files were not valid"));
             }

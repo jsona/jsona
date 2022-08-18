@@ -69,17 +69,6 @@ impl Environment for NativeEnvironment {
         tokio::io::stderr()
     }
 
-    fn glob_files(&self, pattern: &str) -> Result<Vec<std::path::PathBuf>, anyhow::Error> {
-        let paths = glob::glob_with(
-            pattern,
-            glob::MatchOptions {
-                case_sensitive: true,
-                ..Default::default()
-            },
-        )?;
-        Ok(paths.filter_map(Result::ok).collect())
-    }
-
     async fn read_file(&self, path: &Path) -> Result<Vec<u8>, anyhow::Error> {
         Ok(tokio::fs::read(path).await?)
     }

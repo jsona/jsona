@@ -16,7 +16,6 @@ pub struct InitializationOptions {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LspConfig {
-    pub config_file: ConfigFileConfig,
     pub schema: SchemaConfig,
     pub formatter: jsona::formatter::OptionsIncompleteCamel,
 }
@@ -47,20 +46,6 @@ impl Default for SchemaConfig {
             cache: true,
             associations: Default::default(),
             store_url: None,
-        }
-    }
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigFileConfig {
-    pub path: Option<PathBuf>,
-    pub enabled: bool,
-}
-
-impl Default for ConfigFileConfig {
-    fn default() -> Self {
-        Self {
-            path: Default::default(),
-            enabled: true,
         }
     }
 }

@@ -1,17 +1,12 @@
 use crate::App;
 
 use clap::Subcommand;
-use jsona_util::{
-    config::Config,
-    environment::{native::NativeEnvironment, Environment},
-};
-use std::sync::Arc;
+use jsona_util::environment::{native::NativeEnvironment, Environment};
 
 impl<E: Environment> App<E> {
     pub async fn execute_lsp(&self, cmd: LspCommand) -> Result<(), anyhow::Error> {
         let server = jsona_lsp::create_server();
         let world = jsona_lsp::create_world(NativeEnvironment::new());
-        world.set_default_config(Arc::new(Config::default()));
 
         match cmd {
             LspCommand::Tcp { address } => {

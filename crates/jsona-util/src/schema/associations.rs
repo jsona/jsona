@@ -8,7 +8,6 @@ use std::{fmt::Debug, path::Path, sync::Arc};
 use url::Url;
 
 use crate::{
-    config::Config,
     environment::Environment,
     schema::Fetcher,
     util::{
@@ -143,27 +142,6 @@ impl<E: Environment> SchemaAssociations<E> {
                         url,
                         priority: priority::SCHEMA_FIELD,
                         meta: json!({ "source": source::SCHEMA_FIELD }),
-                    },
-                );
-            }
-        }
-    }
-
-    pub fn add_from_config(&self, config: &Config) {
-        for schema_rule in &config.rules {
-            let file_rule = match schema_rule.file_rule.clone() {
-                Some(rule) => rule,
-                None => continue,
-            };
-            if let Some(url) = &schema_rule.url {
-                self.add(
-                    file_rule.into(),
-                    SchemaAssociation {
-                        url: url.clone(),
-                        meta: json!({
-                            "source": source::CONFIG,
-                        }),
-                        priority: priority::CONFIG,
                     },
                 );
             }
