@@ -26,7 +26,7 @@ JSONA schemas can be assigned to JSONA documents according to the following in p
 ```jsona
 {
   "jsona.schema.associations": {
-    "https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona": [
+    "openapi": [
       "api*.jsona",
     ],
   }

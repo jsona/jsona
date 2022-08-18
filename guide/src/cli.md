@@ -59,9 +59,6 @@ The available log levels:
 - `warn`
 - `error`
 
-#### Configuration File
-
-JSONA CLI by default searches for a JSONA config file in the current working directory, this behavior can be disabled by either supplying `--no-auto-config` or `--config <path>` flags.
 
 ### Validation
 
@@ -97,7 +94,7 @@ cat foo.jsona | jsona fmt -
 
 #### Options
 
-Formatter options are read from the [configuration file](./configuration.md#configuration-file), on top of that it is possible to specify overrides via the `--option` flag:
+Please check [formatter options](./config.md#formatter-options) for more details, it is possible to specify overrides via the `--option` flag:
 
 ```sh
 jsona fmt --option trailing_comma=true foo.jsona
