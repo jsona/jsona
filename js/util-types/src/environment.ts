@@ -37,10 +37,6 @@ export interface Environment {
    */
   stderr: Writable | ((bytes: Uint8Array) => Promise<number>);
   /**
-   * Search a glob file pattern and return the matched files.
-   */
-  glob: (pattern: string) => Array<string>;
-  /**
    * Read the contents of the file at the given path.
    */
   readFile: (path: string) => Promise<Uint8Array>;
@@ -53,9 +49,12 @@ export interface Environment {
    */
   fetchFile: (url: string) => Promise<Uint8Array>;
   /**
-   * Return the path to the current working directory.
+   * Return root url. 
+   * 
+   * In os environment, it is cwd; 
+   * In vscode environment, it's workspace folder uri.
    */
-  cwd: () => string;
+  rootUri: () => string;
   /**
    * The fetch function if it is not defined on the global Window.
    *
@@ -107,11 +106,10 @@ export function convertEnv(env: Environment): any {
     js_on_stdin: stdin,
     js_on_stdout: stdout,
     js_on_stderr: stderr,
-    js_glob_files: env.glob,
     js_read_file: env.readFile,
     js_write_file: env.writeFile,
     js_fetch_file: env.fetchFile,
-    js_cwd: env.cwd,
+    js_root_uri: env.rootUri,
   };
 }
 

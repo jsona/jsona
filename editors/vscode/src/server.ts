@@ -1,8 +1,8 @@
 import fsPromise from "fs/promises";
 import { exit } from "process";
+import { pathToFileURL } from "url";
 import { RpcMessage, JsonaLsp } from "@jsona/lsp";
 import fetch, { Headers, Request, Response } from "node-fetch";
-import glob from "fast-glob";
 
 let jsona: JsonaLsp;
 
@@ -14,9 +14,7 @@ process.on("message", async (message: RpcMessage) => {
   if (typeof jsona === "undefined") {
     jsona = await JsonaLsp.init(
       {
-        cwd: () => process.cwd(),
         envVar: name => process.env[name],
-        glob: p => glob.sync(p),
         now: () => new Date(),
         readFile: path => fsPromise.readFile(path),
         writeFile: (path, content) => fsPromise.writeFile(path, content),
@@ -40,6 +38,7 @@ process.on("message", async (message: RpcMessage) => {
             clearTimeout(timeout);
           }
         },
+        rootUri: () => pathToFileURL(process.cwd()).toString(),
         fetch: {
           fetch,
           Headers,

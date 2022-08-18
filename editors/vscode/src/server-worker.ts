@@ -11,6 +11,7 @@ const writer = new BrowserMessageWriter(worker);
 const reader = new BrowserMessageReader(worker);
 
 let jsona: JsonaLsp;
+let rootUri = "root:///";
 
 let com = {
   idx: -1,
@@ -49,7 +50,6 @@ reader.listen(async (message: RpcMessage) => {
   if (!jsona) {
     jsona = await JsonaLsp.init(
       {
-        cwd: () => "/",
         envVar: (name) => {
           if (name === "RUST_LOG") {
             return import.meta.env.RUST_LOG;
@@ -57,7 +57,6 @@ reader.listen(async (message: RpcMessage) => {
             return "";
           }
         },
-        glob: () => [],
         now: () => new Date(),
         readFile: com.readFile,
         writeFile: () => Promise.reject("not implemented write_file"),
@@ -87,6 +86,7 @@ reader.listen(async (message: RpcMessage) => {
             clearTimeout(timeout);
           }
         },
+        rootUri: () => rootUri,
       },
       {
         onMessage(message) {
@@ -108,6 +108,10 @@ reader.listen(async (message: RpcMessage) => {
       }
     }
   } else {
+    if (message.method === "initialize") {
+      let uri = message.params?.workspaceFolders[0]?.uri;
+      if (uri) rootUri = uri;
+    }
     jsona.send(message);
   }
 });

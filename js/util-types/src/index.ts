@@ -1,6 +1,5 @@
 export * from "./environment";
 export * from "./formatter";
-export * from "./config";
 
 /**
  * Byte range within a JSONA document.

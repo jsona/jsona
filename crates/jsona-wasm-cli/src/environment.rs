@@ -173,7 +173,7 @@ pub(crate) struct WasmEnvironment {
     js_read_file: Function,
     js_write_file: Function,
     js_fetch_file: Function,
-    js_root: Function,
+    js_root_uri: Function,
 }
 
 impl From<JsValue> for WasmEnvironment {
@@ -206,7 +206,7 @@ impl From<JsValue> for WasmEnvironment {
             js_fetch_file: js_sys::Reflect::get(&val, &JsValue::from_str("js_fetch_file"))
                 .unwrap()
                 .into(),
-            js_root: js_sys::Reflect::get(&val, &JsValue::from_str("js_root"))
+            js_root_uri: js_sys::Reflect::get(&val, &JsValue::from_str("js_root_uri"))
                 .unwrap()
                 .into(),
         }
@@ -317,9 +317,9 @@ impl Environment for WasmEnvironment {
         Ok(Uint8Array::from(ret).to_vec())
     }
 
-    fn root(&self) -> Option<Url> {
+    fn root_uri(&self) -> Option<Url> {
         let this = JsValue::null();
-        let res: JsValue = self.js_root.call0(&this).unwrap();
+        let res: JsValue = self.js_root_uri.call0(&this).unwrap();
         res.as_string().and_then(|v| v.parse().ok())
     }
 }

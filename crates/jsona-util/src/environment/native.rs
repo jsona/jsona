@@ -104,7 +104,7 @@ impl Environment for NativeEnvironment {
         anyhow::bail!("failed to fetch `{url}`, fetch is not supported")
     }
 
-    fn root(&self) -> Option<Url> {
+    fn root_uri(&self) -> Option<Url> {
         let cwd = std::env::current_dir().ok()?;
         to_file_uri(&cwd.display().to_string(), &None)
     }

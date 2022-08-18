@@ -42,9 +42,9 @@ pub trait Environment: Clone + Send + Sync + 'static {
 
     async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error>;
 
-    fn root(&self) -> Option<Url>;
+    fn root_uri(&self) -> Option<Url>;
 
     fn to_file_uri(&self, path: &str) -> Option<Url> {
-        to_file_uri(path, &self.root())
+        to_file_uri(path, &self.root_uri())
     }
 }

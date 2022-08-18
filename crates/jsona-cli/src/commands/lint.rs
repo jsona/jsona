@@ -7,7 +7,6 @@ use jsona::parser;
 use jsona_util::{
     environment::Environment,
     schema::associations::{AssociationRule, SchemaAssociation},
-    util::to_file_uri,
 };
 use serde_json::json;
 use tokio::io::AsyncReadExt;
@@ -31,19 +30,21 @@ impl<E: Environment> App<E> {
                 );
             } else if let Some(store) = &cmd.schemastore {
                 if !store.is_empty() {
-                    let url = to_file_uri(store, &self.env.root())
+                    let url = self
+                        .env
+                        .to_file_uri(store)
                         .ok_or_else(|| anyhow!("invalid schemastore {store}"))?;
 
                     self.schemas
                         .associations()
-                        .add_from_schemastore(&Some(url), &self.env.root())
+                        .add_from_schemastore(&Some(url), &self.env.root_uri())
                         .await
                         .with_context(|| "failed to load schema store")?;
                 };
             } else {
                 self.schemas
                     .associations()
-                    .add_from_schemastore(&None, &self.env.root())
+                    .add_from_schemastore(&None, &self.env.root_uri())
                     .await
                     .with_context(|| "failed to load schema store")?;
             }
