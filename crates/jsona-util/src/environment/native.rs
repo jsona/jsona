@@ -1,8 +1,12 @@
-use std::path::Path;
-
-use super::Environment;
 use async_trait::async_trait;
 use time::OffsetDateTime;
+use url::Url;
+
+use anyhow::anyhow;
+use std::path::PathBuf;
+
+use super::Environment;
+use crate::util::{to_file_path, to_file_uri};
 
 #[derive(Clone)]
 pub struct NativeEnvironment {
@@ -69,16 +73,18 @@ impl Environment for NativeEnvironment {
         tokio::io::stderr()
     }
 
-    async fn read_file(&self, path: &Path) -> Result<Vec<u8>, anyhow::Error> {
-        Ok(tokio::fs::read(path).await?)
+    async fn read_file(&self, path: &Url) -> Result<Vec<u8>, anyhow::Error> {
+        let path = to_file_path(path).ok_or_else(|| anyhow!("failed to read file at ${path}"))?;
+        Ok(tokio::fs::read(PathBuf::from(path)).await?)
     }
 
-    async fn write_file(&self, path: &std::path::Path, bytes: &[u8]) -> Result<(), anyhow::Error> {
-        Ok(tokio::fs::write(path, bytes).await?)
+    async fn write_file(&self, path: &Url, bytes: &[u8]) -> Result<(), anyhow::Error> {
+        let path = to_file_path(path).ok_or_else(|| anyhow!("failed to read file at ${path}"))?;
+        Ok(tokio::fs::write(PathBuf::from(path), bytes).await?)
     }
 
     #[cfg(feature = "fetch")]
-    async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
+    async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error> {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
@@ -94,11 +100,12 @@ impl Environment for NativeEnvironment {
     }
 
     #[cfg(not(feature = "fetch"))]
-    async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
+    async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error> {
         anyhow::bail!("failed to fetch `{url}`, fetch is not supported")
     }
 
-    fn cwd(&self) -> Option<std::path::PathBuf> {
-        std::env::current_dir().ok()
+    fn root(&self) -> Option<Url> {
+        let cwd = std::env::current_dir().ok()?;
+        to_file_uri(&cwd.display().to_string(), &None)
     }
 }

@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use futures::Future;
-use std::path::{Path, PathBuf};
 use time::OffsetDateTime;
 use tokio::io::{AsyncRead, AsyncWrite};
 use url::Url;
+
+use crate::util::to_file_uri;
 
 #[cfg(not(target_family = "wasm"))]
 pub mod native;
@@ -35,12 +36,15 @@ pub trait Environment: Clone + Send + Sync + 'static {
     fn stdout(&self) -> Self::Stdout;
     fn stderr(&self) -> Self::Stderr;
 
-    async fn read_file(&self, path: &Path) -> Result<Vec<u8>, anyhow::Error>;
+    async fn read_file(&self, path: &Url) -> Result<Vec<u8>, anyhow::Error>;
 
-    async fn write_file(&self, path: &Path, bytes: &[u8]) -> Result<(), anyhow::Error>;
+    async fn write_file(&self, path: &Url, bytes: &[u8]) -> Result<(), anyhow::Error>;
 
     async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error>;
 
-    /// Absolute current working dir.
-    fn cwd(&self) -> Option<PathBuf>;
+    fn root(&self) -> Option<Url>;
+
+    fn to_file_uri(&self, path: &str) -> Option<Url> {
+        to_file_uri(path, &self.root())
+    }
 }

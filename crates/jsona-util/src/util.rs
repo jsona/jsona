@@ -2,11 +2,7 @@ use self::path_utils::{encode_url, to_unix};
 use globset::{Glob, GlobSetBuilder};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::{
-    borrow::Cow,
-    fmt::Debug,
-    path::{Path, PathBuf},
-};
+use std::{borrow::Cow, fmt::Debug, path::Path};
 use url::Url;
 
 const FILE_PROTOCOL: &str = "file://";
@@ -56,12 +52,13 @@ impl GlobRule {
         })
     }
 
-    pub fn preprocessing_pattern(pattern: &str, base: &str) -> String {
+    pub fn preprocessing_pattern(pattern: &str, base: &Option<Url>) -> Option<String> {
         let path = to_unix(pattern);
         if path.starts_with('/') {
-            format!("{}{}", base, path)
+            let base = base.as_ref().and_then(to_file_path)?;
+            Some(format!("{}{}", base, path))
         } else {
-            format!("**/{}", path)
+            Some(format!("**/{}", path))
         }
     }
 
@@ -83,33 +80,7 @@ impl GlobRule {
 
 /// Path utils works on wasm
 pub mod path_utils {
-    use std::{
-        borrow::Cow,
-        path::{Path, PathBuf},
-    };
-
-    pub fn get_parent_path(path: &Path) -> Option<PathBuf> {
-        if cfg!(target_family = "wasm") {
-            let raw_path = path.display().to_string();
-            if is_window(&raw_path) {
-                if raw_path.len() < 3 {
-                    return None;
-                }
-                let parts: Vec<&str> = raw_path.split('\\').collect();
-                let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
-                Some(PathBuf::from(parts.join("\\")))
-            } else {
-                if raw_path.len() < 2 {
-                    return None;
-                }
-                let parts: Vec<&str> = raw_path.split('/').collect();
-                let parts: Vec<&str> = parts.iter().take(parts.len() - 1).cloned().collect();
-                Some(PathBuf::from(parts.join("/")))
-            }
-        } else {
-            path.parent().map(|v| v.to_path_buf())
-        }
-    }
+    use std::{borrow::Cow, path::Path};
 
     pub fn join_path<T: AsRef<str>>(path: T, base: &Path) -> String {
         let path: &str = path.as_ref();
@@ -188,7 +159,7 @@ pub fn is_url(path: &str) -> bool {
 }
 
 /// Convert path to file uri
-pub fn to_file_uri(path: &str, base: &Option<PathBuf>) -> Option<Url> {
+pub fn to_file_uri(path: &str, base: &Option<Url>) -> Option<Url> {
     if is_url(path) {
         return path.parse().ok();
     }
@@ -198,11 +169,8 @@ pub fn to_file_uri(path: &str, base: &Option<PathBuf>) -> Option<Url> {
         let full_path = if path_utils::is_absolute(path) {
             path.to_string()
         } else {
-            let base = match base {
-                Some(v) => v.clone(),
-                None => PathBuf::from("/"),
-            };
-            path_utils::join_path(path, &base)
+            let base = base.as_ref().and_then(to_file_path)?;
+            path_utils::join_path(path, Path::new(&base))
         };
         format!("{}{}", FILE_PROTOCOL, encode_url(full_path))
     };
@@ -253,12 +221,8 @@ mod tests {
             assert_eq!(to_file_uri($p, &None).unwrap().to_string(), $o);
         };
         ($o:expr, $p:expr, $b:expr) => {
-            assert_eq!(
-                to_file_uri($p, &Some(PathBuf::from($b)))
-                    .unwrap()
-                    .to_string(),
-                $o
-            );
+            let b = $b.parse().ok();
+            assert_eq!(to_file_uri($p, &b).unwrap().to_string(), $o);
         };
     }
     macro_rules! assert_to_file_path {
@@ -269,16 +233,8 @@ mod tests {
 
     #[test]
     fn test_to_file_uri() {
-        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1");
-        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "C:\\dir1\\");
-        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a\\b", "C:\\dir1\\");
-        assert_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1");
-        assert_to_file_uri!("file:///dir1/a/b", "a/b", "/dir1/");
-        assert_to_file_uri!("file:///dir1/a/b", "a\\b", "/dir1/");
-        assert_to_file_uri!("file:///a/b", "/a/b", "/dir1");
-        assert_to_file_uri!("file:///a/b", "/a/b");
-        assert_to_file_uri!("file:///a/b", "file:///a/b", "/dir1");
-        assert_to_file_uri!("file:///c%3A/a/b", "c:\\a\\b", "C:\\dir1");
+        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a/b", "file:///c%3A/dir1");
+        assert_to_file_uri!("file:///c%3A/dir1/a/b", "a\\b", "file:///c%3A/dir1");
         assert_to_file_uri!("http://example.com/a/b", "http://example.com/a/b");
     }
 

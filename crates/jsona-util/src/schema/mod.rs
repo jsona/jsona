@@ -4,7 +4,7 @@ pub mod fetcher;
 use anyhow::anyhow;
 use jsona::dom::{Keys, Node};
 use parking_lot::Mutex;
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use url::Url;
 
 use self::associations::SchemaAssociations;
@@ -35,7 +35,7 @@ impl<E: Environment> Schemas<E> {
         &self.associations
     }
 
-    pub fn set_cache_path(&self, path: Option<PathBuf>) {
+    pub fn set_cache_path(&self, path: Option<Url>) {
         self.fetcher.set_cache_path(path);
     }
 }

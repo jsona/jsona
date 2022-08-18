@@ -9,7 +9,6 @@ use jsona::{
 };
 use jsona_util::environment::Environment;
 use serde_json::{json, Value};
-use std::{borrow::Cow, path::PathBuf};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 impl<E: Environment> App<E> {
@@ -17,7 +16,10 @@ impl<E: Environment> App<E> {
         let mut stdout = self.env.stdout();
 
         let source = match &cmd.file_path {
-            Some(p) => String::from_utf8(self.env.read_file(p).await?)?,
+            Some(p) => {
+                let (_, source) = self.load_file(p).await?;
+                source
+            }
             None => {
                 let mut stdin = self.env.stdin();
                 let mut s = String::new();
@@ -28,13 +30,9 @@ impl<E: Environment> App<E> {
 
         let parse = parser::parse(&source);
 
-        let file_path = cmd
-            .file_path
-            .as_ref()
-            .map(|p| p.to_string_lossy())
-            .unwrap_or(Cow::Borrowed("-"));
+        let file_path = cmd.file_path.as_deref().unwrap_or("-");
 
-        self.print_parse_errors(&SimpleFile::new(&file_path, &source), &parse.errors)
+        self.print_parse_errors(&SimpleFile::new(file_path, &source), &parse.errors)
             .await?;
 
         if !parse.errors.is_empty() {
@@ -44,7 +42,7 @@ impl<E: Environment> App<E> {
         let node = parse.into_dom();
 
         if let Err(errors) = node.validate() {
-            self.print_semantic_errors(&SimpleFile::new(&file_path, &source), errors)
+            self.print_semantic_errors(&SimpleFile::new(file_path, &source), errors)
                 .await?;
 
             return Err(anyhow!("semantic errors found"));
@@ -98,7 +96,7 @@ pub struct GetCommand {
 
     /// Path to the JSONA document, if omitted the standard input will be used.
     #[clap(short, long)]
-    pub file_path: Option<PathBuf>,
+    pub file_path: Option<String>,
 
     /// A dotted key pattern to the value within the JSONA document.
     ///
