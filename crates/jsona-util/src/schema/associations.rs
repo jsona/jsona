@@ -294,19 +294,16 @@ mod tests {
 
     #[test]
     fn test_association_rule() {
-        assert_association_rule!("file:///home/u1/abc", ["abc"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/abc", ["abc"], "/home/u1/", true);
-        assert_association_rule!("file:///home/u1/abc", ["ab*"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/abc", ["*bc"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/abcd", ["ab*"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/abcd", ["ab*"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/p1/abc", ["abc"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/p1/abc", ["*abc"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/p1/abc", ["*/abc"], "/home/u1", true);
-        assert_association_rule!("file:///home/u1/p1/abc", ["**/abc"], "/home/u1", true);
-        assert_association_rule!("file:///c%3A/abc", ["abc"], "C:\\abc", true);
-        assert_association_rule!("file:///c%3A/abc", ["abc"], "C:\\abc\\", true);
-        assert_association_rule!("file:///home/u1/p1/abc", ["/abc"], "/home/u1", false);
-        assert_association_rule!("file:///home/u1/p1/abc", ["/abc"], "/home/u1/p1", true);
+        assert_association_rule!("file:///home/u1/abc", ["abc"], "file:///home/u1", true);
+        assert_association_rule!("file:///home/u1/abc", ["abc"], "file:///home/u1/", true);
+        assert_association_rule!("file:///home/u1/abc", ["ab*"], "file:///home/u1", true);
+        assert_association_rule!("file:///home/u1/abc", ["*bc"], "file:///home/u1", true);
+        assert_association_rule!("file:///home/u1/abcd", ["ab*"], "file:///home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["abc"], "file:///home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["*abc"], "file:///home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["*/abc"], "file:///home/u1", true);
+        assert_association_rule!("file:///home/u1/p1/abc", ["**/abc"], "file:///home/u1", true);
+        assert_association_rule!("file:///c%3A/abc", ["abc"], "file:///c%3A/abc", true);
+        assert_association_rule!("file:///c%3A/abc", ["abc"], "file:///c%3A", true);
     }
 }
