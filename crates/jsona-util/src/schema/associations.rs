@@ -79,6 +79,7 @@ impl<E: Environment> SchemaAssociations<E> {
     ) -> Result<(), anyhow::Error> {
         let url = url.as_ref().unwrap_or(&DEFAULT_SCHEMASTORE_URI);
         let schemastore = self.load_schemastore(url).await?;
+        tracing::info!(%url, "use schema store");
         for schema in &schemastore.0 {
             if self
                 .schema_refs
@@ -185,20 +186,10 @@ impl<E: Environment> SchemaAssociations<E> {
     }
 
     async fn load_schemastore(&self, index_url: &Url) -> Result<SchemaStore, anyhow::Error> {
-        let schemastore = match self
-            .fetcher
+        self.fetcher
             .fetch(index_url)
             .await
             .and_then(|v| serde_json::from_slice(&v).map_err(|e| anyhow!("{}", e)))
-        {
-            Ok(idx) => idx,
-            Err(error) => {
-                tracing::warn!(?error, "failed to load schemastore");
-                return Err(error);
-            }
-        };
-
-        Ok(schemastore)
     }
 }
 
