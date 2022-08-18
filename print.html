@@ -369,8 +369,6 @@ As an example if you wish to only see error messages, you can do the following:<
 <li><code>warn</code></li>
 <li><code>error</code></li>
 </ul>
-<h4 id="configuration-file"><a class="header" href="#configuration-file">Configuration File</a></h4>
-<p>JSONA CLI by default searches for a JSONA config file in the current working directory, this behavior can be disabled by either supplying <code>--no-auto-config</code> or <code>--config &lt;path&gt;</code> flags.</p>
 <h3 id="validation"><a class="header" href="#validation">Validation</a></h3>
 <p>JSONA CLI supports validation of JSONA files, by default it will only look for syntax errors and some semantic errors such as duplicate keys.</p>
 <pre><code class="language-sh">jsona lint foo.jsona
@@ -390,7 +388,7 @@ As an example if you wish to only see error messages, you can do the following:<
 <p>By default JSONA CLI will bail on documents that contain syntax errors to avoid destructive edits, you can use the <code>--force</code> flag to suppress this and try to format the invalid document(s) anyway.</p>
 </blockquote>
 <h4 id="options"><a class="header" href="#options">Options</a></h4>
-<p>Formatter options are read from the <a href="./configuration.html#configuration-file">configuration file</a>, on top of that it is possible to specify overrides via the <code>--option</code> flag:</p>
+<p>Please check <a href="./config.html#formatter-options">formatter options</a> for more details, it is possible to specify overrides via the <code>--option</code> flag:</p>
 <pre><code class="language-sh">jsona fmt --option trailing_comma=true foo.jsona
 </code></pre>
 <h4 id="check"><a class="header" href="#check">Check</a></h4>
@@ -465,7 +463,7 @@ Schema-related Commands</li>
 <h2 id="visual-studio-code-settings"><a class="header" href="#visual-studio-code-settings">Visual Studio Code Settings</a></h2>
 <pre><code class="language-jsona">{
   &quot;jsona.schema.associations&quot;: {
-    &quot;https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona&quot;: [
+    &quot;openapi&quot;: [
       &quot;api*.jsona&quot;,
     ],
   }
