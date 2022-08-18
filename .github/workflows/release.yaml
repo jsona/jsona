@@ -81,7 +81,7 @@ jobs:
       with:
         use-cross: ${{ matrix.use-cross }}
         command: build
-        args: --locked --release --target=${{ matrix.target }} ${{ matrix.cargo-flags }}
+        args: --locked --release -p jsona-cli --target=${{ matrix.target }} ${{ matrix.cargo-flags }}
 
     - name: Build Archive
       shell: bash
