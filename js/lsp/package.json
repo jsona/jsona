@@ -1,6 +1,6 @@
 {
   "name": "@jsona/lsp",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "description": "A Jsona lsp.",
   "main": "dist/index.js",
