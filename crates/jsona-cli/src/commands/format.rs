@@ -5,12 +5,11 @@ use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::{formatter, parser};
 use jsona_util::environment::Environment;
-use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 impl<E: Environment> App<E> {
     pub async fn execute_format(&mut self, cmd: FormatCommand) -> Result<(), anyhow::Error> {
-        if matches!(cmd.files.get(0).map(|it| it.as_str()), Some("-")) {
+        if cmd.files.is_empty() {
             self.format_stdin(cmd).await
         } else {
             self.format_files(cmd).await
@@ -22,7 +21,7 @@ impl<E: Environment> App<E> {
         let mut source = String::new();
         self.env.stdin().read_to_string(&mut source).await?;
 
-        let display_path = cmd.stdin_filepath.as_deref().unwrap_or("-");
+        let display_path = "-";
 
         let p = parser::parse(&source);
 
@@ -53,28 +52,21 @@ impl<E: Environment> App<E> {
 
     #[tracing::instrument(skip_all)]
     async fn format_files(&mut self, cmd: FormatCommand) -> Result<(), anyhow::Error> {
-        if cmd.stdin_filepath.is_some() {
-            tracing::warn!("using `--stdin-filepath` has no effect unless input comes from stdin")
-        }
-
         let mut result = Ok(());
 
+        let format_opts = self.format_options(&cmd)?;
+
         for path in &cmd.files {
-            let format_opts = self.format_options(&cmd)?;
-
-            let path = Path::new(path);
-
-            let f = self.env.read_file(path).await?;
-            let source = String::from_utf8_lossy(&f).into_owned();
+            let (url, source) = self
+                .load_file(path)
+                .await
+                .map_err(|err| anyhow!("failed to read {path}, {err}"))?;
 
             let p = parser::parse(&source);
 
             if !p.errors.is_empty() {
-                self.print_parse_errors(
-                    &SimpleFile::new(&*path.to_string_lossy(), source.as_str()),
-                    &p.errors,
-                )
-                .await?;
+                self.print_parse_errors(&SimpleFile::new(path, source.as_str()), &p.errors)
+                    .await?;
 
                 if !cmd.force {
                     result = Err(anyhow!(
@@ -84,7 +76,7 @@ impl<E: Environment> App<E> {
                 }
             }
 
-            let formatted = formatter::format_syntax(p.into_syntax(), format_opts);
+            let formatted = formatter::format_syntax(p.into_syntax(), format_opts.clone());
 
             if cmd.check {
                 if source != formatted {
@@ -92,7 +84,7 @@ impl<E: Environment> App<E> {
                     result = Err(anyhow!("some files were not properly formatted"));
                 }
             } else if source != formatted {
-                self.env.write_file(path, formatted.as_bytes()).await?;
+                self.env.write_file(&url, formatted.as_bytes()).await?;
             }
         }
 
@@ -139,11 +131,4 @@ pub struct FormatCommand {
     ///
     /// If the only argument is "-", the standard input will be used.
     pub files: Vec<String>,
-
-    /// A path to the file that the JSONA CLI will treat like stdin.
-    ///
-    /// This option does not change the file input source. This option should be used only when the
-    /// source input arises from the stdin.
-    #[clap(long)]
-    pub stdin_filepath: Option<String>,
 }

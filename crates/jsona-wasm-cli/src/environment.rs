@@ -1,15 +1,15 @@
 use anyhow::anyhow;
 use futures::FutureExt;
 use js_sys::{Function, Promise, Uint8Array};
-use jsona_util::environment::Environment;
+use jsona_util::{environment::Environment, util::to_file_path};
 use std::{
     io,
-    path::Path,
     pin::Pin,
     task::{self, Poll},
 };
 use time::OffsetDateTime;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use url::Url;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 
@@ -173,7 +173,7 @@ pub(crate) struct WasmEnvironment {
     js_read_file: Function,
     js_write_file: Function,
     js_fetch_file: Function,
-    js_cwd: Function,
+    js_root: Function,
 }
 
 impl From<JsValue> for WasmEnvironment {
@@ -206,7 +206,7 @@ impl From<JsValue> for WasmEnvironment {
             js_fetch_file: js_sys::Reflect::get(&val, &JsValue::from_str("js_fetch_file"))
                 .unwrap()
                 .into(),
-            js_cwd: js_sys::Reflect::get(&val, &JsValue::from_str("js_cwd"))
+            js_root: js_sys::Reflect::get(&val, &JsValue::from_str("js_root"))
                 .unwrap()
                 .into(),
         }
@@ -276,8 +276,9 @@ impl Environment for WasmEnvironment {
         JsAsyncWrite::new(self.js_on_stderr.clone())
     }
 
-    async fn read_file(&self, path: &Path) -> Result<Vec<u8>, anyhow::Error> {
-        let path_str = JsValue::from_str(&path.to_string_lossy());
+    async fn read_file(&self, path: &Url) -> Result<Vec<u8>, anyhow::Error> {
+        let path = to_file_path(path).ok_or_else(|| anyhow!("failed to read file at ${path}"))?;
+        let path_str = JsValue::from_str(&path);
         let this = JsValue::null();
         let res: JsValue = self.js_read_file.call1(&this, &path_str).unwrap();
 
@@ -288,8 +289,9 @@ impl Environment for WasmEnvironment {
         Ok(Uint8Array::from(ret).to_vec())
     }
 
-    async fn write_file(&self, path: &Path, bytes: &[u8]) -> Result<(), anyhow::Error> {
-        let path_str = JsValue::from_str(&path.to_string_lossy());
+    async fn write_file(&self, path: &Url, bytes: &[u8]) -> Result<(), anyhow::Error> {
+        let path = to_file_path(path).ok_or_else(|| anyhow!("failed to read file at ${path}"))?;
+        let path_str = JsValue::from_str(&path);
         let this = JsValue::null();
         let res: JsValue = self
             .js_write_file
@@ -303,7 +305,7 @@ impl Environment for WasmEnvironment {
             .map_err(|err| anyhow!("{err}"))?)
     }
 
-    async fn fetch_file(&self, url: &url::Url) -> Result<Vec<u8>, anyhow::Error> {
+    async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error> {
         let url_str = JsValue::from_str(url.as_str());
         let this = JsValue::null();
         let res: JsValue = self.js_fetch_file.call1(&this, &url_str).unwrap();
@@ -315,10 +317,9 @@ impl Environment for WasmEnvironment {
         Ok(Uint8Array::from(ret).to_vec())
     }
 
-    fn cwd(&self) -> Option<std::path::PathBuf> {
+    fn root(&self) -> Option<Url> {
         let this = JsValue::null();
-        let res: JsValue = self.js_cwd.call0(&this).unwrap();
-
-        res.as_string().map(Into::into)
+        let res: JsValue = self.js_root.call0(&this).unwrap();
+        res.as_string().and_then(|v| v.parse().ok())
     }
 }

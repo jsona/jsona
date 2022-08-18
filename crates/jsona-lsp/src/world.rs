@@ -2,7 +2,6 @@ use crate::{
     config::{InitializationOptions, LspConfig},
     lsp_ext::notification::{InitializeWorkspace, InitializeWorkspaceParams},
 };
-use anyhow::anyhow;
 use arc_swap::ArcSwap;
 use jsona::{
     dom::{Keys, Node},
@@ -15,14 +14,13 @@ use jsona_util::{
         associations::{priority, source, AssociationRule, SchemaAssociation},
         Schemas,
     },
-    util::to_file_path,
     AsyncRwLock, HashMap, IndexMap,
 };
 use lsp_async_stub::{rpc, util::Mapper, Context, RequestWriter};
 use lsp_types::Url;
 use once_cell::sync::Lazy;
 use serde_json::{json, Value};
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 pub type World<E> = Arc<WorldState<E>>;
 
 #[repr(transparent)]
@@ -146,8 +144,13 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         if self.lsp_config.schema.cache {
-            self.schemas
-                .set_cache_path(context.initialization_options.load().cache_path.clone());
+            let cache_path = context
+                .initialization_options
+                .load()
+                .cache_path
+                .as_ref()
+                .and_then(|v| context.env.to_file_uri(v));
+            self.schemas.set_cache_path(cache_path);
         } else {
             self.schemas.set_cache_path(None);
         }
@@ -157,9 +160,6 @@ impl<E: Environment> WorkspaceState<E> {
         if !self.lsp_config.schema.enabled {
             return Ok(());
         }
-
-        let root_path =
-            PathBuf::from(to_file_path(&self.root).ok_or_else(|| anyhow!("invalid root URL"))?);
 
         for (schema_uri, list) in &self.lsp_config.schema.associations {
             match schema_uri.parse::<Url>() {
@@ -171,7 +171,7 @@ impl<E: Environment> WorkspaceState<E> {
                         }),
                         priority: priority::LSP_CONFIG,
                     };
-                    match AssociationRule::batch(list, &root_path) {
+                    match AssociationRule::batch(list, &Some(self.root.clone())) {
                         Ok(rules) => {
                             for rule in rules {
                                 self.schemas.associations().add(rule, assoc.clone())
@@ -192,7 +192,7 @@ impl<E: Environment> WorkspaceState<E> {
         if let Err(error) = self
             .schemas
             .associations()
-            .add_from_schemastore(&store_url, &root_path)
+            .add_from_schemastore(&store_url, &Some(self.root.clone()))
             .await
         {
             tracing::error!(%error, url=?store_url.map(|v| v.to_string()), "failed to load schemastore");

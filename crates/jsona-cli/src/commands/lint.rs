@@ -10,16 +10,16 @@ use jsona_util::{
     util::to_file_uri,
 };
 use serde_json::json;
-use std::path::{Path, PathBuf};
 use tokio::io::AsyncReadExt;
 use url::Url;
 
 impl<E: Environment> App<E> {
     pub async fn execute_lint(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
-        let root = self.env.cwd().unwrap_or_else(|| PathBuf::from("/"));
         if !cmd.no_schema {
-            if let Some(schema_uri) = cmd.schema.clone() {
-                let url: Url = to_file_uri(&schema_uri, &Some(root.clone()))
+            if let Some(schema_uri) = &cmd.schema {
+                let url: Url = self
+                    .env
+                    .to_file_uri(schema_uri)
                     .ok_or_else(|| anyhow!("invalid schema path `{}`", schema_uri))?;
                 self.schemas.associations().add(
                     AssociationRule::glob("**")?,
@@ -29,26 +29,27 @@ impl<E: Environment> App<E> {
                         priority: 999,
                     },
                 );
-            } else {
-                if let Some(store) = &cmd.schemastore {
-                    self.schemas
-                        .associations()
-                        .add_from_schemastore(&Some(store.clone()), &root)
-                        .await
-                        .with_context(|| "failed to load schema store")?;
-                }
+            } else if let Some(store) = &cmd.schemastore {
+                if !store.is_empty() {
+                    let url = to_file_uri(store, &self.env.root())
+                        .ok_or_else(|| anyhow!("invalid schemastore {store}"))?;
 
-                if cmd.default_schemastore {
                     self.schemas
                         .associations()
-                        .add_from_schemastore(&None, &root)
+                        .add_from_schemastore(&Some(url), &self.env.root())
                         .await
                         .with_context(|| "failed to load schema store")?;
-                }
+                };
+            } else {
+                self.schemas
+                    .associations()
+                    .add_from_schemastore(&None, &self.env.root())
+                    .await
+                    .with_context(|| "failed to load schema store")?;
             }
         }
 
-        if matches!(cmd.files.get(0).map(|it| it.as_str()), Some("-")) {
+        if cmd.files.is_empty() {
             self.lint_stdin(cmd).await
         } else {
             self.lint_files(cmd).await
@@ -57,9 +58,7 @@ impl<E: Environment> App<E> {
 
     #[tracing::instrument(skip_all)]
     async fn lint_stdin(&self, _cmd: LintCommand) -> Result<(), anyhow::Error> {
-        let mut source = String::new();
-        self.env.stdin().read_to_string(&mut source).await?;
-        self.lint_source("-", &source).await
+        self.lint_file("-", true).await
     }
 
     #[tracing::instrument(skip_all)]
@@ -67,7 +66,7 @@ impl<E: Environment> App<E> {
         let mut result = Ok(());
 
         for file in &cmd.files {
-            if let Err(error) = self.lint_file(Path::new(&file)).await {
+            if let Err(error) = self.lint_file(file, false).await {
                 tracing::error!(%error, path = ?file, "invalid file");
                 result = Err(anyhow!("some files were not valid"));
             }
@@ -76,17 +75,23 @@ impl<E: Environment> App<E> {
         result
     }
 
-    async fn lint_file(&self, file: &Path) -> Result<(), anyhow::Error> {
-        let source = self.env.read_file(file).await?;
-        let source = String::from_utf8(source)?;
-        self.lint_source(&*file.to_string_lossy(), &source).await
-    }
-
     #[tracing::instrument(skip_all, fields(%file_path))]
-    async fn lint_source(&self, file_path: &str, source: &str) -> Result<(), anyhow::Error> {
-        let parse = parser::parse(source);
-
-        self.print_parse_errors(&SimpleFile::new(file_path, source), &parse.errors)
+    async fn lint_file(&self, file_path: &str, stdin: bool) -> Result<(), anyhow::Error> {
+        let (file_uri, source) = if stdin {
+            let mut source = String::new();
+            self.env
+                .stdin()
+                .read_to_string(&mut source)
+                .await
+                .map_err(|err| anyhow!("failed to read stdin, {err}"))?;
+            ("file:///_".parse().unwrap(), source)
+        } else {
+            self.load_file(file_path)
+                .await
+                .map_err(|err| anyhow!("failed to read {file_path}, {err}"))?
+        };
+        let parse = parser::parse(&source);
+        self.print_parse_errors(&SimpleFile::new(file_path, &source), &parse.errors)
             .await?;
 
         if !parse.errors.is_empty() {
@@ -96,13 +101,11 @@ impl<E: Environment> App<E> {
         let dom = parse.into_dom();
 
         if let Err(errors) = dom.validate() {
-            self.print_semantic_errors(&SimpleFile::new(file_path, source), errors)
+            self.print_semantic_errors(&SimpleFile::new(file_path, &source), errors)
                 .await?;
 
             return Err(anyhow!("semantic errors found"));
         }
-
-        let file_uri: Url = to_file_uri(file_path, &self.env.cwd()).unwrap();
 
         self.schemas
             .associations()
@@ -119,7 +122,7 @@ impl<E: Environment> App<E> {
             let errors = self.schemas.validate(&schema_association.url, &dom).await?;
 
             if !errors.is_empty() {
-                self.print_schema_errors(&SimpleFile::new(file_path, source), &errors)
+                self.print_schema_errors(&SimpleFile::new(file_path, &source), &errors)
                     .await?;
 
                 return Err(anyhow!("schema validation failed"));
@@ -139,22 +142,14 @@ pub struct LintCommand {
     #[clap(long)]
     pub schema: Option<String>,
 
-    /// URL to a schema store (index) that is compatible with jsonaschema stores.
-    ///
-    /// Can be specified multiple times.
+    /// URL to a schema store (index).
     #[clap(long)]
-    pub schemastore: Option<Url>,
-
-    /// Use the default online catalogs for schemas.
-    #[clap(long)]
-    pub default_schemastore: bool,
+    pub schemastore: Option<String>,
 
     /// Disable all schema validations.
     #[clap(long)]
     pub no_schema: bool,
 
     /// Paths or glob patterns to JSONA documents.
-    ///
-    /// If the only argument is "-", the standard input will be used.
     pub files: Vec<String>,
 }
