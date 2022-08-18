@@ -144,12 +144,7 @@ impl<E: Environment> WorkspaceState<E> {
         }
 
         if self.lsp_config.schema.cache {
-            let cache_path = context
-                .initialization_options
-                .load()
-                .cache_path
-                .as_ref()
-                .and_then(|v| context.env.to_file_uri(v));
+            let cache_path = context.initialization_options.load().cache_path.clone();
             self.schemas.set_cache_path(cache_path);
         } else {
             self.schemas.set_cache_path(None);
@@ -169,7 +164,8 @@ impl<E: Environment> WorkspaceState<E> {
             .add_from_schemastore(&store_url, &Some(self.root.clone()))
             .await
         {
-            tracing::error!(%error, url=?store_url.map(|v| v.to_string()), "failed to load schemastore");
+            let store_url = store_url.as_ref().map(|v| v.as_str());
+            tracing::error!(%error, ?store_url, "failed to load schemastore");
         }
 
         for (name, items) in &self.lsp_config.schema.associations {

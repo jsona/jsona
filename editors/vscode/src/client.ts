@@ -112,7 +112,7 @@ async function createNodeClient(context: vscode.ExtensionContext) {
       outputChannel: getOutput(),
       documentSelector: [{ language: "jsona" }],
       initializationOptions: {
-        cachePath: cachePath?.fsPath,
+        cachePath: cachePath.toString(),
       },
     }
   );

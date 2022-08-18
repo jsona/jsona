@@ -9,7 +9,7 @@ pub const DEFAULT_CONFIGURATION_SECTION: &str = "jsona";
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct InitializationOptions {
-    pub cache_path: Option<String>,
+    pub cache_path: Option<Url>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
