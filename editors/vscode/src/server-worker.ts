@@ -17,8 +17,8 @@ let com = {
   idx: -1,
   waitings: {} as Record<number, { resolve: (value) => any, reject: (reason?) => void }>,
   timeouts: {} as Record<number, any>,
-  async readFile(fsPath: string) {
-    return com.send({ method: "fs/readFile", params: { fsPath }});
+  async readFile(uri: string) {
+    return com.send({ method: "fs/readFile", params: { uri }});
   },
   send(req:  Partial<RpcMessage>) {
     const id = com.idx--;
