@@ -43,16 +43,24 @@ export function register(ctx: vscode.ExtensionContext, c: BaseLanguageClient) {
 }
 
 function writeSchemaAssociations(schemaRef: string, fileUrl: string) {
-    const associations: Record<string, string[]> = vscode.workspace.getConfiguration("jsona").get("schema.associations");
-    const newAssociations = Object.assign({}, associations);
-    deleteExistingAssociationFile(newAssociations, fileUrl);
-    let schemaAssociations = newAssociations[schemaRef];
-    if (!schemaAssociations) {
-      newAssociations[schemaRef] = [fileUrl];
-    } else {
-      newAssociations[schemaRef] = [...schemaAssociations, fileUrl];
+  const associations: Record<string, string[]> = vscode.workspace.getConfiguration("jsona").get("schema.associations");
+  const newAssociations = Object.assign({}, associations);
+  deleteExistingAssociationFile(newAssociations, fileUrl);
+  let baseUrl = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(fileUrl))?.uri.toString();
+  if (fileUrl.startsWith(baseUrl)) {
+    fileUrl = fileUrl.slice(baseUrl.length);
+    if (!fileUrl.startsWith("/")) {
+      fileUrl = "/" + fileUrl;
     }
-   vscode.workspace.getConfiguration("jsona").update("schema.associations", newAssociations);
+    deleteExistingAssociationFile(newAssociations, fileUrl);
+  }
+  let schemaAssociations = newAssociations[schemaRef];
+  if (!schemaAssociations) {
+    newAssociations[schemaRef] = [fileUrl];
+  } else {
+    newAssociations[schemaRef] = [...schemaAssociations, fileUrl];
+  }
+  vscode.workspace.getConfiguration("jsona").update("schema.associations", newAssociations);
 }
 
 function deleteExistingAssociationFile(associations: Record<string, string[]>, fileUri: string) {

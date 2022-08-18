@@ -56,7 +56,7 @@ impl GlobRule {
         let path = to_unix(pattern);
         if path.starts_with('/') {
             let base = base.as_ref().and_then(to_file_path)?;
-            Some(format!("{}{}", base, path))
+            Some(format!("{}{}", base.trim_end_matches('/'), path))
         } else {
             Some(format!("**/{}", path))
         }
