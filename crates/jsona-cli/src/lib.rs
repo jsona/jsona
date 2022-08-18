@@ -1,5 +1,4 @@
-use jsona_util::{environment::Environment, schema::Schemas, util::path_utils};
-use std::path::{Path, PathBuf};
+use jsona_util::{environment::Environment, schema::Schemas};
 
 pub use crate::commands::{AppArgs, Colors, GeneralArgs};
 
@@ -19,39 +18,5 @@ impl<E: Environment> App<E> {
             colors: env.atty_stderr(),
             env,
         }
-    }
-
-    fn collect_files(
-        &self,
-        cwd: &Path,
-        arg_patterns: impl Iterator<Item = String>,
-    ) -> Result<Vec<PathBuf>, anyhow::Error> {
-        let mut patterns: Vec<String> = arg_patterns
-            .map(|pat| {
-                if !path_utils::is_absolute(&pat) {
-                    path_utils::join_path(&pat, cwd)
-                } else {
-                    pat
-                }
-            })
-            .collect();
-
-        if patterns.is_empty() {
-            patterns = vec![path_utils::to_unix(path_utils::join_path(
-                "**/*.jsona",
-                cwd,
-            ))];
-        };
-
-        let files = patterns
-            .into_iter()
-            .map(|pat| self.env.glob_files(&pat))
-            .collect::<Result<Vec<_>, _>>()
-            .into_iter()
-            .flatten()
-            .flatten()
-            .collect::<Vec<_>>();
-
-        Ok(files)
     }
 }

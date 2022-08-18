@@ -5,7 +5,7 @@ use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::{formatter, parser};
 use jsona_util::environment::Environment;
-use std::mem;
+use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 impl<E: Environment> App<E> {
@@ -52,24 +52,19 @@ impl<E: Environment> App<E> {
     }
 
     #[tracing::instrument(skip_all)]
-    async fn format_files(&mut self, mut cmd: FormatCommand) -> Result<(), anyhow::Error> {
+    async fn format_files(&mut self, cmd: FormatCommand) -> Result<(), anyhow::Error> {
         if cmd.stdin_filepath.is_some() {
             tracing::warn!("using `--stdin-filepath` has no effect unless input comes from stdin")
         }
 
-        let cwd = self
-            .env
-            .cwd()
-            .ok_or_else(|| anyhow!("could not figure the current working directory"))?;
-
-        let files = self.collect_files(&cwd, mem::take(&mut cmd.files).into_iter())?;
-
         let mut result = Ok(());
 
-        for path in files {
+        for path in &cmd.files {
             let format_opts = self.format_options(&cmd)?;
 
-            let f = self.env.read_file(&path).await?;
+            let path = Path::new(path);
+
+            let f = self.env.read_file(path).await?;
             let source = String::from_utf8_lossy(&f).into_owned();
 
             let p = parser::parse(&source);
@@ -97,7 +92,7 @@ impl<E: Environment> App<E> {
                     result = Err(anyhow!("some files were not properly formatted"));
                 }
             } else if source != formatted {
-                self.env.write_file(&path, formatted.as_bytes()).await?;
+                self.env.write_file(path, formatted.as_bytes()).await?;
             }
         }
 
@@ -140,7 +135,7 @@ pub struct FormatCommand {
     #[clap(long)]
     pub check: bool,
 
-    /// Paths or glob patterns to JSONA documents.
+    /// JSONA files to format.
     ///
     /// If the only argument is "-", the standard input will be used.
     pub files: Vec<String>,

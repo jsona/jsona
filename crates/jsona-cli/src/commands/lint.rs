@@ -64,17 +64,10 @@ impl<E: Environment> App<E> {
 
     #[tracing::instrument(skip_all)]
     async fn lint_files(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
-        let cwd = self
-            .env
-            .cwd()
-            .ok_or_else(|| anyhow!("could not figure the current working directory"))?;
-
-        let files = self.collect_files(&cwd, cmd.files.into_iter())?;
-
         let mut result = Ok(());
 
-        for file in files {
-            if let Err(error) = self.lint_file(&file).await {
+        for file in &cmd.files {
+            if let Err(error) = self.lint_file(Path::new(&file)).await {
                 tracing::error!(%error, path = ?file, "invalid file");
                 result = Err(anyhow!("some files were not valid"));
             }

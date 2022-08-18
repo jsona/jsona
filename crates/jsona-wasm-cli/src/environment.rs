@@ -170,7 +170,6 @@ pub(crate) struct WasmEnvironment {
     js_on_stdin: Function,
     js_on_stdout: Function,
     js_on_stderr: Function,
-    js_glob_files: Function,
     js_read_file: Function,
     js_write_file: Function,
     js_fetch_file: Function,
@@ -196,9 +195,6 @@ impl From<JsValue> for WasmEnvironment {
                 .unwrap()
                 .into(),
             js_on_stderr: js_sys::Reflect::get(&val, &JsValue::from_str("js_on_stderr"))
-                .unwrap()
-                .into(),
-            js_glob_files: js_sys::Reflect::get(&val, &JsValue::from_str("js_glob_files"))
                 .unwrap()
                 .into(),
             js_read_file: js_sys::Reflect::get(&val, &JsValue::from_str("js_read_file"))
@@ -278,15 +274,6 @@ impl Environment for WasmEnvironment {
 
     fn stderr(&self) -> Self::Stderr {
         JsAsyncWrite::new(self.js_on_stderr.clone())
-    }
-
-    fn glob_files(&self, glob: &str) -> Result<Vec<std::path::PathBuf>, anyhow::Error> {
-        let this = JsValue::null();
-        let res: JsValue = self
-            .js_glob_files
-            .call1(&this, &JsValue::from_str(glob))
-            .unwrap();
-        res.into_serde().map_err(|err| anyhow!("{err}"))
     }
 
     async fn read_file(&self, path: &Path) -> Result<Vec<u8>, anyhow::Error> {
