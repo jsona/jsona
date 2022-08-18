@@ -135,55 +135,6 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
-<h2 id="configuration-file"><a class="header" href="#configuration-file">Configuration File</a></h2>
-<p>JSONA supports configuration via file, unsurprisingly it uses the JSONA format.</p>
-<p>By default, every tool looks for one in the working directory or the root of the workspace by <code>.jsona</code></p>
-<h3 id="include"><a class="header" href="#include">Include</a></h3>
-<p>The <code>include</code> property is an array of <a href="https://en.wikipedia.org/wiki/Glob_(programming)">glob</a> path strings that are relative to the working directory (or root of the workspace),
-the matched files are included in the operations by the tools unless explicitly overwritten. The pattern supports globstars (<code>**</code>) for recursive search.</p>
-<p>If this property is omitted, <code>JSONA</code> files will be searched in the entire child directory tree from the root.</p>
-<blockquote>
-<p>If <code>include</code> is present but empty, <strong>no files will be included</strong>.</p>
-</blockquote>
-<pre><code class="language-jsona">include = [&quot;api.jsona&quot;, &quot;some_directory/**/*.jsona&quot;]
-</code></pre>
-<h3 id="exclude"><a class="header" href="#exclude">Exclude</a></h3>
-<p>The <code>exclude</code> property has the same semantics as <code>include</code> and takes precedence over it.</p>
-<p>The following will exclude <code>mixin.jsona</code> from the includes written above, so files matching <code>some_directory/**/*.jsona</code> will be included only.</p>
-<pre><code class="language-jsona">exclude = [&quot;mixin.jsona&quot;]
-</code></pre>
-<h3 id="formatting-options"><a class="header" href="#formatting-options">Formatting Options</a></h3>
-<p>The <code>formatting</code> table contains optional <a href="#formatting-options">formatting options</a> for the formatter:</p>
-<pre><code class="language-jsona">{
-  tailing_comma: false,
-}
-</code></pre>
-<h3 id="jsonaschema-directive"><a class="header" href="#jsonaschema-directive"><code>@jsonaschema</code> Directive</a></h3>
-<p>It is possible to override the schema for a specific document by using the <code>@jsonaschema</code>. A URL can be provided.</p>
-<pre><code class="language-jsona">{ @jsonaschema(&quot;https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.2/openapi.jsona&quot;)
-
-}
-</code></pre>
-<h3 id="rules"><a class="header" href="#rules">Rules</a></h3>
-<p>The <code>rule</code> array of tables consist of rules that overwrite the above configuration based on some conditions.
-Thus it has the same <code>formatting</code> and <code>schema</code> settings, and the <code>include</code> and <code>exclude</code> with the same semantics as their <a href="#include">global variants</a>, however this time they are used to determine whether the rule applies.</p>
-<blockquote>
-<p>In case of overlapping rules, the last defined rule always takes precedence.</p>
-</blockquote>
-<p>Let's say we want to sort our <code>Cargo</code> dependencies, but nothing else, here is how we would do that:</p>
-<pre><code class="language-jsona">{
-  formatting: {
-    tailing_comma: false,
-  },
-  rules: [
-    {
-      name: &quot;openapi&quot;,
-      include: [&quot;api*.jsona&quot;],
-      path: &quot;schemastore/openapi.schema.jsona&quot;,
-    },
-  ],
-}
-</code></pre>
 <h2 id="formatter-options"><a class="header" href="#formatter-options">Formatter Options</a></h2>
 <p>This page contains a list of formatting options the formatter accepts.</p>
 <blockquote>
