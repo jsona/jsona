@@ -40,12 +40,17 @@ chrome() {
 }
 
 # @cmd Build vscode extension
+# @flag --prod
 build() {
-    wasmjs all
+    if [[ -n "$argc_prod" ]]; then
+        (cd editors/vscode && yarn)
+    else
+        wasmjs all
+    fi
     vscode package
 }
 
-# @cmd Build jsona-cli
+# @cmd Build and install jsona-cli to $HOME/.cargo/bin
 # @alias i
 # @flag --prod
 install() {
