@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use futures::FutureExt;
 use js_sys::{Function, Promise, Uint8Array};
-use jsona_util::{environment::Environment, util::to_file_path};
+use jsona_util::environment::Environment;
 use std::{
     io,
     pin::Pin,
@@ -277,8 +277,7 @@ impl Environment for WasmEnvironment {
     }
 
     async fn read_file(&self, path: &Url) -> Result<Vec<u8>, anyhow::Error> {
-        let path = to_file_path(path).ok_or_else(|| anyhow!("failed to read file at ${path}"))?;
-        let path_str = JsValue::from_str(&path);
+        let path_str = JsValue::from_str(path.as_str());
         let this = JsValue::null();
         let res: JsValue = self.js_read_file.call1(&this, &path_str).unwrap();
 
@@ -290,8 +289,7 @@ impl Environment for WasmEnvironment {
     }
 
     async fn write_file(&self, path: &Url, bytes: &[u8]) -> Result<(), anyhow::Error> {
-        let path = to_file_path(path).ok_or_else(|| anyhow!("failed to read file at ${path}"))?;
-        let path_str = JsValue::from_str(&path);
+        let path_str = JsValue::from_str(path.as_str());
         let this = JsValue::null();
         let res: JsValue = self
             .js_write_file
@@ -305,10 +303,10 @@ impl Environment for WasmEnvironment {
             .map_err(|err| anyhow!("{err}"))?)
     }
 
-    async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error> {
-        let url_str = JsValue::from_str(url.as_str());
+    async fn fetch_file(&self, path: &Url) -> Result<Vec<u8>, anyhow::Error> {
+        let path_str = JsValue::from_str(path.as_str());
         let this = JsValue::null();
-        let res: JsValue = self.js_fetch_file.call1(&this, &url_str).unwrap();
+        let res: JsValue = self.js_fetch_file.call1(&this, &path_str).unwrap();
 
         let ret = JsFuture::from(Promise::from(res))
             .await
