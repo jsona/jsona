@@ -23,7 +23,7 @@ impl<E: Environment> App<E> {
             } else {
                 let url = self
                     .env
-                    .to_file_uri(store)
+                    .to_url(store)
                     .ok_or_else(|| anyhow!("invalid schemastore {store}"))?;
 
                 self.schemas

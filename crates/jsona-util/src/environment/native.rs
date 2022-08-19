@@ -6,7 +6,7 @@ use anyhow::anyhow;
 use std::path::PathBuf;
 
 use super::Environment;
-use crate::util::{to_file_path, to_file_uri};
+use crate::util::url::{to_file_path, to_url};
 
 #[derive(Clone)]
 pub struct NativeEnvironment {
@@ -84,13 +84,13 @@ impl Environment for NativeEnvironment {
     }
 
     #[cfg(feature = "fetch")]
-    async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error> {
+    async fn fetch_file(&self, path: &Url) -> Result<Vec<u8>, anyhow::Error> {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
             .unwrap();
         let data = client
-            .get(url.clone())
+            .get(path.clone())
             .send()
             .await?
             .bytes()
@@ -106,6 +106,6 @@ impl Environment for NativeEnvironment {
 
     fn root_uri(&self) -> Option<Url> {
         let cwd = std::env::current_dir().ok()?;
-        to_file_uri(&cwd.display().to_string(), &None)
+        to_url(&cwd.display().to_string(), &None)
     }
 }

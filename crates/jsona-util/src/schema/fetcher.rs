@@ -1,4 +1,3 @@
-use anyhow::{anyhow, bail};
 use arc_swap::ArcSwap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -30,8 +29,7 @@ impl<E: Environment> Fetcher<E> {
     pub async fn fetch(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error> {
         let data: Vec<u8> = match url.scheme() {
             "http" | "https" => self.fetch_file(url).await?,
-            "file" => self.env.read_file(url).await?,
-            _ => bail!(anyhow!("invalid url `{url}`")),
+            _ => self.env.read_file(url).await?,
         };
         Ok(data)
     }

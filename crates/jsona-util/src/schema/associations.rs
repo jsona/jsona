@@ -12,7 +12,7 @@ use url::Url;
 use crate::{
     environment::Environment,
     schema::Fetcher,
-    util::{is_url, GlobRule},
+    util::{url::is_url, GlobRule},
     HashMap,
 };
 
@@ -168,7 +168,7 @@ impl<E: Environment> SchemaAssociations<E> {
         if RE_SCHEMA_NAME.is_match(schema_ref) {
             self.store_schema_urls.read().get(schema_ref).cloned()
         } else {
-            self.env.to_file_uri(schema_ref)
+            self.env.to_url(schema_ref)
         }
     }
 

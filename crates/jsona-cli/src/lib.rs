@@ -24,7 +24,7 @@ impl<E: Environment> App<E> {
     pub async fn load_file(&self, path: &str) -> Result<(Url, String), anyhow::Error> {
         let url = self
             .env
-            .to_file_uri(path)
+            .to_url(path)
             .ok_or_else(|| anyhow!("invalid file path"))?;
         let data = self.env.read_file(&url).await?;
         let content = std::str::from_utf8(&data).map_err(|_| anyhow!("invalid utf8 content"))?;

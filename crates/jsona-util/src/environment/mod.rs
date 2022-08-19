@@ -4,7 +4,7 @@ use time::OffsetDateTime;
 use tokio::io::{AsyncRead, AsyncWrite};
 use url::Url;
 
-use crate::util::to_file_uri;
+use crate::util::url::to_url;
 
 #[cfg(not(target_family = "wasm"))]
 pub mod native;
@@ -40,11 +40,11 @@ pub trait Environment: Clone + Send + Sync + 'static {
 
     async fn write_file(&self, path: &Url, bytes: &[u8]) -> Result<(), anyhow::Error>;
 
-    async fn fetch_file(&self, url: &Url) -> Result<Vec<u8>, anyhow::Error>;
+    async fn fetch_file(&self, path: &Url) -> Result<Vec<u8>, anyhow::Error>;
 
     fn root_uri(&self) -> Option<Url>;
 
-    fn to_file_uri(&self, path: &str) -> Option<Url> {
-        to_file_uri(path, &self.root_uri())
+    fn to_url(&self, path: &str) -> Option<Url> {
+        to_url(path, &self.root_uri())
     }
 }
