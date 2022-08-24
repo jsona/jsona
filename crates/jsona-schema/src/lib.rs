@@ -12,7 +12,7 @@ use jsona::{
 use serde::de::DeserializeOwned;
 
 pub use error::Error;
-pub use schema::{Schema, SchemaType};
+pub use schema::{resolve, Schema, SchemaType};
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn from_str(value: &str) -> Result<Schema> {

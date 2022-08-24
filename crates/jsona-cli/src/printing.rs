@@ -102,9 +102,9 @@ impl<E: Environment> App<E> {
                 .or_else(|| err.keys.last_text_range())
                 .unwrap_or_default();
             let diag = Diagnostic::error()
-                .with_message(&err.info)
+                .with_message(&err.kind.to_string())
                 .with_labels(Vec::from([
-                    Label::primary((), std_range(text_range)).with_message(&err.info)
+                    Label::primary((), std_range(text_range)).with_message(&err.kind.to_string())
                 ]));
 
             if self.colors {

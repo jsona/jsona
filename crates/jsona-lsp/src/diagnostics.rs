@@ -249,7 +249,7 @@ async fn collect_schema_errors<E: Environment>(
                     code: None,
                     code_description: None,
                     source: Some(NAME.into()),
-                    message: err.info,
+                    message: err.kind.to_string(),
                     related_information: None,
                     tags: None,
                     data: None,

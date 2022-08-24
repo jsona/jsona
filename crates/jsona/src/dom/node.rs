@@ -86,6 +86,13 @@ impl Node {
         )
     }
 
+    pub fn is_integer(&self) -> bool {
+        match self {
+            Self::Number(v) => v.is_integer(),
+            _ => false,
+        }
+    }
+
     pub fn text_range(&self) -> Option<TextRange> {
         self.syntax().map(|v| v.text_range())
     }
