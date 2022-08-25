@@ -44,6 +44,10 @@ fn validate_impl(
     keys: &Keys,
     node: &Node,
 ) {
+    let local_schema = match resolve(defs, local_schema) {
+        Some(v) => v,
+        None => return,
+    };
     validate_type(errors, defs, local_schema, keys, node);
     validate_enum(errors, defs, local_schema, keys, node);
     validate_const(errors, defs, local_schema, keys, node);
@@ -162,9 +166,7 @@ fn validate_properties(
             .as_ref()
             .and_then(|v| v.get(key.value()))
         {
-            if let Some(schema) = resolve(defs, schema) {
-                validate_impl(errors, defs, schema, &new_keys, value);
-            }
+            validate_impl(errors, defs, schema, &new_keys, value);
             true
         } else {
             false
@@ -174,10 +176,8 @@ fn validate_properties(
             for (pat, schema) in patterns.iter() {
                 if let Ok(re) = Regex::new(pat) {
                     if let Ok(true) = re.is_match(key.value()) {
-                        if let Some(schema) = resolve(defs, schema) {
-                            validate_impl(errors, defs, schema, &new_keys, value);
-                            is_pattern_passed = true;
-                        }
+                        validate_impl(errors, defs, schema, &new_keys, value);
+                        is_pattern_passed = true;
                     }
                 }
             }
@@ -198,11 +198,7 @@ fn validate_properties(
                         ));
                     }
                 }
-                Either::Right(schema) => {
-                    if let Some(schema) = resolve(defs, schema) {
-                        validate_impl(errors, defs, schema, &new_keys, value)
-                    }
-                }
+                Either::Right(schema) => validate_impl(errors, defs, schema, &new_keys, value),
             }
         }
     }
@@ -273,20 +269,16 @@ fn validate_items(
         };
         match items.value.as_ref() {
             Either::Left(schema) => {
-                if let Some(schema) = resolve(defs, schema) {
-                    for (idx, value) in array.value().read().iter().enumerate() {
-                        let new_keys = keys.join(KeyOrIndex::Index(idx));
-                        validate_impl(errors, defs, schema, &new_keys, value);
-                    }
+                for (idx, value) in array.value().read().iter().enumerate() {
+                    let new_keys = keys.join(KeyOrIndex::Index(idx));
+                    validate_impl(errors, defs, schema, &new_keys, value);
                 }
             }
             Either::Right(schemas) => {
                 let items = array.value().read();
                 for (idx, (value, schema)) in items.iter().zip(schemas.iter()).enumerate() {
-                    if let Some(schema) = resolve(defs, schema) {
-                        let new_keys = keys.join(KeyOrIndex::Index(idx));
-                        validate_impl(errors, defs, schema, &new_keys, value);
-                    }
+                    let new_keys = keys.join(KeyOrIndex::Index(idx));
+                    validate_impl(errors, defs, schema, &new_keys, value);
                 }
                 let schemas_len = schemas.len();
                 if items.len() > schemas_len {
@@ -298,12 +290,9 @@ fn validate_items(
                                 }
                             }
                             Either::Right(schema) => {
-                                if let Some(schema) = resolve(defs, schema) {
-                                    for (idx, value) in items.iter().skip(schemas_len).enumerate() {
-                                        let new_keys =
-                                            keys.join(KeyOrIndex::Index(idx + schemas_len));
-                                        validate_impl(errors, defs, schema, &new_keys, value);
-                                    }
+                                for (idx, value) in items.iter().skip(schemas_len).enumerate() {
+                                    let new_keys = keys.join(KeyOrIndex::Index(idx + schemas_len));
+                                    validate_impl(errors, defs, schema, &new_keys, value);
                                 }
                             }
                         }
@@ -321,25 +310,23 @@ fn validate_contains(
     keys: &Keys,
     node: &Node,
 ) {
-    if let Some(contains) = local_schema.contains.as_ref() {
+    if let Some(schema) = local_schema.contains.as_ref() {
         let array = match node.as_array() {
             Some(v) => v,
             None => return,
         };
-        if let Some(schema) = resolve(defs, contains) {
-            let mut any_matched = false;
-            for (idx, value) in array.value().read().iter().enumerate() {
-                let mut local_errors = vec![];
-                let new_keys = keys.join(KeyOrIndex::Index(idx));
-                validate_impl(&mut local_errors, defs, schema, &new_keys, value);
-                if local_errors.is_empty() {
-                    any_matched = true;
-                    break;
-                }
+        let mut any_matched = false;
+        for (idx, value) in array.value().read().iter().enumerate() {
+            let mut local_errors = vec![];
+            let new_keys = keys.join(KeyOrIndex::Index(idx));
+            validate_impl(&mut local_errors, defs, schema, &new_keys, value);
+            if local_errors.is_empty() {
+                any_matched = true;
+                break;
             }
-            if !any_matched {
-                errors.push(Error::new(keys, ErrorKind::Contains))
-            }
+        }
+        if !any_matched {
+            errors.push(Error::new(keys, ErrorKind::Contains))
         }
     }
 }
@@ -555,9 +542,7 @@ fn validate_allof(
 ) {
     if let Some(all_off) = local_schema.all_of.as_ref() {
         for schema in all_off.iter() {
-            if let Some(schema) = resolve(defs, schema) {
-                validate_impl(errors, defs, schema, keys, node)
-            }
+            validate_impl(errors, defs, schema, keys, node)
         }
     }
 }
@@ -573,14 +558,12 @@ fn validate_anyof(
         let mut collect_errors = vec![];
         let mut valid = false;
         for schema in any_of.iter() {
-            if let Some(schema) = resolve(defs, schema) {
-                let mut local_errors = vec![];
-                validate_impl(&mut local_errors, defs, schema, keys, node);
-                if local_errors.is_empty() {
-                    valid = true;
-                } else {
-                    collect_errors.extend(local_errors);
-                }
+            let mut local_errors = vec![];
+            validate_impl(&mut local_errors, defs, schema, keys, node);
+            if local_errors.is_empty() {
+                valid = true;
+            } else {
+                collect_errors.extend(local_errors);
             }
         }
         if !valid {
@@ -604,22 +587,39 @@ fn validate_oneof(
     if let Some(one_of) = local_schema.one_of.as_ref() {
         let mut collect_errors = vec![];
         let mut valid = 0;
-        for schema in one_of.iter() {
-            if let Some(schema) = resolve(defs, schema) {
-                let mut local_errors = vec![];
-                validate_impl(&mut local_errors, defs, schema, keys, node);
-                if local_errors.is_empty() {
-                    valid += 1;
-                } else {
-                    collect_errors.extend(local_errors);
-                }
+        let mut indexes = vec![];
+        for (index, schema) in one_of.iter().enumerate() {
+            let mut local_errors = vec![];
+            validate_impl(&mut local_errors, defs, schema, keys, node);
+            if local_errors.is_empty() {
+                valid += 1;
             }
+            if local_errors
+                .iter()
+                .filter(|v| {
+                    v.keys.len() > keys.len()
+                        || !matches!(
+                            v.kind,
+                            ErrorKind::AdditionalProperties { .. } | ErrorKind::Type { .. }
+                        )
+                })
+                .count()
+                > 0
+            {
+                indexes.push(index);
+            }
+            collect_errors.push(local_errors);
         }
-        if valid != 1 {
+        if valid == 1 {
+            return;
+        }
+        if valid == 0 && indexes.len() == 1 {
+            errors.extend(collect_errors.remove(indexes[0]))
+        } else {
             errors.push(Error::new(
                 keys,
                 ErrorKind::OneOf {
-                    errors: collect_errors,
+                    errors: collect_errors.into_iter().flatten().collect(),
                 },
             ));
         }
@@ -634,12 +634,10 @@ fn validate_not(
     node: &Node,
 ) {
     if let Some(schema) = local_schema.not.as_ref() {
-        if let Some(schema) = resolve(defs, schema) {
-            let mut local_errors = vec![];
-            validate_impl(&mut local_errors, defs, schema, keys, node);
-            if local_errors.is_empty() {
-                errors.push(Error::new(keys, ErrorKind::Not));
-            }
+        let mut local_errors = vec![];
+        validate_impl(&mut local_errors, defs, schema, keys, node);
+        if local_errors.is_empty() {
+            errors.push(Error::new(keys, ErrorKind::Not));
         }
     }
 }
@@ -651,25 +649,15 @@ fn validate_condiational(
     keys: &Keys,
     node: &Node,
 ) {
-    if let Some(if_value) = local_schema.if_value.as_ref() {
-        if let Some(if_schema) = resolve(defs, if_value) {
-            let mut local_errors = vec![];
-            validate_impl(&mut local_errors, defs, if_schema, keys, node);
-            if local_errors.is_empty() {
-                if let Some(then_schema) = local_schema
-                    .then_value
-                    .as_ref()
-                    .and_then(|v| resolve(defs, v))
-                {
-                    validate_impl(errors, defs, then_schema, keys, node);
-                }
-            } else if let Some(else_schema) = local_schema
-                .else_value
-                .as_ref()
-                .and_then(|v| resolve(defs, v))
-            {
-                validate_impl(errors, defs, else_schema, keys, node);
+    if let Some(if_schema) = local_schema.if_value.as_ref() {
+        let mut local_errors = vec![];
+        validate_impl(&mut local_errors, defs, if_schema, keys, node);
+        if local_errors.is_empty() {
+            if let Some(then_schema) = local_schema.then_value.as_ref() {
+                validate_impl(errors, defs, then_schema, keys, node);
             }
+        } else if let Some(else_schema) = local_schema.else_value.as_ref() {
+            validate_impl(errors, defs, else_schema, keys, node);
         }
     }
 }
@@ -755,8 +743,34 @@ impl Display for ErrorKind {
             ErrorKind::Maximum => write!(f, "Maximum condition is not met"),
             ErrorKind::Minimum => write!(f, "Minimum condition is not met"),
             ErrorKind::MultipleOf => write!(f, "MultipleOf condition is not met"),
-            ErrorKind::AnyOf { .. } => write!(f, "AnyOf conditions are not met"),
-            ErrorKind::OneOf { .. } => write!(f, "OneOf conditions are not met"),
+            ErrorKind::AnyOf { errors } => {
+                let mut extra = "".into();
+                if !errors.is_empty() {
+                    extra = format!(
+                        "; {}",
+                        errors
+                            .iter()
+                            .map(|v| v.to_string())
+                            .collect::<Vec<String>>()
+                            .join("; ")
+                    );
+                }
+                write!(f, "AnyOf conditions are not met{}", extra)
+            }
+            ErrorKind::OneOf { errors } => {
+                let mut extra = "".into();
+                if !errors.is_empty() {
+                    extra = format!(
+                        "; {}",
+                        errors
+                            .iter()
+                            .map(|v| v.to_string())
+                            .collect::<Vec<String>>()
+                            .join("; ")
+                    );
+                }
+                write!(f, "OneOf conditions are not met{}", extra)
+            }
             ErrorKind::Not => write!(f, "Not condition is not met"),
         }
     }
