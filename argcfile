@@ -108,6 +108,28 @@ vscode() {
     popd > /dev/null
 }
 
+# @cmd Update crate version
+# @flag --list print crate versions
+# @arg crates* crate with version, e.g. jsona@0.5.1
+version.crate() {
+    if [[ -n "$argc_list" ]]; then
+        for name in ${CRATES[@]}; do
+            id=$(cargo pkgid -p $name)
+            echo $name@${id##*#}
+        done
+    else
+        for item in ${argc_crates[@]}; do
+            name=${item%%@*}
+            version=${item##*@}
+            minor=${version%.*}
+            sed -i 's/^version = ".*"/version = "'$version'"/' crates/$name/Cargo.toml
+            for crate in crates/*; do
+                sed -i 's|path = "../'$name'", version = ".*"|path = "../'$name'", version = "'$minor'"|' $crate/Cargo.toml
+            done
+        done
+    fi
+}
+
 
 # @cmd Publish crate to carte.io
 publish.crate() {
@@ -123,6 +145,27 @@ publish.crate() {
     done
 }
 
+# @cmd Update npm version
+# @flag --list print npm module versions
+# @arg modules* npm module with version, e.g. core@0.1.2
+version.npm() {
+    if [[ -n "$argc_list" ]]; then
+        for name in ${NPMS[@]}; do
+            pkg_ver=$(node -p "require('./js/"$name"/package.json').version")
+            echo @jsona/$name@$pkg_ver
+        done
+    else
+        for item in ${argc_modules[@]}; do
+            name=${item%%@*}
+            version=${item##*@}
+            sed -i 's/^  "version": ".*",/  "version": "'$version'",/' js/$name/package.json
+            for npm in ${NPMS[@]}; do
+                sed -i 's|"@jsona/'$name'": ".*"|"@jsona/'$name'": "^'$version'"|' js/$npm/package.json
+            done
+            sed -i 's|"@jsona/'$name'": ".*"|"@jsona/'$name'": "^'$version'"|' editors/vscode/package.json
+        done
+    fi
+}
 
 # @cmd Publish to npm
 publish.npm() {
