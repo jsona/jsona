@@ -3,7 +3,7 @@ use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys, Node};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::{Map, Number, Value};
 use std::{collections::HashSet, fmt::Display};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
@@ -30,9 +30,9 @@ pub struct Schema {
     pub default: Option<Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub maximum: Option<f64>,
+    pub maximum: Option<Number>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub minimum: Option<f64>,
+    pub minimum: Option<Number>,
     #[serde(rename = "exclusiveMaximum", skip_serializing_if = "Option::is_none")]
     pub exclusive_maximum: Option<bool>,
     #[serde(rename = "exclusiveMinimum", skip_serializing_if = "Option::is_none")]
@@ -99,7 +99,7 @@ pub struct Schema {
     #[serde(rename = "anyOf", skip_serializing_if = "Option::is_none")]
     pub any_of: Option<Vec<Schema>>,
     #[serde(rename = "not", skip_serializing_if = "Option::is_none")]
-    pub not: Option<Vec<Schema>>,
+    pub not: Option<Box<Schema>>,
     #[serde(rename = "if", skip_serializing_if = "Option::is_none")]
     pub if_value: Option<Box<Schema>>,
     #[serde(rename = "then", skip_serializing_if = "Option::is_none")]
@@ -162,6 +162,18 @@ impl SchemaType {
         };
         Some(schema_type)
     }
+
+    pub fn match_node(&self, node: &Node) -> bool {
+        match self {
+            SchemaType::String => node.is_string(),
+            SchemaType::Number => node.is_number(),
+            SchemaType::Boolean => node.is_bool(),
+            SchemaType::Integer => node.is_integer(),
+            SchemaType::Null => node.is_null(),
+            SchemaType::Object => node.is_object(),
+            SchemaType::Array => node.is_array(),
+        }
+    }
 }
 
 impl Display for SchemaType {
@@ -183,7 +195,7 @@ impl Display for SchemaType {
 #[serde(transparent)]
 pub struct OneOrMultiTypes {
     #[serde(with = "either::serde_untagged")]
-    value: Either<SchemaType, Vec<SchemaType>>,
+    pub value: Either<SchemaType, Vec<SchemaType>>,
 }
 
 impl OneOrMultiTypes {
@@ -231,7 +243,7 @@ impl From<SchemaType> for OneOrMultiTypes {
 #[serde(transparent)]
 pub struct OneOrMultiSchemas {
     #[serde(with = "either::serde_untagged")]
-    value: Either<Box<Schema>, Vec<Schema>>,
+    pub value: Either<Box<Schema>, Vec<Schema>>,
 }
 
 impl OneOrMultiSchemas {
@@ -244,12 +256,6 @@ impl OneOrMultiSchemas {
             Self {
                 value: Either::Left(Box::new(items.remove(0))),
             }
-        }
-    }
-    pub fn as_ref_vec(&self) -> Vec<&Schema> {
-        match self.value.as_ref() {
-            Either::Left(schema) => vec![schema],
-            Either::Right(schemas) => schemas.iter().collect(),
         }
     }
 }
