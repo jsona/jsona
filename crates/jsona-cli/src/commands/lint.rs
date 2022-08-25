@@ -122,7 +122,7 @@ impl<E: Environment> App<E> {
             let errors = self.schemas.validate(&schema_association.url, &dom).await?;
 
             if !errors.is_empty() {
-                self.print_schema_errors(&SimpleFile::new(file_path, &source), &errors)
+                self.print_schema_errors(&SimpleFile::new(file_path, &source), &dom, &errors)
                     .await?;
 
                 return Err(anyhow!("schema validation failed"));

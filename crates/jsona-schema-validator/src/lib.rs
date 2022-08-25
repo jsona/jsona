@@ -1,11 +1,11 @@
-mod jsonschema;
+mod validates;
 
 use std::{collections::HashSet, str::FromStr};
 
-use jsona::dom::{KeyOrIndex, Keys, Node};
+use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node};
 use jsona_schema::from_node;
-pub use jsonschema::Error as JSONASchemaValidationError;
 use thiserror::Error;
+pub use validates::Error as JSONASchemaValidationError;
 
 pub use jsona_schema::Schema;
 
@@ -46,18 +46,45 @@ impl JSONASchemaValidator {
     }
 
     pub fn validate(&self, node: &Node) -> Vec<JSONASchemaValidationError> {
-        jsonschema::validate(&self.schema, node)
+        let mut collect_errors = vec![];
+        let default_defs = Default::default();
+        let defs = self.schema.defs.as_ref().unwrap_or(&default_defs);
+        if let Some(value_schema) = self
+            .schema
+            .properties
+            .as_ref()
+            .and_then(|v| v.get(VALUE_KEY))
+        {
+            collect_errors.extend(validates::validate(
+                defs,
+                value_schema,
+                &Keys::default(),
+                node,
+            ));
+        }
+        for (keys, value) in visit_annotations(node).into_iter() {
+            if let Some(key) = keys.last_annotation_key() {
+                if let Some(schema) = self.schema.properties.as_ref().and_then(|v| {
+                    v.get(ANNOATION_KEY)
+                        .and_then(|s| s.properties.as_ref())
+                        .and_then(|p| p.get(key.value()))
+                }) {
+                    collect_errors.extend(validates::validate(defs, schema, &keys, &value));
+                }
+            }
+        }
+        collect_errors
     }
 
     pub fn pointer(&self, keys: &Keys) -> Vec<&Schema> {
         let (annotation_key, keys) = keys.shift_annotation();
         let new_keys = match annotation_key {
             Some(key) => {
-                let mut key_items = vec![KeyOrIndex::property(ANNOATION_KEY)];
+                let mut anno_keys = vec![KeyOrIndex::property(ANNOATION_KEY)];
                 if self.annotation_names.contains(key.value()) {
-                    key_items.push(KeyOrIndex::property(key.value()));
+                    anno_keys.push(KeyOrIndex::property(key.value()));
                 }
-                let new_keys = Keys::new(key_items.into_iter());
+                let new_keys = Keys::new(anno_keys.into_iter());
                 new_keys.extend(keys)
             }
             None => {

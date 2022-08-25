@@ -8,7 +8,11 @@ use codespan_reporting::{
     },
 };
 use itertools::Itertools;
-use jsona::{dom, parser, rowan::TextRange};
+use jsona::{
+    dom::{self, Node},
+    parser,
+    rowan::TextRange,
+};
 use jsona_util::{environment::Environment, schema::JSONASchemaValidationError};
 use std::ops::Range;
 use tokio::io::AsyncWriteExt;
@@ -90,15 +94,16 @@ impl<E: Environment> App<E> {
     pub(crate) async fn print_schema_errors(
         &self,
         file: &SimpleFile<&str, &str>,
+        node: &Node,
         errors: &[JSONASchemaValidationError],
     ) -> Result<(), anyhow::Error> {
         let config = codespan_reporting::term::Config::default();
 
         let mut out_diag = Vec::<u8>::new();
         for err in errors {
-            let text_range = err
-                .node
-                .text_range()
+            let text_range = node
+                .path(&err.keys)
+                .and_then(|v| v.text_range())
                 .or_else(|| err.keys.last_text_range())
                 .unwrap_or_default();
             let diag = Diagnostic::error()

@@ -3,7 +3,7 @@ use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys, Node};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::{Map, Number, Value};
 use std::{collections::HashSet, fmt::Display};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
@@ -30,9 +30,9 @@ pub struct Schema {
     pub default: Option<Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub maximum: Option<f64>,
+    pub maximum: Option<Number>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub minimum: Option<f64>,
+    pub minimum: Option<Number>,
     #[serde(rename = "exclusiveMaximum", skip_serializing_if = "Option::is_none")]
     pub exclusive_maximum: Option<bool>,
     #[serde(rename = "exclusiveMinimum", skip_serializing_if = "Option::is_none")]
@@ -99,7 +99,7 @@ pub struct Schema {
     #[serde(rename = "anyOf", skip_serializing_if = "Option::is_none")]
     pub any_of: Option<Vec<Schema>>,
     #[serde(rename = "not", skip_serializing_if = "Option::is_none")]
-    pub not: Option<Vec<Schema>>,
+    pub not: Option<Box<Schema>>,
     #[serde(rename = "if", skip_serializing_if = "Option::is_none")]
     pub if_value: Option<Box<Schema>>,
     #[serde(rename = "then", skip_serializing_if = "Option::is_none")]
@@ -359,7 +359,7 @@ fn pointer_impl<'a>(
     }
 }
 
-pub fn resolve<'a>(root_schema: &'a Schema, local_schema: &'a Schema) -> Option<&'a Schema> {
+fn resolve<'a>(root_schema: &'a Schema, local_schema: &'a Schema) -> Option<&'a Schema> {
     let schema = match local_schema.ref_value.as_ref() {
         Some(ref_value) => {
             if ref_value == "#" {

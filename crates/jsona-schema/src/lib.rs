@@ -12,7 +12,7 @@ use jsona::{
 use serde::de::DeserializeOwned;
 
 pub use error::Error;
-pub use schema::{resolve, Schema, SchemaType};
+pub use schema::{Schema, SchemaType};
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn from_str(value: &str) -> Result<Schema> {
@@ -78,6 +78,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
         });
     }
     let mut schema: Schema = parse_object_annotation(&scope, "@schema")?.unwrap_or_default();
+    schema.ref_value = None;
     if let Some(describe) = parse_str_annotation(&scope, "@describe")? {
         schema.description = Some(describe);
     }
