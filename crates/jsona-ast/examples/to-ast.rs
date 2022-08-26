@@ -4,7 +4,7 @@ fn main() {
     let jsona_file_path = std::path::Path::new(&jsona_file);
     let jsona_content = std::fs::read_to_string(jsona_file_path).unwrap();
 
-    match jsona_content.parse::<jsona::ast::Ast>() {
+    match jsona_content.parse::<jsona_ast::Ast>() {
         Ok(ast) => {
             println!("{}", serde_json::to_string_pretty(&ast).unwrap());
         }

@@ -593,6 +593,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsona-ast"
+version = "0.1.0"
+dependencies = [
+ "jsona",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "jsona-cli"
 version = "0.5.0"
 dependencies = [
@@ -732,6 +741,7 @@ name = "jsona-wasm-core"
 version = "0.1.2"
 dependencies = [
  "jsona",
+ "jsona-ast",
  "wasm-bindgen",
  "wasm-bindgen-futures",
 ]

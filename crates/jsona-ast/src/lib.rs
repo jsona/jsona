@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Number as JsonNumber, Value};
 use std::{str::FromStr, string::String as StdString};
 
-use crate::dom::error::{Error as DomError, ParseError};
-use crate::dom::{self, DomNode, Node};
+use jsona::dom::error::{Error as DomError, ParseError};
+use jsona::dom::{self, DomNode, Node};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -133,9 +133,9 @@ impl FromStr for Ast {
                         let message = err.to_string();
                         match err {
                             DomError::ConflictingKeys { key, other } => {
-                                let range = dom_range(&key, &mapper);
+                                let range = key_range(&key, &mapper);
                                 ast_errors.push(Error::new("ConflictingKeys", &message, range));
-                                let range = dom_range(&other, &mapper);
+                                let range = key_range(&other, &mapper);
                                 ast_errors.push(Error::new("ConflictingKeys", &message, range));
                             }
                             DomError::UnexpectedSyntax { syntax } => {
@@ -167,32 +167,22 @@ impl From<Ast> for Node {
     fn from(ast: Ast) -> Self {
         match ast {
             Ast::Null(Null { annotations, .. }) => {
-                dom::NullInner::new(from_annotations(annotations))
-                    .wrap()
-                    .into()
+                dom::Null::new(from_annotations(annotations)).into()
             }
             Ast::Bool(Bool {
                 value, annotations, ..
-            }) => dom::BoolInner::new(value, from_annotations(annotations))
-                .wrap()
-                .into(),
+            }) => dom::Bool::new(value, from_annotations(annotations)).into(),
             Ast::Number(Number {
                 value, annotations, ..
-            }) => dom::NumberInner::new(value, from_annotations(annotations))
-                .wrap()
-                .into(),
+            }) => dom::Number::new(value, from_annotations(annotations)).into(),
             Ast::String(String {
                 value, annotations, ..
-            }) => dom::StringInner::new(value, from_annotations(annotations))
-                .wrap()
-                .into(),
+            }) => dom::String::new(value, from_annotations(annotations)).into(),
             Ast::Array(Array {
                 items, annotations, ..
             }) => {
                 let items: Vec<Node> = items.into_iter().map(Node::from).collect();
-                dom::ArrayInner::new(items, from_annotations(annotations))
-                    .wrap()
-                    .into()
+                dom::Array::new(items, from_annotations(annotations)).into()
             }
             Ast::Object(Object {
                 properties,
@@ -207,9 +197,7 @@ impl From<Ast> for Node {
                         None,
                     );
                 }
-                dom::ObjectInner::new(props, from_annotations(annotations))
-                    .wrap()
-                    .into()
+                dom::Object::new(props, from_annotations(annotations)).into()
             }
         }
     }
@@ -219,8 +207,8 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
     let mut annotations: Vec<Annotation> = vec![];
     if let Some(value_annotations) = value.annotations() {
         for (key, value) in value_annotations.value().read().kv_iter() {
-            let key_range = dom_range(key, mapper);
-            let value_range = dom_range(value, mapper);
+            let key_range = key_range(key, mapper);
+            let value_range = node_range(value, mapper);
             annotations.push({
                 Annotation {
                     key: Key {
@@ -235,7 +223,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
             });
         }
     }
-    let range = dom_range(value, mapper);
+    let range = node_range(value, mapper);
     match value {
         Node::Null(_) => Ast::Null(Null { annotations, range }),
         Node::Bool(v) => Ast::Bool(Bool {
@@ -269,7 +257,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
         Node::Object(v) => {
             let mut properties: Vec<Property> = vec![];
             for (key, value) in v.value().read().kv_iter() {
-                let range = dom_range(key, mapper);
+                let range = key_range(key, mapper);
                 properties.push({
                     Property {
                         key: Key {
@@ -289,8 +277,13 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
     }
 }
 
-fn dom_range<T: DomNode>(node: &T, mapper: &Mapper) -> Option<Range> {
+fn node_range<T: DomNode>(node: &T, mapper: &Mapper) -> Option<Range> {
     node.syntax()
+        .and_then(|syntax| mapper.range(syntax.text_range()))
+}
+
+fn key_range(key: &dom::Key, mapper: &Mapper) -> Option<Range> {
+    key.syntax()
         .and_then(|syntax| mapper.range(syntax.text_range()))
 }
 
@@ -306,11 +299,5 @@ fn from_annotations(annotations: Vec<Annotation>) -> Option<dom::Annotations> {
             None,
         )
     }
-    Some(
-        dom::AnnotationsInner {
-            errors: Default::default(),
-            map: map.into(),
-        }
-        .into(),
-    )
+    Some(dom::Annotations::new(map))
 }

@@ -4,6 +4,7 @@ set -e
 
 CRATES=( \
     jsona \
+    jsona-ast \
     jsona-schema \
     jsona-schema-validator \
     jsona-util \
@@ -190,10 +191,16 @@ example.syntax() {
     cargo run -p jsona --example syntax -- $argc_jsona_file
 }
 
-# @cmd Parse jsona dom and print value
+# @cmd Parse jsona as ast
 # @arg jsona_file!
-example.ast() {
-    cargo run -p jsona --example ast -- $argc_jsona_file
+example.to-ast() {
+    cargo run -p jsona-ast --example to-ast -- $argc_jsona_file
+}
+
+# @cmd Generate jsona from ast
+# @arg ast_file!
+example.from-ast() {
+    cargo run -p jsona-ast --example from-ast -- $argc_ast_file
 }
 
 # @cmd Format jsona doc

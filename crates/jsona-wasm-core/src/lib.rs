@@ -1,6 +1,6 @@
-use jsona::ast::Ast;
 use jsona::dom::Node;
 use jsona::formatter::{self, Options};
+use jsona_ast::Ast;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
