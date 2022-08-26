@@ -2,11 +2,11 @@ use rowan::NodeOrToken;
 
 use super::{
     error::Error,
-    keys::KeyOrIndex,
     node::{
         Annotations, AnnotationsInner, ArrayInner, BoolInner, Key, KeyInner, KeyKind, Map, Node,
         NullInner, NumberInner, NumberRepr, ObjectInner, StringInner,
     },
+    query_keys::QueryKey,
 };
 use serde_json::Number as JsonNumber;
 
@@ -30,9 +30,7 @@ pub fn from_syntax(root: SyntaxElement) -> Node {
     }
 }
 
-pub(crate) fn keys_from_syntax(
-    syntax: &SyntaxElement,
-) -> impl ExactSizeIterator<Item = KeyOrIndex> {
+pub(crate) fn keys_from_syntax(syntax: &SyntaxElement) -> impl ExactSizeIterator<Item = QueryKey> {
     assert!(syntax.kind() == KEYS);
     syntax
         .as_node()
@@ -54,7 +52,7 @@ pub(crate) fn keys_from_syntax(
                             kind: KeyKind::Annotation,
                         }
                         .into();
-                        keys.push(KeyOrIndex::Key(key));
+                        keys.push(QueryKey::Key(key));
                     }
                     k if k.is_key() => {
                         let text = child.text();
@@ -68,26 +66,26 @@ pub(crate) fn keys_from_syntax(
                         if after_bracket {
                             if k == INTEGER {
                                 if let Ok(idx) = text.parse::<usize>() {
-                                    keys.push(KeyOrIndex::Index(idx));
+                                    keys.push(QueryKey::Index(idx));
                                 }
                             } else if k == IDENT_WITH_GLOB {
-                                keys.push(KeyOrIndex::GlobIndex(text.to_string()));
+                                keys.push(QueryKey::GlobIndex(text.to_string()));
                             } else {
-                                keys.push(KeyOrIndex::Key(key))
+                                keys.push(QueryKey::Key(key))
                             }
                         } else if k == IDENT_WITH_GLOB {
                             if text == "**" {
                                 match keys.last() {
-                                    Some(KeyOrIndex::AnyRecursive) => {}
+                                    Some(QueryKey::AnyRecursive) => {}
                                     _ => {
-                                        keys.push(KeyOrIndex::AnyRecursive);
+                                        keys.push(QueryKey::AnyRecursive);
                                     }
                                 }
                             } else {
-                                keys.push(KeyOrIndex::GlobKey(text.to_string()));
+                                keys.push(QueryKey::GlobKey(text.to_string()));
                             }
                         } else {
-                            keys.push(KeyOrIndex::Key(key))
+                            keys.push(QueryKey::Key(key))
                         }
                         after_bracket = false;
                     }

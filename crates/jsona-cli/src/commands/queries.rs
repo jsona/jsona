@@ -4,7 +4,7 @@ use anyhow::{anyhow, bail};
 use clap::Args;
 use codespan_reporting::files::SimpleFile;
 use jsona::{
-    dom::{DomNode, Keys, Node},
+    dom::{DomNode, Node, QueryKeys},
     parser,
 };
 use jsona_util::environment::Environment;
@@ -53,7 +53,7 @@ impl<E: Environment> App<E> {
                 let p = p.trim_start_matches('.');
 
                 let keys = p
-                    .parse::<Keys>()
+                    .parse::<QueryKeys>()
                     .map_err(|err| anyhow!("invalid pattern: {err}"))?;
 
                 node.matches_all(keys, false)

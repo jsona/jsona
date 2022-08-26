@@ -353,7 +353,6 @@ fn pointer_impl<'a>(
                         pointer_impl(result, root_schema, local_schema, &keys)
                     }
                 }
-                _ => {}
             },
         }
     }

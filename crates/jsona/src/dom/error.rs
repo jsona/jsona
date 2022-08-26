@@ -15,9 +15,11 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone, Error)]
-pub enum QueryError {
+pub enum KeyError {
     #[error("the key or index was not found")]
     NotFound,
+    #[error("unexpected glob {0}")]
+    UnexpectedGlob(String),
     #[error("mismatch value type")]
     MismatchType,
     #[error("the given key is invalid: {0}")]
