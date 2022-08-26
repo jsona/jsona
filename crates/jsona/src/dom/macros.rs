@@ -31,8 +31,8 @@ macro_rules! wrap_node {
 
         impl $inner {
             #[allow(dead_code)]
-            pub(crate) fn wrap(self) -> $name {
-                self.into()
+            pub(crate) fn into_node(self) -> $crate::dom::Node {
+				$name::from(self).into()
             }
         }
 

@@ -1,7 +1,6 @@
 use super::error::QueryError;
 use super::from_syntax::keys_from_syntax;
 use super::node::Key;
-use super::DomNode;
 use crate::parser::Parser;
 use crate::util::glob;
 

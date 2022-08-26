@@ -142,8 +142,7 @@ fn scalar_from_syntax(
             node_syntax: Some(root),
             annotations,
         }
-        .wrap()
-        .into(),
+        .into_node(),
         BOOL => BoolInner {
             errors: errors.into(),
             syntax: Some(syntax),
@@ -151,8 +150,7 @@ fn scalar_from_syntax(
             annotations,
             value: Default::default(),
         }
-        .wrap()
-        .into(),
+        .into_node(),
         INTEGER => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
@@ -161,8 +159,7 @@ fn scalar_from_syntax(
             value: Default::default(),
             repr: NumberRepr::Dec,
         }
-        .wrap()
-        .into(),
+        .into_node(),
         INTEGER_BIN => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
@@ -171,8 +168,7 @@ fn scalar_from_syntax(
             value: Default::default(),
             repr: NumberRepr::Bin,
         }
-        .wrap()
-        .into(),
+        .into_node(),
         INTEGER_HEX => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
@@ -181,8 +177,7 @@ fn scalar_from_syntax(
             value: Default::default(),
             repr: NumberRepr::Hex,
         }
-        .wrap()
-        .into(),
+        .into_node(),
         INTEGER_OCT => NumberInner {
             errors: errors.into(),
             syntax: Some(syntax),
@@ -191,8 +186,7 @@ fn scalar_from_syntax(
             value: Default::default(),
             repr: NumberRepr::Oct,
         }
-        .wrap()
-        .into(),
+        .into_node(),
         FLOAT => {
             if let Some(v) = syntax
                 .to_string()
@@ -208,8 +202,7 @@ fn scalar_from_syntax(
                     value: v.into(),
                     repr: NumberRepr::Float,
                 }
-                .wrap()
-                .into()
+                .into_node()
             } else {
                 null_from_syntax(root, annotations, true)
             }
@@ -221,8 +214,7 @@ fn scalar_from_syntax(
             annotations,
             value: Default::default(),
         }
-        .wrap()
-        .into(),
+        .into_node(),
         DOUBLE_QUOTE => StringInner {
             errors: errors.into(),
             syntax: Some(syntax),
@@ -230,8 +222,7 @@ fn scalar_from_syntax(
             annotations,
             value: Default::default(),
         }
-        .wrap()
-        .into(),
+        .into_node(),
         BACKTICK_QUOTE => StringInner {
             errors: errors.into(),
             syntax: Some(syntax),
@@ -239,8 +230,7 @@ fn scalar_from_syntax(
             annotations,
             value: Default::default(),
         }
-        .wrap()
-        .into(),
+        .into_node(),
         _ => null_from_syntax(root, annotations, true),
     }
 }
@@ -265,8 +255,7 @@ fn array_from_syntax(
         annotations,
         items: items.into(),
     }
-    .wrap()
-    .into()
+    .into_node()
 }
 
 fn object_from_syntax(
@@ -288,8 +277,7 @@ fn object_from_syntax(
         annotations,
         properties: properties.into(),
     }
-    .wrap()
-    .into()
+    .into_node()
 }
 
 fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec<Error>) {
@@ -310,7 +298,7 @@ fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec
             errors.push(Error::UnexpectedSyntax {
                 syntax: syntax.clone().into(),
             });
-            NullInner::default().wrap().into()
+            NullInner::default().into_node()
         }
     };
     add_to_map(props, errors, key, value, Some(syntax.into()));
@@ -389,10 +377,9 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
                 node_syntax: Some(anno_value.into()),
                 ..Default::default()
             }
-            .wrap()
-            .into(),
+            .into_node(),
         },
-        None => NullInner::default().wrap().into(),
+        None => NullInner::default().into_node(),
     };
     add_to_map(map, errors, key, value, Some(syntax.into()));
 }
@@ -411,8 +398,7 @@ fn null_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>, err
         syntax: None,
         annotations,
     }
-    .wrap()
-    .into()
+    .into_node()
 }
 
 fn first_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {

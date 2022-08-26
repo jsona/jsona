@@ -309,23 +309,22 @@ pub(crate) struct NullInner {
     pub(crate) annotations: Option<Annotations>,
 }
 
-impl NullInner {
-    pub(crate) fn new(annotations: Option<Annotations>) -> Self {
-        NullInner {
-            errors: Default::default(),
-            syntax: None,
-            node_syntax: None,
-            annotations,
-        }
-    }
-}
-
 wrap_node! {
     #[derive(Debug, Clone)]
     pub struct Null { inner: NullInner }
 }
 
 impl Null {
+    pub fn new(annotations: Option<Annotations>) -> Self {
+        NullInner {
+            errors: Default::default(),
+            syntax: None,
+            node_syntax: None,
+            annotations,
+        }
+        .into()
+    }
+
     pub fn is_valid(&self) -> bool {
         Node::Null(self.clone()).is_valid()
     }
@@ -340,8 +339,13 @@ pub(crate) struct BoolInner {
     pub(crate) value: OnceCell<bool>,
 }
 
-impl BoolInner {
-    pub(crate) fn new(value: bool, annotations: Option<Annotations>) -> Self {
+wrap_node! {
+    #[derive(Debug, Clone)]
+    pub struct Bool { inner: BoolInner }
+}
+
+impl Bool {
+    pub fn new(value: bool, annotations: Option<Annotations>) -> Self {
         BoolInner {
             errors: Default::default(),
             syntax: None,
@@ -349,15 +353,8 @@ impl BoolInner {
             annotations,
             value: value.into(),
         }
+        .into()
     }
-}
-
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Bool { inner: BoolInner }
-}
-
-impl Bool {
     /// A boolean value.
     pub fn value(&self) -> bool {
         *self.inner.value.get_or_init(|| {
@@ -379,8 +376,13 @@ pub(crate) struct NumberInner {
     pub(crate) value: OnceCell<JsonNumber>,
 }
 
-impl NumberInner {
-    pub(crate) fn new(value: JsonNumber, annotations: Option<Annotations>) -> Self {
+wrap_node! {
+    #[derive(Debug, Clone)]
+    pub struct Number { inner: NumberInner }
+}
+
+impl Number {
+    pub fn new(value: JsonNumber, annotations: Option<Annotations>) -> Self {
         NumberInner {
             errors: Default::default(),
             syntax: None,
@@ -389,15 +391,9 @@ impl NumberInner {
             repr: Default::default(),
             value: value.into(),
         }
+        .into()
     }
-}
 
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Number { inner: NumberInner }
-}
-
-impl Number {
     /// An number value.
     pub fn value(&self) -> &JsonNumber {
         self.inner.value.get_or_init(|| {
@@ -472,8 +468,13 @@ pub(crate) struct StringInner {
     pub(crate) value: OnceCell<StdString>,
 }
 
-impl StringInner {
-    pub(crate) fn new(value: StdString, annotations: Option<Annotations>) -> Self {
+wrap_node! {
+    #[derive(Debug, Clone)]
+    pub struct String { inner: StringInner }
+}
+
+impl String {
+    pub fn new(value: StdString, annotations: Option<Annotations>) -> Self {
         StringInner {
             errors: Default::default(),
             syntax: None,
@@ -481,15 +482,9 @@ impl StringInner {
             annotations,
             value: value.into(),
         }
+        .into()
     }
-}
 
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct String { inner: StringInner }
-}
-
-impl String {
     /// An unescaped value of the string.
     pub fn value(&self) -> &str {
         self.inner.value.get_or_init(|| {
@@ -532,8 +527,13 @@ pub(crate) struct ArrayInner {
     pub(crate) items: Shared<Vec<Node>>,
 }
 
-impl ArrayInner {
-    pub(crate) fn new(items: Vec<Node>, annotations: Option<Annotations>) -> Self {
+wrap_node! {
+    #[derive(Debug, Clone)]
+    pub struct Array { inner: ArrayInner }
+}
+
+impl Array {
+    pub fn new(items: Vec<Node>, annotations: Option<Annotations>) -> Self {
         ArrayInner {
             errors: Default::default(),
             syntax: None,
@@ -541,15 +541,9 @@ impl ArrayInner {
             annotations,
             items: items.into(),
         }
+        .into()
     }
-}
 
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Array { inner: ArrayInner }
-}
-
-impl Array {
     pub fn get(&self, idx: usize) -> Option<Node> {
         let items = self.inner.items.read();
         items.get(idx).cloned()
@@ -569,8 +563,13 @@ pub(crate) struct ObjectInner {
     pub(crate) properties: Shared<Map>,
 }
 
-impl ObjectInner {
-    pub(crate) fn new(properties: Map, annotations: Option<Annotations>) -> Self {
+wrap_node! {
+    #[derive(Debug, Clone)]
+    pub struct Object { inner: ObjectInner }
+}
+
+impl Object {
+    pub fn new(properties: Map, annotations: Option<Annotations>) -> Self {
         ObjectInner {
             errors: Default::default(),
             syntax: None,
@@ -578,15 +577,9 @@ impl ObjectInner {
             annotations,
             properties: properties.into(),
         }
+        .into()
     }
-}
 
-wrap_node! {
-    #[derive(Debug, Clone)]
-    pub struct Object { inner: ObjectInner }
-}
-
-impl Object {
     pub fn get(&self, key: &Key) -> Option<Node> {
         let props = self.inner.properties.read();
         props.value.get(key).map(|(node, _)| node.clone())
@@ -630,6 +623,14 @@ impl From<KeyInner> for Key {
 }
 
 impl Key {
+    pub fn syntax(&self) -> Option<&SyntaxElement> {
+        self.inner.syntax.as_ref()
+    }
+
+    pub fn errors(&self) -> &Shared<Vec<Error>> {
+        &self.inner.errors
+    }
+
     pub fn property<T: Into<StdString>>(key: T) -> Self {
         KeyInner {
             errors: Default::default(),
@@ -701,25 +702,6 @@ impl Key {
     }
 }
 
-impl Sealed for Key {}
-impl DomNode for Key {
-    fn node_syntax(&self) -> Option<&SyntaxElement> {
-        self.inner.syntax.as_ref()
-    }
-
-    fn syntax(&self) -> Option<&SyntaxElement> {
-        self.inner.syntax.as_ref()
-    }
-
-    fn errors(&self) -> &Shared<Vec<Error>> {
-        &self.inner.errors
-    }
-
-    fn annotations(&self) -> Option<&Annotations> {
-        None
-    }
-}
-
 impl AsRef<str> for Key {
     fn as_ref(&self) -> &str {
         self.value()
@@ -778,7 +760,7 @@ impl Map {
         self.value.iter().map(|(key, (node, _))| (key, node))
     }
 
-    pub(crate) fn add(&mut self, key: Key, node: Node, syntax: Option<SyntaxElement>) {
+    pub fn add(&mut self, key: Key, node: Node, syntax: Option<SyntaxElement>) {
         self.value.insert(key, (node, syntax));
     }
 }
@@ -795,6 +777,18 @@ pub struct Annotations {
 }
 
 impl Annotations {
+    pub fn new(map: Map) -> Self {
+        AnnotationsInner {
+            errors: Default::default(),
+            map: map.into(),
+        }
+        .into()
+    }
+
+    pub fn errors(&self) -> &Shared<Vec<Error>> {
+        &self.inner.errors
+    }
+
     pub fn get(&self, key: &Key) -> Option<Node> {
         let map = self.inner.map.read();
         map.value.get(key).map(|(node, _)| node.clone())
@@ -815,25 +809,6 @@ impl Annotations {
             .kv_iter()
             .map(|(k, _)| k.to_string())
             .collect()
-    }
-}
-
-impl Sealed for Annotations {}
-impl DomNode for Annotations {
-    fn node_syntax(&self) -> Option<&SyntaxElement> {
-        None
-    }
-
-    fn syntax(&self) -> Option<&SyntaxElement> {
-        None
-    }
-
-    fn errors(&self) -> &Shared<Vec<Error>> {
-        &self.inner.errors
-    }
-
-    fn annotations(&self) -> Option<&Annotations> {
-        None
     }
 }
 

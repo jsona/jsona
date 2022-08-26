@@ -1,0 +1,13 @@
+[package]
+name = "jsona-ast"
+version = "0.1.0"
+edition = "2021"
+description = "The JSONA abstract syntax tree module"
+repository = "https://github.com/jsona/jsona"
+keywords = ["jsona", "ast"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+jsona = { path = "../jsona", version = "0.5" }
+serde_json = { version = "1", features = ["preserve_order"] }

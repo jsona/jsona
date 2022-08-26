@@ -1,6 +1,6 @@
 //! Utilities for mapping between offset:length bytes and col:row character positions.
 
-use rowan::{TextRange, TextSize};
+use jsona::rowan::{TextRange, TextSize};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
