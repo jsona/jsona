@@ -1,5 +1,6 @@
-use super::error::{Error, ParseError, QueryError};
+use super::error::{Error, KeyError, ParseError};
 use super::keys::{KeyOrIndex, Keys};
+use super::query_keys::QueryKeys;
 use super::visitor::{VisitControl, Visitor};
 use crate::parser;
 use crate::private::Sealed;
@@ -55,12 +56,11 @@ impl Node {
                     self.annotations().and_then(|v| v.get(k))
                 }
             }
-            _ => None,
         }
     }
 
-    pub fn try_get(&self, key: &KeyOrIndex) -> Result<Node, QueryError> {
-        self.get(key).ok_or(QueryError::NotFound)
+    pub fn try_get(&self, key: &KeyOrIndex) -> Result<Node, KeyError> {
+        self.get(key).ok_or(KeyError::NotFound)
     }
 
     pub fn validate(&self) -> Result<(), impl Iterator<Item = Error> + core::fmt::Debug> {
@@ -103,7 +103,7 @@ impl Node {
 
     pub fn matches_all(
         &self,
-        keys: Keys,
+        keys: QueryKeys,
         match_children: bool,
     ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, Error> {
         let all: Vec<(Keys, Node)> = Visitor::new(self, &(), |_, _, _| VisitControl::AddIter)

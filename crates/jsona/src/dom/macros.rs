@@ -102,14 +102,14 @@ macro_rules! define_value_fns {
             }
         }
 
-        pub fn $try_get_as_fn(&self, key: &KeyOrIndex) -> Result<Option<$t>, QueryError> {
+        pub fn $try_get_as_fn(&self, key: &KeyOrIndex) -> Result<Option<$t>, KeyError> {
             match self.get(key) {
                 None => Ok(None),
                 Some(v) => {
                     if let Node::$elm(v) = v {
                         Ok(Some(v))
                     } else {
-                        Err(QueryError::MismatchType)
+                        Err(KeyError::MismatchType)
                     }
                 }
             }
