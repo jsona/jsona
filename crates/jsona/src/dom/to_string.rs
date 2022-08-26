@@ -30,17 +30,25 @@ fn write_value(scope: Scope, value: &Node) {
             } else {
                 scope.write("[");
             }
-            let scope = scope.enter(ScopeKind::Array);
-            write_annotations(scope.clone(), v.annotations());
-            scope.newline();
-            let value = v.value().read();
-            for item in value.iter() {
-                write_value(scope.clone(), item);
+            if v.inner.items.read().len() == 0
+                && v.annotations()
+                    .map(|v| v.value().read().len() == 0)
+                    .unwrap_or(true)
+            {
+                scope.write("],");
+            } else {
+                let scope = scope.enter(ScopeKind::Array);
+                write_annotations(scope.clone(), v.annotations());
                 scope.newline();
+                let value = v.value().read();
+                for item in value.iter() {
+                    write_value(scope.clone(), item);
+                    scope.newline();
+                }
+                let scope = scope.exit();
+                scope.write_ident();
+                scope.write("],");
             }
-            let scope = scope.exit();
-            scope.write_ident();
-            scope.write("],");
         }
         Node::Object(v) => {
             if scope.kind == ScopeKind::Array {
@@ -49,19 +57,27 @@ fn write_value(scope: Scope, value: &Node) {
             } else {
                 scope.write("{");
             }
-            let scope = scope.enter(ScopeKind::Object);
-            write_annotations(scope.clone(), v.annotations());
-            scope.newline();
-            let value = v.value().read();
-            for (k, v) in value.kv_iter() {
-                scope.write_ident();
-                scope.write(format!("{}: ", k));
-                write_value(scope.clone(), v);
+            if v.inner.properties.read().len() == 0
+                && v.annotations()
+                    .map(|v| v.value().read().len() == 0)
+                    .unwrap_or(true)
+            {
+                scope.write("],");
+            } else {
+                let scope = scope.enter(ScopeKind::Object);
+                write_annotations(scope.clone(), v.annotations());
                 scope.newline();
+                let value = v.value().read();
+                for (k, v) in value.kv_iter() {
+                    scope.write_ident();
+                    scope.write(format!("{}: ", k));
+                    write_value(scope.clone(), v);
+                    scope.newline();
+                }
+                let scope = scope.exit();
+                scope.write_ident();
+                scope.write("},");
             }
-            let scope = scope.exit();
-            scope.write_ident();
-            scope.write("},");
         }
     }
 }
@@ -99,6 +115,7 @@ fn write_annotations(scope: Scope, annotations: Option<&Annotations>) {
                         scope.write("\n");
                         scope.write_ident();
                         scope.write(format!("{}(", key));
+                        scope.enter(ScopeKind::Annotation);
                         write_value(scope.clone(), value);
                         scope.exit();
                         if scope.is_last_char(',') {
