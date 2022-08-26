@@ -288,10 +288,10 @@ fn key_range(key: &dom::Key, mapper: &Mapper) -> Option<Range> {
 }
 
 fn from_annotations(annotations: Vec<Annotation>) -> Option<dom::Annotations> {
-    let mut map = dom::Map::default();
-    if map.is_empty() {
+    if annotations.is_empty() {
         return None;
     }
+    let mut map = dom::Map::default();
     for anno in annotations {
         map.add(
             dom::Key::annotation(anno.key.name),
