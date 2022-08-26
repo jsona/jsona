@@ -127,10 +127,7 @@ impl<'de> Visitor<'de> for JsonaVisitor {
     where
         E: serde::de::Error,
     {
-        Err(serde::de::Error::invalid_type(
-            serde::de::Unexpected::Unit,
-            &self,
-        ))
+        Ok(node::Null::new(None).into())
     }
 
     fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
