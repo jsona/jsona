@@ -64,7 +64,7 @@ fn collect<T>(
     match node {
         Node::Object(obj) => {
             let props = obj.inner.properties.read();
-            for (key, node) in props.kv_iter() {
+            for (key, node) in props.iter() {
                 collect(keys.join(key.into()), node, state, all, &f);
             }
         }
@@ -79,7 +79,7 @@ fn collect<T>(
 
     if let Some(annotations) = node.annotations() {
         let map = annotations.value().read();
-        for (key, node) in map.kv_iter() {
+        for (key, node) in map.iter() {
             collect(keys.join(key.into()), node, state, all, &f);
         }
     }

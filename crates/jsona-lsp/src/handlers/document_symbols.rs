@@ -131,7 +131,7 @@ fn symbols_for_value(
 
 fn symbols_for_annotations(node: &Node, mapper: &Mapper, symbols: &mut Vec<DocumentSymbol>) {
     if let Some(annotations) = node.annotations() {
-        for (key, value) in annotations.value().read().kv_iter() {
+        for (key, value) in annotations.value().read().iter() {
             if !key.value().is_empty() {
                 symbols_for_value(
                     key.value().to_string(),
@@ -160,7 +160,7 @@ fn symbols_for_array(arr: &dom::Array, mapper: &Mapper) -> Vec<DocumentSymbol> {
 fn symbols_for_object(obj: &dom::Object, mapper: &Mapper) -> Vec<DocumentSymbol> {
     let properties = obj.value().read();
     let mut symbols = vec![];
-    for (key, value) in properties.kv_iter() {
+    for (key, value) in properties.iter() {
         symbols_for_annotations(value, mapper, &mut symbols);
         if !key.value().is_empty() {
             symbols_for_value(

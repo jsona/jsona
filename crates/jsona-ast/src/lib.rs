@@ -195,7 +195,7 @@ impl From<Ast> for Node {
 fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
     let mut annotations: Vec<Annotation> = vec![];
     if let Some(value_annotations) = value.annotations() {
-        for (key, value) in value_annotations.value().read().kv_iter() {
+        for (key, value) in value_annotations.value().read().iter() {
             let key_range = key_range(key, mapper);
             let value_range = node_range(value, mapper);
             annotations.push({
@@ -245,7 +245,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
         }
         Node::Object(v) => {
             let mut properties: Vec<Property> = vec![];
-            for (key, value) in v.value().read().kv_iter() {
+            for (key, value) in v.value().read().iter() {
                 let range = key_range(key, mapper);
                 properties.push({
                     Property {

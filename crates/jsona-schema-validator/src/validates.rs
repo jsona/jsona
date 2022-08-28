@@ -159,7 +159,7 @@ fn validate_properties(
         Some(v) => v,
         None => return,
     };
-    for (key, value) in object.value().read().kv_iter() {
+    for (key, value) in object.value().read().iter() {
         let new_keys = keys.join(KeyOrIndex::property(key.value()));
         let is_property_passed = if let Some(schema) = local_schema
             .properties
@@ -218,7 +218,7 @@ fn validate_required(
         };
         let mut miss: Vec<String> = vec![];
         let map = object.value().read();
-        let object_keys: HashSet<&str> = map.kv_iter().map(|(k, _)| k.value()).collect();
+        let object_keys: HashSet<&str> = map.iter().map(|(k, _)| k.value()).collect();
         for key in required.iter() {
             if object_keys.contains(key.as_str()) {
                 continue;

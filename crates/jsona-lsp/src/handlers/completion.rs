@@ -103,7 +103,7 @@ pub async fn completion<E: Environment>(
                 .map(|v| {
                     v.value()
                         .read()
-                        .kv_iter()
+                        .iter()
                         .map(|(k, _)| k.value().to_string())
                         .collect()
                 })
@@ -216,7 +216,7 @@ fn complete_properties_schemaless(
             Some(obj) => obj,
             None => continue,
         };
-        for (key, value) in obj.value().read().kv_iter() {
+        for (key, value) in obj.value().read().iter() {
             let key = key.value().to_string();
             if exist_props.contains(&key) {
                 continue;

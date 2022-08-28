@@ -300,7 +300,7 @@ pub struct PositionInfo {
 fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node)> {
     if let Some(annotations) = node.annotations() {
         let map = annotations.value().read();
-        for (key, value) in map.kv_iter() {
+        for (key, value) in map.iter() {
             if map
                 .syntax(key)
                 .map(|v| v.text_range().contains(offset))
@@ -324,7 +324,7 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
         }
         Node::Object(obj) => {
             let map = obj.value().read();
-            for (key, value) in map.kv_iter() {
+            for (key, value) in map.iter() {
                 if map
                     .syntax(key)
                     .map(|v| v.text_range().contains(offset))

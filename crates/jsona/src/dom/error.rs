@@ -20,8 +20,6 @@ pub enum KeyError {
     NotFound,
     #[error("the glob is unexpected: {0}")]
     UnexpectedGlob(String),
-    #[error("the type is unexpected")]
-    UnexpectedType,
     #[error("the given key is invalid: {0}")]
     InvalidKey(crate::parser::Error),
 }

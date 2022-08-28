@@ -122,7 +122,7 @@ pub fn to_json(node: &Node) -> Value {
         Value::Object(
             a.value()
                 .read()
-                .kv_iter()
+                .iter()
                 .map(|(k, v)| (k.to_string(), v.to_plain_json()))
                 .collect(),
         )
@@ -200,7 +200,7 @@ pub fn to_json(node: &Node) -> Value {
             let value = Value::Object(
                 v.value()
                     .read()
-                    .kv_iter()
+                    .iter()
                     .map(|(k, v)| (k.to_string(), to_json(v)))
                     .collect(),
             );

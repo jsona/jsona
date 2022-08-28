@@ -19,7 +19,7 @@ impl Serialize for Node {
                 let properties = v.value().read();
                 let mut map = ser.serialize_map(Some(properties.len()))?;
 
-                for (key, property) in properties.kv_iter() {
+                for (key, property) in properties.iter() {
                     map.serialize_entry(key.value(), property)?;
                 }
 

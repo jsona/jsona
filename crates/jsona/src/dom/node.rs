@@ -160,7 +160,7 @@ impl Node {
                     return;
                 }
                 let items = v.inner.properties.read();
-                for (k, entry) in items.as_ref().kv_iter() {
+                for (k, entry) in items.as_ref().iter() {
                     if !k.is_valid() {
                         *valid = false;
                         return;
@@ -215,7 +215,7 @@ impl Node {
                 return;
             }
             let items = v.inner.map.read();
-            for (k, node) in items.as_ref().kv_iter() {
+            for (k, node) in items.as_ref().iter() {
                 if !k.errors().read().as_ref().is_empty() {
                     *valid = false;
                     return;
@@ -234,7 +234,7 @@ impl Node {
                 errors.extend(v.errors().read().as_ref().iter().cloned());
 
                 let items = v.inner.properties.read();
-                for (k, entry) in items.as_ref().kv_iter() {
+                for (k, entry) in items.as_ref().iter() {
                     errors.extend(k.errors().read().as_ref().iter().cloned());
                     entry.validate_all_impl(errors);
                 }
@@ -262,7 +262,7 @@ impl Node {
         if let Some(v) = self.annotations() {
             errors.extend(v.errors().read().as_ref().iter().cloned());
             let items = v.inner.map.read();
-            for (k, node) in items.as_ref().kv_iter() {
+            for (k, node) in items.as_ref().iter() {
                 errors.extend(k.errors().read().as_ref().iter().cloned());
                 node.validate_all_impl(errors);
             }
@@ -271,12 +271,12 @@ impl Node {
 }
 
 impl Node {
-    define_value_fns!(Null, Null, is_null, as_null, try_get_as_null);
-    define_value_fns!(Bool, Bool, is_bool, as_bool, try_get_as_bool);
-    define_value_fns!(Number, Number, is_number, as_number, try_get_as_number);
-    define_value_fns!(String, String, is_string, as_string, try_get_as_string);
-    define_value_fns!(Object, Object, is_object, as_object, try_get_as_object);
-    define_value_fns!(Array, Array, is_array, as_array, try_get_as_array);
+    define_value_fns!(Null, Null, is_null, as_null);
+    define_value_fns!(Bool, Bool, is_bool, as_bool);
+    define_value_fns!(Number, Number, is_number, as_number);
+    define_value_fns!(String, String, is_string, as_string);
+    define_value_fns!(Object, Object, is_object, as_object);
+    define_value_fns!(Array, Array, is_array, as_array);
 }
 
 value_from!(Null, Number, String, Bool, Array, Object,);
@@ -756,7 +756,7 @@ impl Map {
         self.value.is_empty()
     }
 
-    pub fn kv_iter(&self) -> impl Iterator<Item = (&Key, &Node)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&Key, &Node)> {
         self.value.iter().map(|(key, (node, _))| (key, node))
     }
 
@@ -806,7 +806,7 @@ impl Annotations {
     pub fn map_keys(&self) -> Vec<StdString> {
         self.value()
             .read()
-            .kv_iter()
+            .iter()
             .map(|(k, _)| k.to_string())
             .collect()
     }

@@ -113,7 +113,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     }
     match &scope.node {
         Node::Object(obj) => {
-            for (key, child) in obj.value().read().kv_iter() {
+            for (key, child) in obj.value().read().iter() {
                 let child_scope = scope.spawn(key.into(), child.clone());
                 let key = key.value();
                 let pattern = parse_str_annotation(&child_scope, "@pattern")?;
@@ -183,17 +183,10 @@ fn exist_annotation(scope: &Scope, name: &str) -> bool {
 
 fn parse_object_annotation<T: DeserializeOwned>(scope: &Scope, name: &str) -> Result<Option<T>> {
     let key = KeyOrIndex::annotation(name);
-    let value = scope
-        .node
-        .try_get_as_object(&key)
-        .map_err(|_| Error::UnexpectedType {
-            keys: scope.keys.clone().join(key.clone()),
-        })?;
-    if let Some(value) = value {
-        let value: Node = value.into();
+    if let Some(value) = scope.node.get(&key) {
         let value = value.to_plain_json();
         let schema = serde_json::from_value(value).map_err(|err| Error::InvalidSchemaValue {
-            keys: scope.keys.clone().join(key),
+            keys: scope.keys.clone().join(key.clone()),
             error: err.to_string(),
         })?;
         Ok(Some(schema))
@@ -204,11 +197,13 @@ fn parse_object_annotation<T: DeserializeOwned>(scope: &Scope, name: &str) -> Re
 
 fn parse_str_annotation(scope: &Scope, name: &str) -> Result<Option<String>> {
     let key = KeyOrIndex::annotation(name);
-    let value = scope
-        .node
-        .try_get_as_string(&key)
-        .map_err(|_| Error::UnexpectedType {
-            keys: scope.keys.clone().join(key),
-        })?;
-    Ok(value.map(|v| v.value().to_string()))
+    match scope.node.get(&key) {
+        Some(v) => match v.as_string() {
+            Some(v) => Ok(Some(v.value().to_string())),
+            None => Err(Error::UnexpectedType {
+                keys: scope.keys.clone().join(key.clone()),
+            }),
+        },
+        None => Ok(None),
+    }
 }
