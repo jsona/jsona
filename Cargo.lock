@@ -659,6 +659,7 @@ dependencies = [
  "jsona",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]

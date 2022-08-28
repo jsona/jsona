@@ -94,13 +94,6 @@ pub struct Error {
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum ErrorKind {
-    InvalidSyntax,
-    UnexpectedSyntax,
-    InvalidEscapeSequence,
-}
-
 impl Error {
     pub fn new(kind: &str, message: &str, range: Option<Range>) -> Self {
         Self {
@@ -138,21 +131,17 @@ impl FromStr for Ast {
                                 let range = key_range(&other, &mapper);
                                 ast_errors.push(Error::new("ConflictingKeys", &message, range));
                             }
-                            DomError::UnexpectedSyntax { syntax } => {
+                            DomError::InvalidNode { syntax } => {
                                 let range = mapper.range(syntax.text_range());
-                                ast_errors.push(Error::new("UnexpectedSyntax", &message, range));
+                                ast_errors.push(Error::new("InvalidNode", &message, range));
                             }
                             DomError::InvalidNumber { syntax } => {
                                 let range = mapper.range(syntax.text_range());
                                 ast_errors.push(Error::new("InvalidNumber", &message, range));
                             }
-                            DomError::InvalidEscapeSequence { syntax } => {
+                            DomError::InvalidString { syntax } => {
                                 let range = mapper.range(syntax.text_range());
-                                ast_errors.push(Error::new(
-                                    "InvalidEscapeSequence",
-                                    &message,
-                                    range,
-                                ));
+                                ast_errors.push(Error::new("InvalidString", &message, range));
                             }
                         }
                     }

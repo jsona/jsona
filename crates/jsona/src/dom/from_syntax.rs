@@ -111,7 +111,7 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
         .into()
     } else {
         KeyInner {
-            errors: Shared::new(Vec::from([Error::UnexpectedSyntax {
+            errors: Shared::new(Vec::from([Error::InvalidNode {
                 syntax: syntax.clone(),
             }])),
             syntax: Some(syntax),
@@ -284,7 +284,7 @@ fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec
     let key = match syntax.children().find(|v| v.kind() == KEY) {
         Some(key) => key_from_syntax(key.into()),
         None => {
-            errors.push(Error::UnexpectedSyntax {
+            errors.push(Error::InvalidNode {
                 syntax: syntax.into(),
             });
             return;
@@ -293,7 +293,7 @@ fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec
     let value = match syntax.children().find(|v| v.kind() == VALUE) {
         Some(value) => from_syntax(value.into()),
         None => {
-            errors.push(Error::UnexpectedSyntax {
+            errors.push(Error::InvalidNode {
                 syntax: syntax.clone().into(),
             });
             NullInner::default().into_node()
@@ -362,7 +362,7 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
         }
         .into(),
         None => {
-            errors.push(Error::UnexpectedSyntax {
+            errors.push(Error::InvalidNode {
                 syntax: syntax.into(),
             });
             return;
@@ -384,7 +384,7 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
 
 fn null_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>, error: bool) -> Node {
     let errors = if error {
-        Vec::from([Error::UnexpectedSyntax {
+        Vec::from([Error::InvalidNode {
             syntax: syntax.clone(),
         }])
     } else {

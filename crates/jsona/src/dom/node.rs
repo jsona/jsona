@@ -495,7 +495,7 @@ impl String {
                     Ok(s) => s,
                     Err(_) => {
                         self.inner.errors.update(|errors| {
-                            errors.push(Error::InvalidEscapeSequence { syntax: s.clone() })
+                            errors.push(Error::InvalidString { syntax: s.clone() })
                         });
                         StdString::new()
                     }
@@ -666,7 +666,7 @@ impl Key {
                         Ok(s) => s,
                         Err(_) => {
                             self.inner.errors.update(|errors| {
-                                errors.push(Error::InvalidEscapeSequence {
+                                errors.push(Error::InvalidString {
                                     syntax: s.clone().into(),
                                 })
                             });

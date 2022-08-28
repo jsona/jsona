@@ -1,33 +1,41 @@
-mod error;
 mod schema;
 
 use indexmap::IndexMap;
 use schema::OneOrMultiSchemas;
 use std::{cell::RefCell, rc::Rc};
+use thiserror::Error;
 
-use jsona::{
-    dom::{KeyOrIndex, Keys, Node},
-    parser,
-};
+use jsona::dom::{KeyOrIndex, Keys, Node, ParseError};
 use serde::de::DeserializeOwned;
 
-pub use error::Error;
 pub use schema::{Schema, SchemaType};
+
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Clone, Debug, Error)]
+pub enum Error {
+    #[error("invalid jsona")]
+    InvalidJsona(#[from] ParseError),
+    #[error("conflict def {name}")]
+    ConflictDef { keys: Keys, name: String },
+    #[error("unknown ref {name}")]
+    UnknownRef { keys: Keys, name: String },
+    #[error("the type is unexpected")]
+    UnexpectedType { keys: Keys },
+    #[error("the schema type is not match value type")]
+    UnmatchedSchemaType { keys: Keys },
+    #[error("invalid schema value")]
+    InvalidSchemaValue { keys: Keys, error: String },
+    #[error("invalid compound value")]
+    InvalidCompoundValue { keys: Keys },
+}
+
 pub fn from_str(value: &str) -> Result<Schema> {
-    let parse = parser::parse(value);
-    if !parse.errors.is_empty() {
-        return Err(Error::invalid_file(Keys::default()));
-    }
-    let node = parse.into_dom();
+    let node: Node = value.parse()?;
     from_node(&node)
 }
 
 pub fn from_node(node: &Node) -> Result<Schema> {
-    if node.validate().is_err() {
-        return Err(Error::invalid_file(Keys::default()));
-    }
     let scope = Scope {
         node: node.clone(),
         keys: Default::default(),
@@ -63,14 +71,20 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     if let Some(def) = parse_str_annotation(&scope, "@def")? {
         let mut defs = scope.defs.borrow_mut();
         if defs.contains_key(&def) {
-            return Err(Error::conflict_def(scope.keys.clone(), &def));
+            return Err(Error::ConflictDef {
+                keys: scope.keys.clone(),
+                name: def,
+            });
         }
         defs.insert(def.clone(), Default::default());
         def_value = def;
     } else if let Some(ref_value) = parse_str_annotation(&scope, "@ref")? {
         let defs = scope.defs.borrow();
         if !defs.contains_key(&ref_value) {
-            return Err(Error::unknown_def(scope.keys.clone(), &ref_value));
+            return Err(Error::UnknownRef {
+                keys: scope.keys.clone(),
+                name: ref_value,
+            });
         }
         return Ok(Schema {
             ref_value: Some(format!("#/$defs/{}", ref_value)),
@@ -94,7 +108,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
         schema.schema_type = node_type.map(Into::into);
     } else if let Some(node_type) = node_type {
         if !schema_types.contains(&node_type) {
-            return Err(Error::mismatch_type(scope.keys));
+            return Err(Error::UnmatchedSchemaType { keys: scope.keys });
         }
     }
     match &scope.node {
@@ -106,12 +120,6 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                 let child_schema = parse_node(child_scope.clone())?;
                 if let Some(pattern) = pattern {
                     let props = schema.pattern_properties.get_or_insert(Default::default());
-                    if props.contains_key(key) {
-                        return Err(Error::conflict_pattern(
-                            child_scope.keys.join(KeyOrIndex::annotation("@pattern")),
-                            &pattern,
-                        ));
-                    }
                     props.insert(pattern, child_schema);
                 } else {
                     let required = exist_annotation(&child_scope, "@required");
@@ -141,9 +149,9 @@ fn parse_node(scope: Scope) -> Result<Schema> {
                         "oneOf" => schema.one_of = Some(schemas),
                         "allOf" => schema.all_of = Some(schemas),
                         _ => {
-                            return Err(Error::invalid_value(
-                                scope.keys.join(KeyOrIndex::annotation("@compound")),
-                            ));
+                            return Err(Error::InvalidCompoundValue {
+                                keys: scope.keys.join(KeyOrIndex::annotation("@compound")),
+                            });
                         }
                     }
                 } else if arr.len() == 1 {
@@ -178,12 +186,16 @@ fn parse_object_annotation<T: DeserializeOwned>(scope: &Scope, name: &str) -> Re
     let value = scope
         .node
         .try_get_as_object(&key)
-        .map_err(|_| Error::mismatch_type(scope.keys.clone().join(key.clone())))?;
+        .map_err(|_| Error::UnexpectedType {
+            keys: scope.keys.clone().join(key.clone()),
+        })?;
     if let Some(value) = value {
         let value: Node = value.into();
         let value = value.to_plain_json();
-        let schema = serde_json::from_value(value)
-            .map_err(|_| Error::invalid_value(scope.keys.clone().join(key)))?;
+        let schema = serde_json::from_value(value).map_err(|err| Error::InvalidSchemaValue {
+            keys: scope.keys.clone().join(key),
+            error: err.to_string(),
+        })?;
         Ok(Some(schema))
     } else {
         Ok(None)
@@ -195,6 +207,8 @@ fn parse_str_annotation(scope: &Scope, name: &str) -> Result<Option<String>> {
     let value = scope
         .node
         .try_get_as_string(&key)
-        .map_err(|_| Error::mismatch_type(scope.keys.clone().join(key)))?;
+        .map_err(|_| Error::UnexpectedType {
+            keys: scope.keys.clone().join(key),
+        })?;
     Ok(value.map(|v| v.value().to_string()))
 }

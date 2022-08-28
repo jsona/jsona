@@ -2,8 +2,8 @@ mod validates;
 
 use std::{collections::HashSet, str::FromStr};
 
-use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node};
-use jsona_schema::from_node;
+use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node, ParseError};
+use jsona_schema::{from_node, Error as SchemaError};
 use thiserror::Error;
 pub use validates::Error as JSONASchemaValidationError;
 
@@ -19,10 +19,7 @@ pub struct JSONASchemaValidator {
 
 impl JSONASchemaValidator {
     pub fn from_node(node: &Node) -> Result<Self, Error> {
-        if node.validate().is_err() {
-            return Err(Error::InvalidJsonaNode);
-        };
-        let mut schema = from_node(node).map_err(|err| Error::InvalidSchema(err.to_string()))?;
+        let mut schema = from_node(node)?;
         let mut annotation_names = HashSet::default();
         if let Some(properties) = schema
             .properties
@@ -99,19 +96,15 @@ impl JSONASchemaValidator {
 impl FromStr for JSONASchemaValidator {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let node: Node = s.parse().map_err(|_| Error::InvalidJsonaDoc)?;
+        let node: Node = s.parse()?;
         Self::from_node(&node)
     }
 }
 
 #[derive(Debug, Clone, Error)]
 pub enum Error {
-    #[error("invalid jsona doc")]
-    InvalidJsonaDoc,
-    #[error("invalid jsona node")]
-    InvalidJsonaNode,
-    #[error("invalid node at {0}")]
-    InvalidNode(String),
-    #[error("invalid schema {0}")]
-    InvalidSchema(String),
+    #[error("invalid jsona")]
+    InvalidJsona(#[from] ParseError),
+    #[error("invalid schema")]
+    InvalidSchema(#[from] SchemaError),
 }

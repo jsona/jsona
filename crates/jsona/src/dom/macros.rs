@@ -109,7 +109,7 @@ macro_rules! define_value_fns {
                     if let Node::$elm(v) = v {
                         Ok(Some(v))
                     } else {
-                        Err(KeyError::MismatchType)
+                        Err(KeyError::UnexpectedType)
                     }
                 }
             }
