@@ -190,7 +190,7 @@ fn collect_dom_errors(
                         ..Default::default()
                     });
                 }
-                jsona::dom::Error::UnexpectedSyntax { syntax } => {
+                jsona::dom::Error::InvalidNode { syntax } => {
                     let range = doc
                         .mapper
                         .range(syntax.text_range())
@@ -208,7 +208,7 @@ fn collect_dom_errors(
                         data: None,
                     });
                 }
-                jsona::dom::Error::InvalidEscapeSequence { syntax: _ }
+                jsona::dom::Error::InvalidString { syntax: _ }
                 | jsona::dom::Error::InvalidNumber { syntax: _ } => {}
             }
         }

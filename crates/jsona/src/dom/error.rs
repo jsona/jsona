@@ -4,11 +4,11 @@ use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
 pub enum Error {
-    #[error("the syntax was not expected")]
-    UnexpectedSyntax { syntax: SyntaxElement },
-    #[error("the string contains invalid escape sequence(s)")]
-    InvalidEscapeSequence { syntax: SyntaxElement },
-    #[error("the syntax was not valid number")]
+    #[error("the syntax is not valid node")]
+    InvalidNode { syntax: SyntaxElement },
+    #[error("the syntax is not valid string")]
+    InvalidString { syntax: SyntaxElement },
+    #[error("the syntax is not valid number")]
     InvalidNumber { syntax: SyntaxElement },
     #[error("conflicting keys")]
     ConflictingKeys { key: Key, other: Key },
@@ -16,12 +16,12 @@ pub enum Error {
 
 #[derive(Debug, Clone, Error)]
 pub enum KeyError {
-    #[error("the key or index was not found")]
+    #[error("the value is not found")]
     NotFound,
-    #[error("unexpected glob {0}")]
+    #[error("the glob is unexpected: {0}")]
     UnexpectedGlob(String),
-    #[error("mismatch value type")]
-    MismatchType,
+    #[error("the type is unexpected")]
+    UnexpectedType,
     #[error("the given key is invalid: {0}")]
     InvalidKey(crate::parser::Error),
 }
