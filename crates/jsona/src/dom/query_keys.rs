@@ -1,5 +1,4 @@
-use super::error::KeyError;
-use super::from_syntax::keys_from_syntax;
+use super::from_syntax::query_keys_from_syntax;
 use super::node::Key;
 use super::{KeyOrIndex, Keys};
 use crate::parser::Parser;
@@ -182,17 +181,19 @@ impl core::fmt::Display for QueryKeys {
 }
 
 impl FromStr for QueryKeys {
-    type Err = KeyError;
+    type Err = Vec<crate::parser::Error>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() || s == "." {
             return Ok(QueryKeys::default());
         }
-        let mut p = Parser::new(s).parse_keys_only();
-        if let Some(err) = p.errors.pop() {
-            return Err(KeyError::InvalidKey(err));
+        let p = Parser::new(s).parse_keys_only(true);
+        if !p.errors.is_empty() {
+            return Err(p.errors);
         }
-        Ok(QueryKeys::new(keys_from_syntax(&p.into_syntax().into())))
+        Ok(QueryKeys::new(query_keys_from_syntax(
+            &p.into_syntax().into(),
+        )))
     }
 }
 

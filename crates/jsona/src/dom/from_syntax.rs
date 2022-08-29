@@ -11,6 +11,7 @@ use super::{
 use serde_json::Number as JsonNumber;
 
 use crate::{
+    dom::KeyOrIndex,
     syntax::{SyntaxElement, SyntaxKind::*},
     util::shared::Shared,
 };
@@ -30,7 +31,9 @@ pub fn from_syntax(root: SyntaxElement) -> Node {
     }
 }
 
-pub(crate) fn keys_from_syntax(syntax: &SyntaxElement) -> impl ExactSizeIterator<Item = QueryKey> {
+pub(crate) fn query_keys_from_syntax(
+    syntax: &SyntaxElement,
+) -> impl ExactSizeIterator<Item = QueryKey> {
     assert!(syntax.kind() == KEYS);
     syntax
         .as_node()
@@ -86,6 +89,62 @@ pub(crate) fn keys_from_syntax(syntax: &SyntaxElement) -> impl ExactSizeIterator
                             }
                         } else {
                             keys.push(QueryKey::Key(key))
+                        }
+                        after_bracket = false;
+                    }
+                    _ => {}
+                }
+            }
+            keys.into_iter()
+        })
+        .unwrap_or_else(|| vec![].into_iter())
+}
+
+pub(crate) fn keys_from_syntax(
+    syntax: &SyntaxElement,
+) -> impl ExactSizeIterator<Item = KeyOrIndex> {
+    assert!(syntax.kind() == KEYS);
+    syntax
+        .as_node()
+        .map(|syntax| {
+            let mut keys = vec![];
+            let mut after_bracket = false;
+            for child in syntax.children_with_tokens() {
+                let child = match child {
+                    NodeOrToken::Node(_) => continue,
+                    NodeOrToken::Token(v) => v,
+                };
+                match child.kind() {
+                    BRACKET_START => after_bracket = true,
+                    ANNOTATION_KEY => {
+                        let key = KeyInner {
+                            errors: Shared::default(),
+                            syntax: Some(child.clone().into()),
+                            value: child.to_string().into(),
+                            kind: KeyKind::Annotation,
+                        }
+                        .into();
+                        keys.push(KeyOrIndex::Key(key));
+                    }
+                    k if k.is_key() => {
+                        let text = child.text();
+                        let key = KeyInner {
+                            errors: Shared::default(),
+                            syntax: Some(child.clone().into()),
+                            value: Default::default(),
+                            kind: KeyKind::Property,
+                        }
+                        .into();
+                        if after_bracket {
+                            if k == INTEGER {
+                                if let Ok(idx) = text.parse::<usize>() {
+                                    keys.push(KeyOrIndex::Index(idx));
+                                }
+                            } else {
+                                keys.push(KeyOrIndex::Key(key))
+                            }
+                        } else {
+                            keys.push(KeyOrIndex::Key(key))
                         }
                         after_bracket = false;
                     }
