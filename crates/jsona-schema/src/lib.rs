@@ -399,7 +399,6 @@ impl SchemaParser {
             });
         }
         let mut schema: Schema = self.parse_object_annotation("@schema")?.unwrap_or_default();
-        schema.ref_value = None;
         if let Some(describe) = self.parse_string_annotation("@describe")? {
             schema.description = Some(describe);
         }
