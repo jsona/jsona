@@ -52,9 +52,16 @@ impl<E: Environment> App<E> {
             Some(p) => {
                 let p = p.trim_start_matches('.');
 
-                let keys = p
-                    .parse::<QueryKeys>()
-                    .map_err(|err| anyhow!("invalid pattern: {err}"))?;
+                let keys = p.parse::<QueryKeys>().map_err(|errors| {
+                    anyhow!(
+                        "invalid pattern: {}",
+                        errors
+                            .into_iter()
+                            .map(|v| v.to_string())
+                            .collect::<Vec<String>>()
+                            .join(",")
+                    )
+                })?;
 
                 node.matches_all(keys, false)
                     .map_err(|err| anyhow!("invalid pattern: {err}"))?

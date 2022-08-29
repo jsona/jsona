@@ -59,7 +59,20 @@ pub(crate) struct Parser<'p> {
     builder: GreenNodeBuilder<'p>,
     errors: Vec<Error>,
     annotation_scope: bool,
-    parse_keys_mode: bool,
+    parse_keys_mode: ParseKeysMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ParseKeysMode {
+    None,
+    Keys,
+    QueryKeys,
+}
+
+impl Default for ParseKeysMode {
+    fn default() -> Self {
+        ParseKeysMode::None
+    }
 }
 
 /// This is just a convenience type during parsing.
@@ -74,12 +87,16 @@ impl<'p> Parser<'p> {
             builder: Default::default(),
             errors: Default::default(),
             annotation_scope: false,
-            parse_keys_mode: false,
+            parse_keys_mode: Default::default(),
         }
     }
 
-    pub(crate) fn parse_keys_only(mut self) -> Parse {
-        self.parse_keys_mode = true;
+    pub(crate) fn parse_keys_only(mut self, glob: bool) -> Parse {
+        if glob {
+            self.parse_keys_mode = ParseKeysMode::QueryKeys
+        } else {
+            self.parse_keys_mode = ParseKeysMode::Keys
+        }
         let _ = with_node!(self.builder, KEYS, self.parse_keys());
 
         Parse {
@@ -414,7 +431,7 @@ impl<'p> Parser<'p> {
 
         match t {
             IDENT => self.consume_current_token(),
-            IDENT_WITH_GLOB if self.parse_keys_mode => {
+            IDENT_WITH_GLOB if self.parse_keys_mode == ParseKeysMode::QueryKeys => {
                 if let Err(err_indices) = validates::glob(self.lexer.slice()) {
                     for e in err_indices {
                         let span = self.lexer.span();
@@ -442,7 +459,7 @@ impl<'p> Parser<'p> {
                 self.validate_string();
                 self.consume_current_token()
             }
-            FLOAT if !self.parse_keys_mode => {
+            FLOAT if self.parse_keys_mode == ParseKeysMode::None => {
                 if self.lexer.slice().starts_with('0') {
                     self.consume_error_token("zero-padded numbers are not allowed")
                 } else if self.lexer.slice().starts_with('+') {

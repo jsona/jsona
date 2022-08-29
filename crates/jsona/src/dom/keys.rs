@@ -1,7 +1,7 @@
-use super::error::KeyError;
+use crate::parser::Parser;
+
+use super::from_syntax::keys_from_syntax;
 use super::node::Key;
-use super::query_keys::QueryKey;
-use super::QueryKeys;
 
 use rowan::TextRange;
 use std::iter::{empty, once};
@@ -253,21 +253,14 @@ impl core::fmt::Display for Keys {
 }
 
 impl FromStr for Keys {
-    type Err = KeyError;
+    type Err = Vec<crate::parser::Error>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let query_keys = s.parse::<QueryKeys>()?;
-        let mut keys = vec![];
-        for key in query_keys.iter() {
-            match key {
-                QueryKey::Index(v) => keys.push(KeyOrIndex::Index(*v)),
-                QueryKey::Key(v) => keys.push(KeyOrIndex::Key(v.clone())),
-                QueryKey::GlobIndex(_) | QueryKey::GlobKey(_) | QueryKey::AnyRecursive => {
-                    return Err(KeyError::UnexpectedGlob(key.to_string()))
-                }
-            }
+        let p = Parser::new(s).parse_keys_only(true);
+        if !p.errors.is_empty() {
+            return Err(p.errors);
         }
-        Ok(Keys::new(keys.into_iter()))
+        Ok(Keys::new(keys_from_syntax(&p.into_syntax().into())))
     }
 }
 

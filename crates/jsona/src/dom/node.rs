@@ -1,4 +1,4 @@
-use super::error::{Error, KeyError, ParseError};
+use super::error::{Error, ParseError};
 use super::keys::{KeyOrIndex, Keys};
 use super::query_keys::QueryKeys;
 use super::visitor::{VisitControl, Visitor};
@@ -57,10 +57,6 @@ impl Node {
                 }
             }
         }
-    }
-
-    pub fn try_get(&self, key: &KeyOrIndex) -> Result<Node, KeyError> {
-        self.get(key).ok_or(KeyError::NotFound)
     }
 
     pub fn validate(&self) -> Result<(), impl Iterator<Item = Error> + core::fmt::Debug> {
