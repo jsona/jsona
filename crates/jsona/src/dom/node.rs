@@ -267,12 +267,12 @@ impl Node {
 }
 
 impl Node {
-    define_value_fns!(Null, Null, is_null, as_null);
-    define_value_fns!(Bool, Bool, is_bool, as_bool);
-    define_value_fns!(Number, Number, is_number, as_number);
-    define_value_fns!(String, String, is_string, as_string);
-    define_value_fns!(Object, Object, is_object, as_object);
-    define_value_fns!(Array, Array, is_array, as_array);
+    define_value_fns!(Null, Null, is_null, as_null, get_as_null);
+    define_value_fns!(Bool, Bool, is_bool, as_bool, get_as_bool);
+    define_value_fns!(Number, Number, is_number, as_number, get_as_number);
+    define_value_fns!(String, String, is_string, as_string, get_as_string);
+    define_value_fns!(Object, Object, is_object, as_object, get_as_object);
+    define_value_fns!(Array, Array, is_array, as_array, get_as_array);
 }
 
 value_from!(Null, Number, String, Bool, Array, Object,);
@@ -614,6 +614,16 @@ impl From<KeyInner> for Key {
     fn from(inner: KeyInner) -> Self {
         Self {
             inner: Arc::new(inner),
+        }
+    }
+}
+
+impl From<&str> for Key {
+    fn from(v: &str) -> Self {
+        if v.starts_with('@') {
+            Self::annotation(v)
+        } else {
+            Self::property(v)
         }
     }
 }

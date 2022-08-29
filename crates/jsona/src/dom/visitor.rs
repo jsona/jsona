@@ -65,13 +65,13 @@ fn collect<T>(
         Node::Object(obj) => {
             let props = obj.inner.properties.read();
             for (key, node) in props.iter() {
-                collect(keys.join(key.into()), node, state, all, &f);
+                collect(keys.join(key.clone()), node, state, all, &f);
             }
         }
         Node::Array(arr) => {
             let items = arr.inner.items.read();
             for (idx, node) in items.iter().enumerate() {
-                collect(keys.join(idx.into()), node, state, all, &f);
+                collect(keys.join(idx), node, state, all, &f);
             }
         }
         _ => {}
@@ -80,7 +80,7 @@ fn collect<T>(
     if let Some(annotations) = node.annotations() {
         let map = annotations.value().read();
         for (key, node) in map.iter() {
-            collect(keys.join(key.into()), node, state, all, &f);
+            collect(keys.join(key.clone()), node, state, all, &f);
         }
     }
 }

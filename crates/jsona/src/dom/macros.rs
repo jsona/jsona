@@ -89,7 +89,7 @@ impl DomNode for Node {
 }
 
 macro_rules! define_value_fns {
-    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident) => {
+    ($elm:ident, $t:ty, $is_fn:ident, $as_fn:ident, $get_as_fn:ident) => {
         pub fn $is_fn(&self) -> bool {
             matches!(self, Self::$elm(..))
         }
@@ -100,6 +100,36 @@ macro_rules! define_value_fns {
             } else {
                 None
             }
+        }
+
+        pub fn $get_as_fn(&self, key: impl Into<Key>) -> Option<(Key, Option<$t>)> {
+            let key = key.into();
+            if key.is_annotation() {
+                if let Some(m) = self.annotations() {
+                    for (k, v) in m.value().read().iter() {
+                        if k.value() == key.value() {
+                            if let Some(v) = v.$as_fn() {
+                                return Some((k.clone(), Some(v.clone())));
+                            } else {
+                                return Some((k.clone(), None));
+                            }
+                        }
+                    }
+                }
+            } else {
+                if let Some(o) = self.as_object() {
+                    for (k, v) in o.value().read().iter() {
+                        if k.value() == key.value() {
+                            if let Some(v) = v.$as_fn() {
+                                return Some((k.clone(), Some(v.clone())));
+                            } else {
+                                return Some((k.clone(), None));
+                            }
+                        }
+                    }
+                }
+            }
+            None
         }
     };
 }

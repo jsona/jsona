@@ -306,7 +306,7 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
                 .map(|v| v.text_range().contains(offset))
                 .unwrap_or_default()
             {
-                return node_at_impl(value, offset, keys.join(key.into()));
+                return node_at_impl(value, offset, keys.join(key.clone()));
             }
         }
     }
@@ -318,7 +318,7 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
                     .map(|v| v.text_range().contains(offset))
                     .unwrap_or_default()
                 {
-                    return node_at_impl(value, offset, keys.join(index.into()));
+                    return node_at_impl(value, offset, keys.join(index));
                 }
             }
         }
@@ -338,7 +338,7 @@ fn node_at_impl(node: &Node, offset: TextSize, keys: Keys) -> Option<(Keys, Node
                     {
                         return Some((keys, node.clone()));
                     }
-                    return node_at_impl(value, offset, keys.join(key.into()));
+                    return node_at_impl(value, offset, keys.join(key.clone()));
                 }
             }
         }

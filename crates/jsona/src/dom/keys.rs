@@ -14,18 +14,6 @@ pub enum KeyOrIndex {
     Key(Key),
 }
 
-impl<'a> From<&'a usize> for KeyOrIndex {
-    fn from(v: &'a usize) -> Self {
-        Self::Index(*v)
-    }
-}
-
-impl<'a> From<&'a Key> for KeyOrIndex {
-    fn from(k: &'a Key) -> Self {
-        Self::Key(k.clone())
-    }
-}
-
 impl From<usize> for KeyOrIndex {
     fn from(v: usize) -> Self {
         Self::Index(v)
@@ -132,8 +120,8 @@ impl Keys {
         Self::new(once(key.into()))
     }
 
-    pub fn join(&self, key: KeyOrIndex) -> Self {
-        self.extend(once(key))
+    pub fn join(&self, key: impl Into<KeyOrIndex>) -> Self {
+        self.extend(once(key.into()))
     }
 
     pub fn extend<I, K>(&self, keys: I) -> Self

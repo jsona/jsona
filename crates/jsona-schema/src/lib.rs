@@ -57,10 +57,10 @@ struct Scope {
 }
 
 impl Scope {
-    fn spawn(&self, key: KeyOrIndex, node: Node) -> Self {
+    fn spawn(&self, key: impl Into<KeyOrIndex>, node: Node) -> Self {
         Self {
             node,
-            keys: self.keys.clone().join(key),
+            keys: self.keys.clone().join(key.into()),
             defs: self.defs.clone(),
         }
     }
@@ -114,7 +114,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
     match &scope.node {
         Node::Object(obj) => {
             for (key, child) in obj.value().read().iter() {
-                let child_scope = scope.spawn(key.into(), child.clone());
+                let child_scope = scope.spawn(key.clone(), child.clone());
                 let key = key.value();
                 let pattern = parse_str_annotation(&child_scope, "@pattern")?;
                 let child_schema = parse_node(child_scope.clone())?;
@@ -139,7 +139,7 @@ fn parse_node(scope: Scope) -> Result<Schema> {
             if arr.len() > 0 {
                 let mut schemas = vec![];
                 for (i, child) in arr.iter().enumerate() {
-                    let child_scope = scope.spawn(i.into(), child.clone());
+                    let child_scope = scope.spawn(i, child.clone());
                     schemas.push(parse_node(child_scope)?);
                 }
                 if let Some(compound) = parse_str_annotation(&scope, "@compound")? {
@@ -177,33 +177,34 @@ fn parse_node(scope: Scope) -> Result<Schema> {
 }
 
 fn exist_annotation(scope: &Scope, name: &str) -> bool {
-    let key = KeyOrIndex::annotation(name);
-    scope.node.get(&key).is_some()
+    scope.node.get(&KeyOrIndex::annotation(name)).is_some()
 }
 
 fn parse_object_annotation<T: DeserializeOwned>(scope: &Scope, name: &str) -> Result<Option<T>> {
-    let key = KeyOrIndex::annotation(name);
-    if let Some(value) = scope.node.get(&key) {
-        let value = value.to_plain_json();
-        let schema = serde_json::from_value(value).map_err(|err| Error::InvalidSchemaValue {
-            keys: scope.keys.clone().join(key.clone()),
-            error: err.to_string(),
-        })?;
-        Ok(Some(schema))
-    } else {
-        Ok(None)
+    match scope.node.get_as_object(name) {
+        Some((key, Some(value))) => {
+            let value = Node::from(value).to_plain_json();
+            match serde_json::from_value(value) {
+                Ok(v) => Ok(Some(v)),
+                Err(err) => Err(Error::InvalidSchemaValue {
+                    keys: scope.keys.clone().join(key),
+                    error: err.to_string(),
+                }),
+            }
+        }
+        Some((key, None)) => Err(Error::UnexpectedType {
+            keys: scope.keys.clone().join(key),
+        }),
+        None => Ok(None),
     }
 }
 
 fn parse_str_annotation(scope: &Scope, name: &str) -> Result<Option<String>> {
-    let key = KeyOrIndex::annotation(name);
-    match scope.node.get(&key) {
-        Some(v) => match v.as_string() {
-            Some(v) => Ok(Some(v.value().to_string())),
-            None => Err(Error::UnexpectedType {
-                keys: scope.keys.clone().join(key.clone()),
-            }),
-        },
+    match scope.node.get_as_string(name) {
+        Some((_, Some(value))) => Ok(Some(value.value().to_string())),
+        Some((key, None)) => Err(Error::UnexpectedType {
+            keys: scope.keys.clone().join(key),
+        }),
         None => Ok(None),
     }
 }
