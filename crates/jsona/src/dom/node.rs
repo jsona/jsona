@@ -581,11 +581,6 @@ impl Object {
         props.value.get(key).map(|(node, _)| node.clone())
     }
 
-    pub fn property_syntax(&self, key: &Key) -> Option<SyntaxElement> {
-        let props = self.inner.properties.read();
-        props.value.get(key).and_then(|(_, syntax)| syntax.clone())
-    }
-
     pub fn value(&self) -> &Shared<Map> {
         &self.inner.properties
     }

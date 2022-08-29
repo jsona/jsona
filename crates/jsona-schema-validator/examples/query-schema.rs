@@ -11,7 +11,7 @@ fn main() {
     let jsona_content =
         std::fs::read_to_string(jsona_file_path).expect("not found schema jsona file");
     let node: Node = jsona_content.parse().expect("invalid file");
-    let validator = JSONASchemaValidator::from_node(&node).expect("invalid schema");
+    let validator = JSONASchemaValidator::try_from(&node).expect("invalid schema");
     let keys = match keys {
         Some(keys) => keys.parse().expect("invalid query path"),
         None => Keys::default(),
