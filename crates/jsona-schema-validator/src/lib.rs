@@ -2,9 +2,8 @@ mod validates;
 
 use std::{collections::HashSet, str::FromStr};
 
-use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node, ParseError};
-use jsona_schema::{from_node, Error as SchemaError};
-use thiserror::Error;
+use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node};
+use jsona_schema::Error;
 pub use validates::Error as JSONASchemaValidationError;
 
 pub use jsona_schema::Schema;
@@ -18,30 +17,6 @@ pub struct JSONASchemaValidator {
 }
 
 impl JSONASchemaValidator {
-    pub fn from_node(node: &Node) -> Result<Self, Error> {
-        let mut schema = from_node(node)?;
-        let mut annotation_names = HashSet::default();
-        if let Some(properties) = schema
-            .properties
-            .as_mut()
-            .and_then(|v| v.get_mut(ANNOATION_KEY))
-            .and_then(|v| v.properties.as_mut())
-        {
-            let keys: Vec<String> = properties.keys().cloned().collect();
-            for key in keys.iter() {
-                if let Some(value) = properties.remove(key) {
-                    let new_key = format!("@{}", key);
-                    properties.insert(new_key.clone(), value);
-                    annotation_names.insert(new_key);
-                }
-            }
-        }
-        Ok(Self {
-            schema,
-            annotation_names,
-        })
-    }
-
     pub fn validate(&self, node: &Node) -> Vec<JSONASchemaValidationError> {
         let mut collect_errors = vec![];
         let default_defs = Default::default();
@@ -93,18 +68,37 @@ impl JSONASchemaValidator {
     }
 }
 
+impl TryFrom<&Node> for JSONASchemaValidator {
+    type Error = Error;
+    fn try_from(value: &Node) -> Result<Self, Self::Error> {
+        let mut schema = Schema::try_from(value)?;
+        let mut annotation_names = HashSet::default();
+        if let Some(properties) = schema
+            .properties
+            .as_mut()
+            .and_then(|v| v.get_mut(ANNOATION_KEY))
+            .and_then(|v| v.properties.as_mut())
+        {
+            let keys: Vec<String> = properties.keys().cloned().collect();
+            for key in keys.iter() {
+                if let Some(value) = properties.remove(key) {
+                    let new_key = format!("@{}", key);
+                    properties.insert(new_key.clone(), value);
+                    annotation_names.insert(new_key);
+                }
+            }
+        }
+        Ok(Self {
+            schema,
+            annotation_names,
+        })
+    }
+}
+
 impl FromStr for JSONASchemaValidator {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let node: Node = s.parse()?;
-        Self::from_node(&node)
+        Self::try_from(&node)
     }
-}
-
-#[derive(Debug, Clone, Error)]
-pub enum Error {
-    #[error("invalid jsona")]
-    InvalidJsona(#[from] ParseError),
-    #[error("invalid schema")]
-    InvalidSchema(#[from] SchemaError),
 }
