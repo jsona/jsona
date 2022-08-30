@@ -1,4 +1,4 @@
-use jsona::dom::Keys;
+use jsona::dom::{Keys, Node};
 use jsona_schema::Schema;
 fn main() {
     let mut args = std::env::args();
@@ -8,7 +8,8 @@ fn main() {
     let keys = args.next();
     let jsona_file_path = std::path::Path::new(&jsona_file);
     let jsona_content = std::fs::read_to_string(jsona_file_path).unwrap();
-    let schema: Schema = jsona_content.parse().unwrap();
+    let node: Node = jsona_content.parse().unwrap();
+    let schema: Schema = Schema::try_from(&node).unwrap();
     let result = match keys {
         Some(keys) => {
             let keys: Keys = keys.parse().unwrap();

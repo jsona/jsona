@@ -2,57 +2,20 @@ use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys, Node};
-use jsona::error::Error as JsonaError;
 use once_cell::sync::Lazy;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Number, Value};
-use std::{cell::RefCell, rc::Rc, str::FromStr};
+use std::{cell::RefCell, rc::Rc};
 use std::{collections::HashSet, fmt::Display};
-use thiserror::Error;
 
-pub type SchemaResult<T> = std::result::Result<T, SchemaError>;
+mod error;
+
+pub use error::{SchemaError, SchemaResult};
 
 pub const REF_PREFIX: &str = "#/$defs/";
 
 pub static REF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^#/\$defs/(\w+)$"#).unwrap());
-
-#[derive(Debug, Clone, Error)]
-pub enum Error {
-    #[error("invalid jsona")]
-    InvalidJsona(#[from] JsonaError),
-    #[error("invalid schema")]
-    InvalidSchema(#[from] SchemaError),
-}
-
-#[derive(Clone, Debug, Error)]
-pub enum SchemaError {
-    #[error("conflict def {name}")]
-    ConflictDef { keys: Keys, name: String },
-    #[error("unknown ref {name}")]
-    UnknownRef { keys: Keys, name: String },
-    #[error("the type is unexpected")]
-    UnexpectedType { keys: Keys },
-    #[error("the schema type is not match value type")]
-    UnmatchedSchemaType { keys: Keys },
-    #[error("invalid schema value, {error}")]
-    InvalidSchemaValue { keys: Keys, error: String },
-    #[error("invalid compound value")]
-    InvalidCompoundValue { keys: Keys },
-}
-
-impl SchemaError {
-    pub fn keys(&self) -> &Keys {
-        match self {
-            SchemaError::ConflictDef { keys, .. } => keys,
-            SchemaError::UnknownRef { keys, .. } => keys,
-            SchemaError::UnexpectedType { keys } => keys,
-            SchemaError::UnmatchedSchemaType { keys } => keys,
-            SchemaError::InvalidSchemaValue { keys, .. } => keys,
-            SchemaError::InvalidCompoundValue { keys } => keys,
-        }
-    }
-}
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct Schema {
@@ -226,16 +189,6 @@ impl TryFrom<&Node> for Schema {
         if !defs.is_empty() {
             schema.defs = Some(defs);
         }
-        Ok(schema)
-    }
-}
-
-impl FromStr for Schema {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let node: Node = s.parse()?;
-        let schema = Schema::try_from(&node)?;
         Ok(schema)
     }
 }

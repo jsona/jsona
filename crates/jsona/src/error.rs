@@ -12,18 +12,18 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn into_error_objects(self, mapper: &Mapper) -> Vec<ErrorObject> {
+    pub fn into_error_objects(&self, mapper: &Mapper) -> Vec<ErrorObject> {
         match self {
             Error::InvalidSyntax { errors } => errors
-                .into_iter()
+                .iter()
                 .map(|err| {
                     let message = err.to_string();
                     let range = mapper.range(err.range);
-                    ErrorObject::new("InvalidSyntax", &message, range)
+                    ErrorObject::new("InvalidSyntax", message, range)
                 })
                 .collect(),
             Error::InvalidDom { errors } => errors
-                .into_iter()
+                .iter()
                 .flat_map(|err| {
                     let message = err.to_string();
                     match err {
@@ -31,21 +31,21 @@ impl Error {
                             let key_range = key.mapper_range(mapper);
                             let other_key_range = other_key.mapper_range(mapper);
                             vec![
-                                ErrorObject::new("ConflictingKeys", &message, key_range),
-                                ErrorObject::new("ConflictingKeys", &message, other_key_range),
+                                ErrorObject::new("ConflictingKeys", message.clone(), key_range),
+                                ErrorObject::new("ConflictingKeys", message, other_key_range),
                             ]
                         }
                         DomError::InvalidNode { syntax } => {
                             let range = mapper.range(syntax.text_range());
-                            vec![ErrorObject::new("InvalidNode", &message, range)]
+                            vec![ErrorObject::new("InvalidNode", message, range)]
                         }
                         DomError::InvalidNumber { syntax } => {
                             let range = mapper.range(syntax.text_range());
-                            vec![ErrorObject::new("InvalidNumber", &message, range)]
+                            vec![ErrorObject::new("InvalidNumber", message, range)]
                         }
                         DomError::InvalidString { syntax } => {
                             let range = mapper.range(syntax.text_range());
-                            vec![ErrorObject::new("InvalidString", &message, range)]
+                            vec![ErrorObject::new("InvalidString", message, range)]
                         }
                     }
                 })
@@ -62,10 +62,10 @@ pub struct ErrorObject {
 }
 
 impl ErrorObject {
-    pub fn new(kind: &str, message: &str, range: Option<Range>) -> Self {
+    pub fn new(kind: &str, message: String, range: Option<Range>) -> Self {
         Self {
             kind: kind.into(),
-            message: message.into(),
+            message,
             range,
         }
     }
