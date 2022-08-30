@@ -91,7 +91,7 @@ impl FromStr for Ast {
         let mapper = Mapper::new_utf16(s, false);
         match s.parse::<Node>() {
             Ok(value) => Ok(node_to_ast(&value, &mapper)),
-            Err(error) => Err(error.into_error_objects(&mapper)),
+            Err(error) => Err(error.to_error_objects(&mapper)),
         }
     }
 }

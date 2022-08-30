@@ -34,7 +34,7 @@ impl SchemaError {
             SchemaError::InvalidCompoundValue { keys } => keys,
         }
     }
-    pub fn into_error_objects(&self, node: &Node, mapper: &Mapper) -> Vec<ErrorObject> {
+    pub fn to_error_objects(&self, node: &Node, mapper: &Mapper) -> Vec<ErrorObject> {
         let message = self.to_string();
         let (kind, range) = match self {
             SchemaError::ConflictDef { keys, .. } => ("ConflictDef", get_range(keys, node, mapper)),

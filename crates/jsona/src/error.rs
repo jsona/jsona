@@ -12,7 +12,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn into_error_objects(&self, mapper: &Mapper) -> Vec<ErrorObject> {
+    pub fn to_error_objects(&self, mapper: &Mapper) -> Vec<ErrorObject> {
         match self {
             Error::InvalidSyntax { errors } => errors
                 .iter()
