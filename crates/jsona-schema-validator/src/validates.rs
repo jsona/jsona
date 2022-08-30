@@ -758,7 +758,7 @@ impl Display for ErrorKind {
                 write!(f, "AnyOf conditions are not met{}", extra)
             }
             ErrorKind::OneOf { errors } => {
-                let mut extra = "".into();
+                let mut extra = ", more than one valid".into();
                 if !errors.is_empty() {
                     extra = format!(
                         "; {}",
