@@ -3,7 +3,7 @@ use crate::syntax::SyntaxElement;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
-pub enum Error {
+pub enum DomError {
     #[error("the syntax is not valid node")]
     InvalidNode { syntax: SyntaxElement },
     #[error("the syntax is not valid string")]
@@ -12,12 +12,4 @@ pub enum Error {
     InvalidNumber { syntax: SyntaxElement },
     #[error("conflicting keys")]
     ConflictingKeys { key: Key, other: Key },
-}
-
-#[derive(Debug, Clone, Error)]
-pub enum ParseError {
-    #[error("invalid syntax")]
-    InvalidSyntax { errors: Vec<crate::parser::Error> },
-    #[error("invalid dom")]
-    InvalidDom { errors: Vec<Error> },
 }

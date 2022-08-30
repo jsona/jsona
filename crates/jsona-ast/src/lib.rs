@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Number as JsonNumber, Value};
 use std::{str::FromStr, string::String as StdString};
 
-use jsona::dom::error::{Error as DomError, ParseError};
-use jsona::dom::{self, DomNode, Node};
+use jsona::dom::{self, DomError, DomNode, Node};
+use jsona::error::Error as JsonaError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -114,14 +114,14 @@ impl FromStr for Ast {
         match s.parse::<Node>() {
             Ok(value) => return Ok(node_to_ast(&value, &mapper)),
             Err(error) => match error {
-                ParseError::InvalidSyntax { errors } => {
+                JsonaError::InvalidSyntax { errors } => {
                     for err in errors.into_iter() {
                         let message = err.to_string();
                         let range = mapper.range(err.range);
                         ast_errors.push(Error::new("InvalidSyntax", &message, range));
                     }
                 }
-                ParseError::InvalidDom { errors } => {
+                JsonaError::InvalidDom { errors } => {
                     for err in errors.into_iter() {
                         let message = err.to_string();
                         match err {
@@ -135,14 +135,8 @@ impl FromStr for Ast {
                                 let range = mapper.range(syntax.text_range());
                                 ast_errors.push(Error::new("InvalidNode", &message, range));
                             }
-                            DomError::InvalidNumber { syntax } => {
-                                let range = mapper.range(syntax.text_range());
-                                ast_errors.push(Error::new("InvalidNumber", &message, range));
-                            }
-                            DomError::InvalidString { syntax } => {
-                                let range = mapper.range(syntax.text_range());
-                                ast_errors.push(Error::new("InvalidString", &message, range));
-                            }
+                            DomError::InvalidNumber { syntax: _ }
+                            | DomError::InvalidString { syntax: _ } => {}
                         }
                     }
                 }

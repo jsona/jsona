@@ -20,7 +20,7 @@ macro_rules! wrap_node {
                 self.inner.syntax.as_ref()
             }
 
-            fn errors(&self) -> &$crate::util::shared::Shared<Vec<$crate::dom::error::Error>> {
+            fn errors(&self) -> &$crate::util::shared::Shared<Vec<$crate::dom::error::DomError>> {
                 &self.inner.errors
             }
 
@@ -69,7 +69,7 @@ impl DomNode for Node {
         }
     }
 
-    fn errors(&self) -> &Shared<Vec<Error>> {
+    fn errors(&self) -> &Shared<Vec<DomError>> {
         match self {
             $(
             Node::$elm(v) => v.errors(),

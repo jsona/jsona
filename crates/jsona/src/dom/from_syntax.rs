@@ -1,7 +1,7 @@
 use rowan::NodeOrToken;
 
 use super::{
-    error::Error,
+    error::DomError,
     node::{
         Annotations, AnnotationsInner, ArrayInner, BoolInner, Key, KeyInner, KeyKind, Map, Node,
         NullInner, NumberInner, NumberRepr, ObjectInner, StringInner,
@@ -170,7 +170,7 @@ pub(crate) fn key_from_syntax(syntax: SyntaxElement) -> Key {
         .into()
     } else {
         KeyInner {
-            errors: Shared::new(Vec::from([Error::InvalidNode {
+            errors: Shared::new(Vec::from([DomError::InvalidNode {
                 syntax: syntax.clone(),
             }])),
             syntax: Some(syntax),
@@ -187,7 +187,7 @@ fn scalar_from_syntax(
     annotations: Option<Annotations>,
 ) -> Node {
     assert!(syntax.kind() == SCALAR);
-    let errors: Vec<Error> = Default::default();
+    let errors: Vec<DomError> = Default::default();
     let syntax = match syntax.into_node().and_then(|v| v.first_child_or_token()) {
         Some(v) => v,
         _ => return null_from_syntax(root, annotations, true),
@@ -337,13 +337,13 @@ fn object_from_syntax(
     .into_node()
 }
 
-fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec<Error>) {
+fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec<DomError>) {
     assert!(syntax.kind() == PROPERTY);
     let syntax = syntax.into_node().unwrap();
     let key = match syntax.children().find(|v| v.kind() == KEY) {
         Some(key) => key_from_syntax(key.into()),
         None => {
-            errors.push(Error::InvalidNode {
+            errors.push(DomError::InvalidNode {
                 syntax: syntax.into(),
             });
             return;
@@ -352,7 +352,7 @@ fn property_from_syntax(syntax: SyntaxElement, props: &mut Map, errors: &mut Vec
     let value = match syntax.children().find(|v| v.kind() == VALUE) {
         Some(value) => from_syntax(value.into()),
         None => {
-            errors.push(Error::InvalidNode {
+            errors.push(DomError::InvalidNode {
                 syntax: syntax.clone().into(),
             });
             NullInner::default().into_node()
@@ -365,7 +365,7 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
     assert!(syntax.kind() == VALUE);
     let syntax = syntax.into_node()?;
 
-    let mut errors: Vec<Error> = vec![];
+    let mut errors: Vec<DomError> = vec![];
     let mut map = Map::default();
     match (
         syntax.children().find(|v| v.kind() == ANNOTATIONS),
@@ -403,7 +403,7 @@ fn annotations_from_syntax(syntax: SyntaxElement) -> Option<Annotations> {
     )
 }
 
-fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec<Error>) {
+fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec<DomError>) {
     assert!(syntax.kind() == ANNOTATION_PROPERTY);
     let syntax = match syntax.into_node() {
         Some(v) => v,
@@ -421,7 +421,7 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
         }
         .into(),
         None => {
-            errors.push(Error::InvalidNode {
+            errors.push(DomError::InvalidNode {
                 syntax: syntax.into(),
             });
             return;
@@ -443,7 +443,7 @@ fn annotation_from_syntax(syntax: SyntaxElement, map: &mut Map, errors: &mut Vec
 
 fn null_from_syntax(syntax: SyntaxElement, annotations: Option<Annotations>, error: bool) -> Node {
     let errors = if error {
-        Vec::from([Error::InvalidNode {
+        Vec::from([DomError::InvalidNode {
             syntax: syntax.clone(),
         }])
     } else {
@@ -467,13 +467,13 @@ fn first_value_child(syntax: &SyntaxElement) -> Option<SyntaxElement> {
 /// Add an prop and also collect errors on conflicts.
 fn add_to_map(
     map: &mut Map,
-    errors: &mut Vec<Error>,
+    errors: &mut Vec<DomError>,
     key: Key,
     node: Node,
     syntax: Option<SyntaxElement>,
 ) {
     if let Some((existing_key, _)) = map.value.get_key_value(&key) {
-        errors.push(Error::ConflictingKeys {
+        errors.push(DomError::ConflictingKeys {
             key: key.clone(),
             other: existing_key.clone(),
         })
