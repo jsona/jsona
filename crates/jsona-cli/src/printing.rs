@@ -52,7 +52,7 @@ impl<E: Environment> App<E> {
     pub(crate) async fn print_semantic_errors(
         &self,
         file: &SimpleFile<&str, &str>,
-        errors: impl Iterator<Item = dom::Error>,
+        errors: impl Iterator<Item = dom::DomError>,
     ) -> Result<(), anyhow::Error> {
         let mut out_diag = Vec::<u8>::new();
 
@@ -60,7 +60,7 @@ impl<E: Environment> App<E> {
 
         for error in errors {
             let diag = match &error {
-                dom::Error::ConflictingKeys { key, other } => Diagnostic::error()
+                dom::DomError::ConflictingKeys { key, other } => Diagnostic::error()
                     .with_message(error.to_string())
                     .with_labels(Vec::from([
                         Label::primary((), std_range(key.text_range().unwrap()))
@@ -68,9 +68,9 @@ impl<E: Environment> App<E> {
                         Label::secondary((), std_range(other.text_range().unwrap()))
                             .with_message("duplicate found here"),
                     ])),
-                dom::Error::InvalidNode { syntax }
-                | dom::Error::InvalidString { syntax }
-                | dom::Error::InvalidNumber { syntax } => Diagnostic::error()
+                dom::DomError::InvalidNode { syntax }
+                | dom::DomError::InvalidString { syntax }
+                | dom::DomError::InvalidNumber { syntax } => Diagnostic::error()
                     .with_message(error.to_string())
                     .with_labels(Vec::from([Label::primary(
                         (),

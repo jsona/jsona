@@ -147,7 +147,7 @@ fn collect_dom_errors(
     if let Err(errors) = dom.validate() {
         for error in errors {
             match &error {
-                jsona::dom::Error::ConflictingKeys { key, other } => {
+                jsona::dom::DomError::ConflictingKeys { key, other } => {
                     let range = doc
                         .mapper
                         .range(key.text_range().unwrap())
@@ -190,7 +190,7 @@ fn collect_dom_errors(
                         ..Default::default()
                     });
                 }
-                jsona::dom::Error::InvalidNode { syntax } => {
+                jsona::dom::DomError::InvalidNode { syntax } => {
                     let range = doc
                         .mapper
                         .range(syntax.text_range())
@@ -208,8 +208,8 @@ fn collect_dom_errors(
                         data: None,
                     });
                 }
-                jsona::dom::Error::InvalidString { syntax: _ }
-                | jsona::dom::Error::InvalidNumber { syntax: _ } => {}
+                jsona::dom::DomError::InvalidString { syntax: _ }
+                | jsona::dom::DomError::InvalidNumber { syntax: _ } => {}
             }
         }
     }

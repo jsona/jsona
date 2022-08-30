@@ -1,7 +1,8 @@
 use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
-use jsona::dom::{KeyOrIndex, Keys, Node, ParseError};
+use jsona::dom::{KeyOrIndex, Keys, Node};
+use jsona::error::Error as JsonaError;
 use once_cell::sync::Lazy;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -19,7 +20,7 @@ pub static REF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^#/\$defs/(\w+)$"
 #[derive(Debug, Clone, Error)]
 pub enum Error {
     #[error("invalid jsona")]
-    InvalidJsona(#[from] ParseError),
+    InvalidJsona(#[from] JsonaError),
     #[error("invalid schema")]
     InvalidSchema(#[from] SchemaError),
 }

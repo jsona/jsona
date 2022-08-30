@@ -1,7 +1,8 @@
-use super::error::{Error, ParseError};
+use super::error::DomError;
 use super::keys::{KeyOrIndex, Keys};
 use super::query_keys::QueryKeys;
 use super::visitor::{VisitControl, Visitor};
+use crate::error::Error as JsonaError;
 use crate::parser;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
@@ -19,7 +20,7 @@ use std::sync::Arc;
 pub trait DomNode: Sized + Sealed {
     fn node_syntax(&self) -> Option<&SyntaxElement>;
     fn syntax(&self) -> Option<&SyntaxElement>;
-    fn errors(&self) -> &Shared<Vec<Error>>;
+    fn errors(&self) -> &Shared<Vec<DomError>>;
     fn annotations(&self) -> Option<&Annotations>;
 }
 
@@ -59,7 +60,7 @@ impl Node {
         }
     }
 
-    pub fn validate(&self) -> Result<(), impl Iterator<Item = Error> + core::fmt::Debug> {
+    pub fn validate(&self) -> Result<(), impl Iterator<Item = DomError> + core::fmt::Debug> {
         let mut errors = Vec::new();
         self.validate_all_impl(&mut errors);
         if errors.is_empty() {
@@ -101,7 +102,7 @@ impl Node {
         &self,
         keys: QueryKeys,
         match_children: bool,
-    ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, Error> {
+    ) -> Result<impl Iterator<Item = (Keys, Node)> + ExactSizeIterator, DomError> {
         let all: Vec<(Keys, Node)> = Visitor::new(self, &(), |_, _, _| VisitControl::AddIter)
             .into_iter()
             .collect();
@@ -224,7 +225,7 @@ impl Node {
         }
     }
 
-    fn validate_all_impl(&self, errors: &mut Vec<Error>) {
+    fn validate_all_impl(&self, errors: &mut Vec<DomError>) {
         match self {
             Node::Object(v) => {
                 errors.extend(v.errors().read().as_ref().iter().cloned());
@@ -278,18 +279,18 @@ impl Node {
 value_from!(Null, Number, String, Bool, Array, Object,);
 
 impl FromStr for Node {
-    type Err = ParseError;
+    type Err = JsonaError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parse = parser::parse(s);
         if !parse.errors.is_empty() {
-            return Err(ParseError::InvalidSyntax {
+            return Err(JsonaError::InvalidSyntax {
                 errors: parse.errors,
             });
         }
         let root = parse.into_dom();
         if let Err(errors) = root.validate() {
-            return Err(ParseError::InvalidDom {
+            return Err(JsonaError::InvalidDom {
                 errors: errors.collect(),
             });
         }
@@ -299,7 +300,7 @@ impl FromStr for Node {
 
 #[derive(Debug, Default)]
 pub(crate) struct NullInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
@@ -328,7 +329,7 @@ impl Null {
 
 #[derive(Debug)]
 pub(crate) struct BoolInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
@@ -364,7 +365,7 @@ impl Bool {
 
 #[derive(Debug)]
 pub(crate) struct NumberInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
@@ -405,7 +406,7 @@ impl Number {
                                 Some(v) => v,
                                 None => {
                                     self.inner.errors.update(|errors| {
-                                        errors.push(Error::InvalidNumber { syntax: s.clone() })
+                                        errors.push(DomError::InvalidNumber { syntax: s.clone() })
                                     });
                                     JsonNumber::from_f64(0.0).unwrap()
                                 }
@@ -457,7 +458,7 @@ impl Default for NumberRepr {
 
 #[derive(Debug)]
 pub(crate) struct StringInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
@@ -491,7 +492,7 @@ impl String {
                     Ok(s) => s,
                     Err(_) => {
                         self.inner.errors.update(|errors| {
-                            errors.push(Error::InvalidString { syntax: s.clone() })
+                            errors.push(DomError::InvalidString { syntax: s.clone() })
                         });
                         StdString::new()
                     }
@@ -516,7 +517,7 @@ impl Default for StringRepr {
 
 #[derive(Debug)]
 pub(crate) struct ArrayInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
@@ -552,7 +553,7 @@ impl Array {
 
 #[derive(Debug)]
 pub(crate) struct ObjectInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) node_syntax: Option<SyntaxElement>,
     pub(crate) annotations: Option<Annotations>,
@@ -588,7 +589,7 @@ impl Object {
 
 #[derive(Debug)]
 pub(crate) struct KeyInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) syntax: Option<SyntaxElement>,
     pub(crate) value: OnceCell<StdString>,
     pub(crate) kind: KeyKind,
@@ -628,7 +629,7 @@ impl Key {
         self.inner.syntax.as_ref()
     }
 
-    pub fn errors(&self) -> &Shared<Vec<Error>> {
+    pub fn errors(&self) -> &Shared<Vec<DomError>> {
         &self.inner.errors
     }
 
@@ -667,7 +668,7 @@ impl Key {
                         Ok(s) => s,
                         Err(_) => {
                             self.inner.errors.update(|errors| {
-                                errors.push(Error::InvalidString {
+                                errors.push(DomError::InvalidString {
                                     syntax: s.clone().into(),
                                 })
                             });
@@ -768,7 +769,7 @@ impl Map {
 
 #[derive(Debug)]
 pub(crate) struct AnnotationsInner {
-    pub(crate) errors: Shared<Vec<Error>>,
+    pub(crate) errors: Shared<Vec<DomError>>,
     pub(crate) map: Shared<Map>,
 }
 
@@ -786,7 +787,7 @@ impl Annotations {
         .into()
     }
 
-    pub fn errors(&self) -> &Shared<Vec<Error>> {
+    pub fn errors(&self) -> &Shared<Vec<DomError>> {
         &self.inner.errors
     }
 
