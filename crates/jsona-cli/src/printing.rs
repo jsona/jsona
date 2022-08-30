@@ -60,12 +60,12 @@ impl<E: Environment> App<E> {
 
         for error in errors {
             let diag = match &error {
-                dom::DomError::ConflictingKeys { key, other } => Diagnostic::error()
+                dom::DomError::ConflictingKeys { key, other_key } => Diagnostic::error()
                     .with_message(error.to_string())
                     .with_labels(Vec::from([
                         Label::primary((), std_range(key.text_range().unwrap()))
                             .with_message("duplicate key"),
-                        Label::secondary((), std_range(other.text_range().unwrap()))
+                        Label::secondary((), std_range(other_key.text_range().unwrap()))
                             .with_message("duplicate found here"),
                     ])),
                 dom::DomError::InvalidNode { syntax }

@@ -1,15 +1,12 @@
 //! The JSONA abstract syntax tree module.
 
-mod mapper;
-
-pub use self::mapper::{Mapper, Position, Range};
-
+pub use jsona::util::mapper::{Mapper, Position, Range};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number as JsonNumber, Value};
 use std::{str::FromStr, string::String as StdString};
 
-use jsona::dom::{self, DomError, DomNode, Node};
-use jsona::error::Error as JsonaError;
+use jsona::dom::{self, DomNode, Node};
+use jsona::error::ErrorObject;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -87,62 +84,15 @@ pub struct AnnotationValue {
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Error {
-    pub kind: StdString,
-    pub message: StdString,
-    pub range: Option<Range>,
-}
-
-impl Error {
-    pub fn new(kind: &str, message: &str, range: Option<Range>) -> Self {
-        Self {
-            kind: kind.into(),
-            message: message.into(),
-            range,
-        }
-    }
-}
-
 impl FromStr for Ast {
-    type Err = Vec<Error>;
+    type Err = Vec<ErrorObject>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mapper = Mapper::new_utf16(s, false);
-        let mut ast_errors: Vec<Error> = vec![];
-
         match s.parse::<Node>() {
-            Ok(value) => return Ok(node_to_ast(&value, &mapper)),
-            Err(error) => match error {
-                JsonaError::InvalidSyntax { errors } => {
-                    for err in errors.into_iter() {
-                        let message = err.to_string();
-                        let range = mapper.range(err.range);
-                        ast_errors.push(Error::new("InvalidSyntax", &message, range));
-                    }
-                }
-                JsonaError::InvalidDom { errors } => {
-                    for err in errors.into_iter() {
-                        let message = err.to_string();
-                        match err {
-                            DomError::ConflictingKeys { key, other } => {
-                                let range = key_range(&key, &mapper);
-                                ast_errors.push(Error::new("ConflictingKeys", &message, range));
-                                let range = key_range(&other, &mapper);
-                                ast_errors.push(Error::new("ConflictingKeys", &message, range));
-                            }
-                            DomError::InvalidNode { syntax } => {
-                                let range = mapper.range(syntax.text_range());
-                                ast_errors.push(Error::new("InvalidNode", &message, range));
-                            }
-                            DomError::InvalidNumber { syntax: _ }
-                            | DomError::InvalidString { syntax: _ } => {}
-                        }
-                    }
-                }
-            },
+            Ok(value) => Ok(node_to_ast(&value, &mapper)),
+            Err(error) => Err(error.into_error_objects(&mapper)),
         }
-        Err(ast_errors)
     }
 }
 
@@ -190,8 +140,8 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
     let mut annotations: Vec<Annotation> = vec![];
     if let Some(value_annotations) = value.annotations() {
         for (key, value) in value_annotations.value().read().iter() {
-            let key_range = key_range(key, mapper);
-            let value_range = node_range(value, mapper);
+            let key_range = key.mapper_range(mapper);
+            let value_range = value.mapper_range(mapper);
             annotations.push({
                 Annotation {
                     key: Key {
@@ -206,7 +156,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
             });
         }
     }
-    let range = node_range(value, mapper);
+    let range = value.mapper_range(mapper);
     match value {
         Node::Null(_) => Ast::Null(Null { annotations, range }),
         Node::Bool(v) => Ast::Bool(Bool {
@@ -240,7 +190,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
         Node::Object(v) => {
             let mut properties: Vec<Property> = vec![];
             for (key, value) in v.value().read().iter() {
-                let range = key_range(key, mapper);
+                let range = key.mapper_range(mapper);
                 properties.push({
                     Property {
                         key: Key {
@@ -258,16 +208,6 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
             })
         }
     }
-}
-
-fn node_range<T: DomNode>(node: &T, mapper: &Mapper) -> Option<Range> {
-    node.syntax()
-        .and_then(|syntax| mapper.range(syntax.text_range()))
-}
-
-fn key_range(key: &dom::Key, mapper: &Mapper) -> Option<Range> {
-    key.syntax()
-        .and_then(|syntax| mapper.range(syntax.text_range()))
 }
 
 fn from_annotations(annotations: Vec<Annotation>) -> Option<dom::Annotations> {

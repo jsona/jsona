@@ -54,6 +54,10 @@ impl KeyOrIndex {
         matches!(self, KeyOrIndex::Index(_))
     }
 
+    pub fn is_key(&self) -> bool {
+        matches!(self, KeyOrIndex::Key(_))
+    }
+
     pub fn is_property_key(&self) -> bool {
         if let KeyOrIndex::Key(v) = self {
             if v.is_property() {
@@ -74,6 +78,14 @@ impl KeyOrIndex {
 
     pub fn as_index(&self) -> Option<&usize> {
         if let KeyOrIndex::Index(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_key(&self) -> Option<&Key> {
+        if let KeyOrIndex::Key(v) = self {
             Some(v)
         } else {
             None
