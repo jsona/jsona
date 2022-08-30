@@ -8,7 +8,6 @@ use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys, Node};
-use jsona_schema::REF_REGEX;
 use jsona_schema::{Schema, SchemaType};
 use once_cell::sync::Lazy;
 use std::ops::Index;
@@ -26,67 +25,67 @@ static UUID_RE: Lazy<Regex> = Lazy::new(|| {
 });
 
 pub fn validate(
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     schema: &Schema,
     keys: &Keys,
     node: &Node,
 ) -> Vec<Error> {
     let mut errors = vec![];
-    if let Some(schema) = resolve(definitions, schema) {
-        validate_impl(&mut errors, definitions, schema, keys, node);
+    if let Some(schema) = resolve(defs, schema) {
+        validate_impl(&mut errors, defs, schema, keys, node);
     }
     errors
 }
 
 fn validate_impl(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
 ) {
-    let local_schema = match resolve(definitions, local_schema) {
+    let local_schema = match resolve(defs, local_schema) {
         Some(v) => v,
         None => return,
     };
-    validate_type(errors, definitions, local_schema, keys, node);
-    validate_enum(errors, definitions, local_schema, keys, node);
-    validate_const(errors, definitions, local_schema, keys, node);
+    validate_type(errors, defs, local_schema, keys, node);
+    validate_enum(errors, defs, local_schema, keys, node);
+    validate_const(errors, defs, local_schema, keys, node);
 
     if node.is_object() {
-        validate_properties(errors, definitions, local_schema, keys, node);
-        validate_required(errors, definitions, local_schema, keys, node);
-        validate_maxmin_properties(errors, definitions, local_schema, keys, node);
+        validate_properties(errors, defs, local_schema, keys, node);
+        validate_required(errors, defs, local_schema, keys, node);
+        validate_maxmin_properties(errors, defs, local_schema, keys, node);
     }
 
     if node.is_array() {
-        validate_items(errors, definitions, local_schema, keys, node);
-        validate_contains(errors, definitions, local_schema, keys, node);
-        validate_maxmin_items(errors, definitions, local_schema, keys, node);
-        validate_unique_items(errors, definitions, local_schema, keys, node);
+        validate_items(errors, defs, local_schema, keys, node);
+        validate_contains(errors, defs, local_schema, keys, node);
+        validate_maxmin_items(errors, defs, local_schema, keys, node);
+        validate_unique_items(errors, defs, local_schema, keys, node);
     }
 
     if node.is_string() {
-        validate_pattern(errors, definitions, local_schema, keys, node);
-        validate_maxmin_length(errors, definitions, local_schema, keys, node);
-        validate_format(errors, definitions, local_schema, keys, node);
+        validate_pattern(errors, defs, local_schema, keys, node);
+        validate_maxmin_length(errors, defs, local_schema, keys, node);
+        validate_format(errors, defs, local_schema, keys, node);
     }
 
     if node.is_number() {
-        validate_maxmin(errors, definitions, local_schema, keys, node);
-        validate_multiple_of(errors, definitions, local_schema, keys, node);
+        validate_maxmin(errors, defs, local_schema, keys, node);
+        validate_multiple_of(errors, defs, local_schema, keys, node);
     }
 
-    validate_allof(errors, definitions, local_schema, keys, node);
-    validate_anyof(errors, definitions, local_schema, keys, node);
-    validate_oneof(errors, definitions, local_schema, keys, node);
-    validate_not(errors, definitions, local_schema, keys, node);
-    validate_condiational(errors, definitions, local_schema, keys, node);
+    validate_allof(errors, defs, local_schema, keys, node);
+    validate_anyof(errors, defs, local_schema, keys, node);
+    validate_oneof(errors, defs, local_schema, keys, node);
+    validate_not(errors, defs, local_schema, keys, node);
+    validate_condiational(errors, defs, local_schema, keys, node);
 }
 
 fn validate_type(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -114,7 +113,7 @@ fn validate_type(
 
 fn validate_enum(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -136,7 +135,7 @@ fn validate_enum(
 
 fn validate_const(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -151,7 +150,7 @@ fn validate_const(
 
 fn validate_properties(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -167,7 +166,7 @@ fn validate_properties(
             .as_ref()
             .and_then(|v| v.get(key.value()))
         {
-            validate_impl(errors, definitions, schema, &new_keys, value);
+            validate_impl(errors, defs, schema, &new_keys, value);
             true
         } else {
             false
@@ -177,7 +176,7 @@ fn validate_properties(
             for (pat, schema) in patterns.iter() {
                 if let Ok(re) = Regex::new(pat) {
                     if let Ok(true) = re.is_match(key.value()) {
-                        validate_impl(errors, definitions, schema, &new_keys, value);
+                        validate_impl(errors, defs, schema, &new_keys, value);
                         is_pattern_passed = true;
                     }
                 }
@@ -199,9 +198,7 @@ fn validate_properties(
                         ));
                     }
                 }
-                Either::Right(schema) => {
-                    validate_impl(errors, definitions, schema, &new_keys, value)
-                }
+                Either::Right(schema) => validate_impl(errors, defs, schema, &new_keys, value),
             }
         }
     }
@@ -209,7 +206,7 @@ fn validate_properties(
 
 fn validate_required(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -236,7 +233,7 @@ fn validate_required(
 
 fn validate_maxmin_properties(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -260,7 +257,7 @@ fn validate_maxmin_properties(
 
 fn validate_items(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -274,14 +271,14 @@ fn validate_items(
             Either::Left(schema) => {
                 for (idx, value) in array.value().read().iter().enumerate() {
                     let new_keys = keys.join(KeyOrIndex::Index(idx));
-                    validate_impl(errors, definitions, schema, &new_keys, value);
+                    validate_impl(errors, defs, schema, &new_keys, value);
                 }
             }
             Either::Right(schemas) => {
                 let items = array.value().read();
                 for (idx, (value, schema)) in items.iter().zip(schemas.iter()).enumerate() {
                     let new_keys = keys.join(KeyOrIndex::Index(idx));
-                    validate_impl(errors, definitions, schema, &new_keys, value);
+                    validate_impl(errors, defs, schema, &new_keys, value);
                 }
                 let schemas_len = schemas.len();
                 if items.len() > schemas_len {
@@ -295,7 +292,7 @@ fn validate_items(
                             Either::Right(schema) => {
                                 for (idx, value) in items.iter().skip(schemas_len).enumerate() {
                                     let new_keys = keys.join(KeyOrIndex::Index(idx + schemas_len));
-                                    validate_impl(errors, definitions, schema, &new_keys, value);
+                                    validate_impl(errors, defs, schema, &new_keys, value);
                                 }
                             }
                         }
@@ -308,7 +305,7 @@ fn validate_items(
 
 fn validate_contains(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -322,7 +319,7 @@ fn validate_contains(
         for (idx, value) in array.value().read().iter().enumerate() {
             let mut local_errors = vec![];
             let new_keys = keys.join(KeyOrIndex::Index(idx));
-            validate_impl(&mut local_errors, definitions, schema, &new_keys, value);
+            validate_impl(&mut local_errors, defs, schema, &new_keys, value);
             if local_errors.is_empty() {
                 any_matched = true;
                 break;
@@ -336,7 +333,7 @@ fn validate_contains(
 
 fn validate_maxmin_items(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -359,7 +356,7 @@ fn validate_maxmin_items(
 
 fn validate_unique_items(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -386,7 +383,7 @@ fn validate_unique_items(
 
 fn validate_pattern(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -406,7 +403,7 @@ fn validate_pattern(
 
 fn validate_maxmin_length(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -429,7 +426,7 @@ fn validate_maxmin_length(
 
 fn validate_format(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -460,7 +457,7 @@ fn validate_format(
 
 fn validate_maxmin(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -509,7 +506,7 @@ fn validate_maxmin(
 
 fn validate_multiple_of(
     errors: &mut Vec<Error>,
-    _definitions: &IndexMap<String, Schema>,
+    _defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -538,21 +535,21 @@ fn validate_multiple_of(
 
 fn validate_allof(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
 ) {
     if let Some(all_off) = local_schema.all_of.as_ref() {
         for schema in all_off.iter() {
-            validate_impl(errors, definitions, schema, keys, node)
+            validate_impl(errors, defs, schema, keys, node)
         }
     }
 }
 
 fn validate_anyof(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -562,7 +559,7 @@ fn validate_anyof(
         let mut valid = false;
         for schema in any_of.iter() {
             let mut local_errors = vec![];
-            validate_impl(&mut local_errors, definitions, schema, keys, node);
+            validate_impl(&mut local_errors, defs, schema, keys, node);
             if local_errors.is_empty() {
                 valid = true;
             } else {
@@ -582,7 +579,7 @@ fn validate_anyof(
 
 fn validate_oneof(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
@@ -593,7 +590,7 @@ fn validate_oneof(
         let mut indexes = vec![];
         for (index, schema) in one_of.iter().enumerate() {
             let mut local_errors = vec![];
-            validate_impl(&mut local_errors, definitions, schema, keys, node);
+            validate_impl(&mut local_errors, defs, schema, keys, node);
             if local_errors.is_empty() {
                 valid += 1;
             }
@@ -631,14 +628,14 @@ fn validate_oneof(
 
 fn validate_not(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
 ) {
     if let Some(schema) = local_schema.not.as_ref() {
         let mut local_errors = vec![];
-        validate_impl(&mut local_errors, definitions, schema, keys, node);
+        validate_impl(&mut local_errors, defs, schema, keys, node);
         if local_errors.is_empty() {
             errors.push(Error::new(keys, ErrorKind::Not));
         }
@@ -647,20 +644,20 @@ fn validate_not(
 
 fn validate_condiational(
     errors: &mut Vec<Error>,
-    definitions: &IndexMap<String, Schema>,
+    defs: &IndexMap<String, Schema>,
     local_schema: &Schema,
     keys: &Keys,
     node: &Node,
 ) {
     if let Some(if_schema) = local_schema.if_value.as_ref() {
         let mut local_errors = vec![];
-        validate_impl(&mut local_errors, definitions, if_schema, keys, node);
+        validate_impl(&mut local_errors, defs, if_schema, keys, node);
         if local_errors.is_empty() {
             if let Some(then_schema) = local_schema.then_value.as_ref() {
-                validate_impl(errors, definitions, then_schema, keys, node);
+                validate_impl(errors, defs, then_schema, keys, node);
             }
         } else if let Some(else_schema) = local_schema.else_value.as_ref() {
-            validate_impl(errors, definitions, else_schema, keys, node);
+            validate_impl(errors, defs, else_schema, keys, node);
         }
     }
 }
@@ -779,18 +776,13 @@ impl Display for ErrorKind {
     }
 }
 
-fn resolve<'a>(
-    definitions: &'a IndexMap<String, Schema>,
-    local_schema: &'a Schema,
-) -> Option<&'a Schema> {
+fn resolve<'a>(defs: &'a IndexMap<String, Schema>, local_schema: &'a Schema) -> Option<&'a Schema> {
     let schema = match local_schema.ref_value.as_ref() {
         Some(ref_value) => {
-            match REF_REGEX
-                .captures(ref_value)
+            match Regex::new(r#"^#/\$defs/(\w+)$"#)
                 .ok()
-                .flatten()
-                .and_then(|v| v.get(1))
-                .and_then(|v| definitions.get(v.as_str()))
+                .and_then(|v| v.captures(ref_value).ok().flatten().and_then(|v| v.get(1)))
+                .and_then(|v| defs.get(v.as_str()))
             {
                 Some(v) => v,
                 None => return None,

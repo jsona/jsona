@@ -2,18 +2,12 @@ use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys, Node, ParseError};
-use once_cell::sync::Lazy;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Number, Value};
 use std::{cell::RefCell, rc::Rc, str::FromStr};
 use std::{collections::HashSet, fmt::Display};
 use thiserror::Error;
-
-pub const REF_PREFIX: &str = "#/definitions/";
-
-pub static REF_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(&format!(r#"^{}(\w+)$"#, REF_PREFIX)).unwrap());
 
 pub type SchemaResult<T> = std::result::Result<T, SchemaError>;
 
@@ -60,7 +54,8 @@ pub struct Schema {
     #[serde(rename = "$ref")]
     pub ref_value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub definitions: Option<IndexMap<String, Schema>>,
+    #[serde(rename = "$defs")]
+    pub defs: Option<IndexMap<String, Schema>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -194,14 +189,14 @@ impl TryFrom<&Node> for Schema {
         let scope = SchemaParser {
             keys: Keys::default(),
             node: node.clone(),
-            definitions: Default::default(),
-            ref_prefix: Rc::new(REF_PREFIX.to_string()),
+            defs: Default::default(),
+            ref_prefix: Rc::new("#/$defs/".to_string()),
             prefer_optional: true,
         };
         let mut schema = scope.parse()?;
-        let definitions = scope.definitions.take();
-        if !definitions.is_empty() {
-            schema.definitions = Some(definitions);
+        let defs = scope.defs.take();
+        if !defs.is_empty() {
+            schema.defs = Some(defs);
         }
         Ok(schema)
     }
@@ -372,7 +367,7 @@ impl OneOrMultiSchemas {
 pub struct SchemaParser {
     pub node: Node,
     pub keys: Keys,
-    pub definitions: Rc<RefCell<IndexMap<String, Schema>>>,
+    pub defs: Rc<RefCell<IndexMap<String, Schema>>>,
     pub ref_prefix: Rc<String>,
     pub prefer_optional: bool,
 }
@@ -381,18 +376,18 @@ impl SchemaParser {
     pub fn parse(&self) -> SchemaResult<Schema> {
         let mut def_value = String::new();
         if let Some(def) = self.parse_string_annotation("@def")? {
-            let mut definitions = self.definitions.borrow_mut();
-            if definitions.contains_key(&def) {
+            let mut defs = self.defs.borrow_mut();
+            if defs.contains_key(&def) {
                 return Err(SchemaError::ConflictDef {
                     keys: self.keys.clone(),
                     name: def,
                 });
             }
-            definitions.insert(def.clone(), Default::default());
+            defs.insert(def.clone(), Default::default());
             def_value = def;
         } else if let Some(ref_value) = self.parse_string_annotation("@ref")? {
-            let definitions = self.definitions.borrow();
-            if !definitions.contains_key(&ref_value) {
+            let defs = self.defs.borrow();
+            if !defs.contains_key(&ref_value) {
                 return Err(SchemaError::UnknownRef {
                     keys: self.keys.clone(),
                     name: ref_value,
@@ -406,6 +401,9 @@ impl SchemaParser {
         let mut schema: Schema = self.parse_object_annotation("@schema")?.unwrap_or_default();
         if let Some(describe) = self.parse_string_annotation("@describe")? {
             schema.description = Some(describe);
+        }
+        if self.exist_annotation("@example") {
+            schema.examples = Some(vec![self.node.to_plain_json()])
         }
         if self.exist_annotation("@default") {
             schema.default = Some(self.node.to_plain_json())
@@ -479,9 +477,7 @@ impl SchemaParser {
             schema.schema_type = None;
         }
         if !def_value.is_empty() {
-            self.definitions
-                .borrow_mut()
-                .insert(def_value.clone(), schema);
+            self.defs.borrow_mut().insert(def_value.clone(), schema);
             return Ok(Schema {
                 ref_value: Some(format!("{}{}", self.ref_prefix, def_value)),
                 ..Default::default()
@@ -494,7 +490,7 @@ impl SchemaParser {
         Self {
             node,
             keys: self.keys.clone().join(key.into()),
-            definitions: self.definitions.clone(),
+            defs: self.defs.clone(),
             ref_prefix: self.ref_prefix.clone(),
             prefer_optional: self.prefer_optional,
         }
@@ -609,13 +605,11 @@ fn resolve<'a>(root_schema: &'a Schema, local_schema: &'a Schema) -> Option<&'a 
             if ref_value == "#" {
                 root_schema
             } else {
-                match root_schema.definitions.as_ref().and_then(|definitions| {
-                    REF_REGEX
-                        .captures(ref_value)
+                match root_schema.defs.as_ref().and_then(|defs| {
+                    Regex::new(r#"^#/\$defs/(\w+)$"#)
                         .ok()
-                        .flatten()
-                        .and_then(|v| v.get(1))
-                        .and_then(|v| definitions.get(v.as_str()))
+                        .and_then(|v| v.captures(ref_value).ok().flatten().and_then(|v| v.get(1)))
+                        .and_then(|v| defs.get(v.as_str()))
                 }) {
                     Some(v) => v,
                     None => return None,

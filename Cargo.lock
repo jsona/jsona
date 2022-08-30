@@ -657,7 +657,6 @@ dependencies = [
  "fancy-regex",
  "indexmap",
  "jsona",
- "once_cell",
  "serde",
  "serde_json",
  "thiserror",
