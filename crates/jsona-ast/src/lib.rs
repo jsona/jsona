@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Number as JsonNumber, Value};
 use std::{str::FromStr, string::String as StdString};
 
-use jsona::dom::{self, DomError, DomNode, Node};
-use jsona::error::Error as JsonaError;
+use jsona::dom::{self, DomNode, Node};
+use jsona::error::ErrorObject;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -84,62 +84,15 @@ pub struct AnnotationValue {
     pub range: Option<Range>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Error {
-    pub kind: StdString,
-    pub message: StdString,
-    pub range: Option<Range>,
-}
-
-impl Error {
-    pub fn new(kind: &str, message: &str, range: Option<Range>) -> Self {
-        Self {
-            kind: kind.into(),
-            message: message.into(),
-            range,
-        }
-    }
-}
-
 impl FromStr for Ast {
-    type Err = Vec<Error>;
+    type Err = Vec<ErrorObject>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mapper = Mapper::new_utf16(s, false);
-        let mut ast_errors: Vec<Error> = vec![];
-
         match s.parse::<Node>() {
-            Ok(value) => return Ok(node_to_ast(&value, &mapper)),
-            Err(error) => match error {
-                JsonaError::InvalidSyntax { errors } => {
-                    for err in errors.into_iter() {
-                        let message = err.to_string();
-                        let range = mapper.range(err.range);
-                        ast_errors.push(Error::new("InvalidSyntax", &message, range));
-                    }
-                }
-                JsonaError::InvalidDom { errors } => {
-                    for err in errors.into_iter() {
-                        let message = err.to_string();
-                        match err {
-                            DomError::ConflictingKeys { key, other_key } => {
-                                let range = key.mapper_range(&mapper);
-                                ast_errors.push(Error::new("ConflictingKeys", &message, range));
-                                let range = other_key.mapper_range(&mapper);
-                                ast_errors.push(Error::new("ConflictingKeys", &message, range));
-                            }
-                            DomError::InvalidNode { syntax } => {
-                                let range = mapper.range(syntax.text_range());
-                                ast_errors.push(Error::new("InvalidNode", &message, range));
-                            }
-                            DomError::InvalidNumber { syntax: _ }
-                            | DomError::InvalidString { syntax: _ } => {}
-                        }
-                    }
-                }
-            },
+            Ok(value) => Ok(node_to_ast(&value, &mapper)),
+            Err(error) => Err(error.into_error_objects(&mapper)),
         }
-        Err(ast_errors)
     }
 }
 

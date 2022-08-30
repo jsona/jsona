@@ -1,5 +1,5 @@
-use crate::util::mapper::Range;
-use crate::{dom::DomError, util::mapper};
+use crate::dom::DomError;
+use crate::util::mapper::{Mapper, Range};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -11,56 +11,46 @@ pub enum Error {
     InvalidDom { errors: Vec<DomError> },
 }
 
-trait IntoErrorObjects {
-    fn into_error_objects(self, mapper: &mapper::Mapper) -> Vec<ErrorObject>;
-}
-
-impl IntoErrorObjects for Error {
-    fn into_error_objects(self, mapper: &mapper::Mapper) -> Vec<ErrorObject> {
-        let mut error_objects: Vec<ErrorObject> = vec![];
+impl Error {
+    pub fn into_error_objects(self, mapper: &Mapper) -> Vec<ErrorObject> {
         match self {
-            Error::InvalidSyntax { errors } => {
-                for err in errors.into_iter() {
+            Error::InvalidSyntax { errors } => errors
+                .into_iter()
+                .map(|err| {
                     let message = err.to_string();
                     let range = mapper.range(err.range);
-                    error_objects.push(ErrorObject::new("InvalidSyntax", &message, range));
-                }
-            }
-            Error::InvalidDom { errors } => {
-                for err in errors.into_iter() {
+                    ErrorObject::new("InvalidSyntax", &message, range)
+                })
+                .collect(),
+            Error::InvalidDom { errors } => errors
+                .into_iter()
+                .flat_map(|err| {
                     let message = err.to_string();
                     match err {
                         DomError::ConflictingKeys { key, other_key } => {
-                            let range = key.mapper_range(mapper);
-                            error_objects.push(ErrorObject::new(
-                                "ConflictingKeys",
-                                &message,
-                                range,
-                            ));
-                            let range = other_key.mapper_range(mapper);
-                            error_objects.push(ErrorObject::new(
-                                "ConflictingKeys",
-                                &message,
-                                range,
-                            ));
+                            let key_range = key.mapper_range(mapper);
+                            let other_key_range = other_key.mapper_range(mapper);
+                            vec![
+                                ErrorObject::new("ConflictingKeys", &message, key_range),
+                                ErrorObject::new("ConflictingKeys", &message, other_key_range),
+                            ]
                         }
                         DomError::InvalidNode { syntax } => {
                             let range = mapper.range(syntax.text_range());
-                            error_objects.push(ErrorObject::new("InvalidNode", &message, range));
+                            vec![ErrorObject::new("InvalidNode", &message, range)]
                         }
                         DomError::InvalidNumber { syntax } => {
                             let range = mapper.range(syntax.text_range());
-                            error_objects.push(ErrorObject::new("InvalidNumber", &message, range));
+                            vec![ErrorObject::new("InvalidNumber", &message, range)]
                         }
                         DomError::InvalidString { syntax } => {
                             let range = mapper.range(syntax.text_range());
-                            error_objects.push(ErrorObject::new("InvalidString", &message, range));
+                            vec![ErrorObject::new("InvalidString", &message, range)]
                         }
                     }
-                }
-            }
+                })
+                .collect(),
         }
-        error_objects
     }
 }
 
