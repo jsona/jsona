@@ -1,7 +1,7 @@
 use jsona::{
     dom::{Keys, Node},
     error::ErrorObject,
-    util::mapper::{Mapper, Range},
+    util::mapper::Mapper,
 };
 use thiserror::Error;
 
@@ -37,30 +37,23 @@ impl SchemaError {
     pub fn to_error_objects(&self, node: &Node, mapper: &Mapper) -> Vec<ErrorObject> {
         let message = self.to_string();
         let (kind, range) = match self {
-            SchemaError::ConflictDef { keys, .. } => ("ConflictDef", get_range(keys, node, mapper)),
-            SchemaError::UnknownRef { keys, .. } => ("UnknownRef", get_range(keys, node, mapper)),
+            SchemaError::ConflictDef { keys, .. } => {
+                ("ConflictDef", keys.mapper_range(node, mapper))
+            }
+            SchemaError::UnknownRef { keys, .. } => ("UnknownRef", keys.mapper_range(node, mapper)),
             SchemaError::UnexpectedType { keys } => {
-                ("UnexpectedType", get_range(keys, node, mapper))
+                ("UnexpectedType", keys.mapper_range(node, mapper))
             }
             SchemaError::UnmatchedSchemaType { keys } => {
-                ("UnmatchedSchemaType", get_range(keys, node, mapper))
+                ("UnmatchedSchemaType", keys.mapper_range(node, mapper))
             }
             SchemaError::InvalidSchemaValue { keys, .. } => {
-                ("InvalidSchemaValue", get_range(keys, node, mapper))
+                ("InvalidSchemaValue", keys.mapper_range(node, mapper))
             }
             SchemaError::InvalidCompoundValue { keys } => {
-                ("InvalidCompoundValue", get_range(keys, node, mapper))
+                ("InvalidCompoundValue", keys.mapper_range(node, mapper))
             }
         };
         vec![ErrorObject::new(kind, message, range)]
-    }
-}
-
-fn get_range(keys: &Keys, node: &Node, mapper: &Mapper) -> Option<Range> {
-    let key = keys.last().and_then(|v| v.as_key())?;
-    let key_range = key.mapper_range(mapper)?;
-    match node.path(keys).and_then(|v| v.mapper_range(mapper)) {
-        Some(value_range) => Some(key_range.join(&value_range)),
-        None => Some(key_range),
     }
 }

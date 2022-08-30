@@ -1,7 +1,9 @@
 use crate::parser::Parser;
+use crate::util::mapper;
 
 use super::from_syntax::keys_from_syntax;
 use super::node::Key;
+use super::Node;
 
 use rowan::TextRange;
 use std::iter::{empty, once};
@@ -226,6 +228,15 @@ impl Keys {
                 Self::new(self.keys.iter().skip(i + 1).cloned()),
             ),
             None => (None, self.clone()),
+        }
+    }
+
+    pub fn mapper_range(&self, node: &Node, mapper: &mapper::Mapper) -> Option<mapper::Range> {
+        let key = self.last().and_then(|v| v.as_key())?;
+        let key_range = key.mapper_range(mapper)?;
+        match node.path(self).and_then(|v| v.mapper_range(mapper)) {
+            Some(value_range) => Some(key_range.join(&value_range)),
+            None => Some(key_range),
         }
     }
 }
