@@ -429,9 +429,6 @@ impl SchemaParser {
         if let Some(describe) = self.parse_string_annotation("@describe")? {
             schema.description = Some(describe);
         }
-        if self.exist_annotation("@example") {
-            schema.examples = Some(vec![self.node.to_plain_json()])
-        }
         if self.exist_annotation("@default") {
             schema.default = Some(self.node.to_plain_json())
         }
