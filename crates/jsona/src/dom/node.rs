@@ -6,6 +6,7 @@ use crate::error::Error as JsonaError;
 use crate::parser;
 use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
+use crate::util::mapper;
 use crate::util::shared::Shared;
 use crate::util::{quote, unquote};
 
@@ -147,6 +148,11 @@ impl Node {
             }
             Node::Array(_) | Node::Object(_) => None,
         }
+    }
+
+    pub fn mapper_range(&self, mapper: &mapper::Mapper) -> Option<mapper::Range> {
+        self.syntax()
+            .and_then(|syntax| mapper.range(syntax.text_range()))
     }
 
     fn is_valid_impl(&self, valid: &mut bool) {
@@ -701,6 +707,11 @@ impl Key {
 
     pub fn is_valid(&self) -> bool {
         self.errors().read().is_empty()
+    }
+
+    pub fn mapper_range(&self, mapper: &mapper::Mapper) -> Option<mapper::Range> {
+        self.syntax()
+            .and_then(|syntax| mapper.range(syntax.text_range()))
     }
 }
 

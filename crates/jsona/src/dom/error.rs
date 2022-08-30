@@ -11,5 +11,5 @@ pub enum DomError {
     #[error("the syntax is not valid number")]
     InvalidNumber { syntax: SyntaxElement },
     #[error("conflicting keys")]
-    ConflictingKeys { key: Key, other: Key },
+    ConflictingKeys { key: Key, other_key: Key },
 }

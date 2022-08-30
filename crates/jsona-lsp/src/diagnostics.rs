@@ -147,7 +147,7 @@ fn collect_dom_errors(
     if let Err(errors) = dom.validate() {
         for error in errors {
             match &error {
-                jsona::dom::DomError::ConflictingKeys { key, other } => {
+                jsona::dom::DomError::ConflictingKeys { key, other_key } => {
                     let range = doc
                         .mapper
                         .range(key.text_range().unwrap())
@@ -156,7 +156,7 @@ fn collect_dom_errors(
 
                     let other_range = doc
                         .mapper
-                        .range(other.text_range().unwrap())
+                        .range(other_key.text_range().unwrap())
                         .unwrap()
                         .into_lsp();
 

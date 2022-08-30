@@ -475,7 +475,7 @@ fn add_to_map(
     if let Some((existing_key, _)) = map.value.get_key_value(&key) {
         errors.push(DomError::ConflictingKeys {
             key: key.clone(),
-            other: existing_key.clone(),
+            other_key: existing_key.clone(),
         })
     }
 

@@ -1,9 +1,6 @@
 //! The JSONA abstract syntax tree module.
 
-mod mapper;
-
-pub use self::mapper::{Mapper, Position, Range};
-
+pub use jsona::util::mapper::{Mapper, Position, Range};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number as JsonNumber, Value};
 use std::{str::FromStr, string::String as StdString};
@@ -125,10 +122,10 @@ impl FromStr for Ast {
                     for err in errors.into_iter() {
                         let message = err.to_string();
                         match err {
-                            DomError::ConflictingKeys { key, other } => {
-                                let range = key_range(&key, &mapper);
+                            DomError::ConflictingKeys { key, other_key } => {
+                                let range = key.mapper_range(&mapper);
                                 ast_errors.push(Error::new("ConflictingKeys", &message, range));
-                                let range = key_range(&other, &mapper);
+                                let range = other_key.mapper_range(&mapper);
                                 ast_errors.push(Error::new("ConflictingKeys", &message, range));
                             }
                             DomError::InvalidNode { syntax } => {
@@ -190,8 +187,8 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
     let mut annotations: Vec<Annotation> = vec![];
     if let Some(value_annotations) = value.annotations() {
         for (key, value) in value_annotations.value().read().iter() {
-            let key_range = key_range(key, mapper);
-            let value_range = node_range(value, mapper);
+            let key_range = key.mapper_range(mapper);
+            let value_range = value.mapper_range(mapper);
             annotations.push({
                 Annotation {
                     key: Key {
@@ -206,7 +203,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
             });
         }
     }
-    let range = node_range(value, mapper);
+    let range = value.mapper_range(mapper);
     match value {
         Node::Null(_) => Ast::Null(Null { annotations, range }),
         Node::Bool(v) => Ast::Bool(Bool {
@@ -240,7 +237,7 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
         Node::Object(v) => {
             let mut properties: Vec<Property> = vec![];
             for (key, value) in v.value().read().iter() {
-                let range = key_range(key, mapper);
+                let range = key.mapper_range(mapper);
                 properties.push({
                     Property {
                         key: Key {
@@ -258,16 +255,6 @@ fn node_to_ast(value: &Node, mapper: &Mapper) -> Ast {
             })
         }
     }
-}
-
-fn node_range<T: DomNode>(node: &T, mapper: &Mapper) -> Option<Range> {
-    node.syntax()
-        .and_then(|syntax| mapper.range(syntax.text_range()))
-}
-
-fn key_range(key: &dom::Key, mapper: &Mapper) -> Option<Range> {
-    key.syntax()
-        .and_then(|syntax| mapper.range(syntax.text_range()))
 }
 
 fn from_annotations(annotations: Vec<Annotation>) -> Option<dom::Annotations> {

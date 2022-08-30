@@ -1,6 +1,6 @@
-pub(crate) mod shared;
-
+pub mod mapper;
 mod quote;
+pub(crate) mod shared;
 
 mod glob;
 pub use glob::glob;
