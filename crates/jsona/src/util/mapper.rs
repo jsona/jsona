@@ -33,6 +33,14 @@ pub struct Range {
     pub end: Position,
 }
 
+impl Range {
+    pub fn join(&self, other: &Range) -> Range {
+        let start = self.start.min(other.start);
+        let end = self.end.max(other.end);
+        Self { start, end }
+    }
+}
+
 /// Inclusive offset range in characters instead of bytes.
 #[derive(Debug, Clone, Copy)]
 pub struct CharacterRange(u64, u64);

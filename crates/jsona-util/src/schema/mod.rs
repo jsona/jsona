@@ -4,7 +4,7 @@ pub mod fetcher;
 use anyhow::anyhow;
 use jsona::dom::{Keys, Node};
 use parking_lot::Mutex;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use url::Url;
 
 use self::associations::SchemaAssociations;
@@ -64,7 +64,10 @@ impl<E: Environment> Schemas<E> {
             match self.fetcher.fetch(schema_uri).await.and_then(|v| {
                 std::str::from_utf8(&v)
                     .map_err(|v| anyhow!("{}", v))
-                    .and_then(|v| v.parse().map_err(|err| anyhow!("{}", err)))
+                    .and_then(|v| Node::from_str(v).map_err(|err| anyhow!("{}", err)))
+                    .and_then(|v| {
+                        JSONASchemaValidator::try_from(&v).map_err(|err| anyhow!("{}", err))
+                    })
             }) {
                 Ok(s) => Arc::new(s),
                 Err(error) => {

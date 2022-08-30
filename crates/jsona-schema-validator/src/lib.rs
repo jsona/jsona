@@ -1,9 +1,9 @@
 mod validates;
 
-use std::{collections::HashSet, str::FromStr};
+use std::collections::HashSet;
 
 use jsona::dom::{visit_annotations, KeyOrIndex, Keys, Node};
-use jsona_schema::Error;
+use jsona_schema::SchemaError;
 pub use validates::Error as JSONASchemaValidationError;
 
 pub use jsona_schema::Schema;
@@ -69,7 +69,7 @@ impl JSONASchemaValidator {
 }
 
 impl TryFrom<&Node> for JSONASchemaValidator {
-    type Error = Error;
+    type Error = SchemaError;
     fn try_from(value: &Node) -> Result<Self, Self::Error> {
         let mut schema = Schema::try_from(value)?;
         let mut annotation_names = HashSet::default();
@@ -92,13 +92,5 @@ impl TryFrom<&Node> for JSONASchemaValidator {
             schema,
             annotation_names,
         })
-    }
-}
-
-impl FromStr for JSONASchemaValidator {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let node: Node = s.parse()?;
-        Self::try_from(&node)
     }
 }
