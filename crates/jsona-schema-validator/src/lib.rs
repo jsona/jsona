@@ -19,8 +19,12 @@ pub struct JSONASchemaValidator {
 impl JSONASchemaValidator {
     pub fn validate(&self, node: &Node) -> Vec<JSONASchemaValidationError> {
         let mut collect_errors = vec![];
-        let default_defs = Default::default();
-        let defs = self.schema.defs.as_ref().unwrap_or(&default_defs);
+        let default_definitions = Default::default();
+        let definitions = self
+            .schema
+            .definitions
+            .as_ref()
+            .unwrap_or(&default_definitions);
         if let Some(value_schema) = self
             .schema
             .properties
@@ -28,7 +32,7 @@ impl JSONASchemaValidator {
             .and_then(|v| v.get(VALUE_KEY))
         {
             collect_errors.extend(validates::validate(
-                defs,
+                definitions,
                 value_schema,
                 &Keys::default(),
                 node,
@@ -41,7 +45,7 @@ impl JSONASchemaValidator {
                         .and_then(|s| s.properties.as_ref())
                         .and_then(|p| p.get(key.value()))
                 }) {
-                    collect_errors.extend(validates::validate(defs, schema, &keys, &value));
+                    collect_errors.extend(validates::validate(definitions, schema, &keys, &value));
                 }
             }
         }
