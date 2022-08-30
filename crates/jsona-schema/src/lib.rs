@@ -2,6 +2,7 @@ use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys, Node, ParseError};
+use once_cell::sync::Lazy;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Number, Value};
@@ -10,6 +11,10 @@ use std::{collections::HashSet, fmt::Display};
 use thiserror::Error;
 
 pub type SchemaResult<T> = std::result::Result<T, SchemaError>;
+
+pub const REF_PREFIX: &str = "#/$defs/";
+
+pub static REF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^#/\$defs/(\w+)$"#).unwrap());
 
 #[derive(Debug, Clone, Error)]
 pub enum Error {
@@ -190,7 +195,7 @@ impl TryFrom<&Node> for Schema {
             keys: Keys::default(),
             node: node.clone(),
             defs: Default::default(),
-            ref_prefix: Rc::new("#/$defs/".to_string()),
+            ref_prefix: Rc::new(REF_PREFIX.to_string()),
             prefer_optional: true,
         };
         let mut schema = scope.parse()?;
@@ -606,9 +611,11 @@ fn resolve<'a>(root_schema: &'a Schema, local_schema: &'a Schema) -> Option<&'a 
                 root_schema
             } else {
                 match root_schema.defs.as_ref().and_then(|defs| {
-                    Regex::new(r#"^#/\$defs/(\w+)$"#)
+                    REF_REGEX
+                        .captures(ref_value)
                         .ok()
-                        .and_then(|v| v.captures(ref_value).ok().flatten().and_then(|v| v.get(1)))
+                        .flatten()
+                        .and_then(|v| v.get(1))
                         .and_then(|v| defs.get(v.as_str()))
                 }) {
                     Some(v) => v,

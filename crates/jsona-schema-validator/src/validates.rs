@@ -8,7 +8,7 @@ use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
 use jsona::dom::{KeyOrIndex, Keys, Node};
-use jsona_schema::{Schema, SchemaType};
+use jsona_schema::{Schema, SchemaType, REF_REGEX};
 use once_cell::sync::Lazy;
 use std::ops::Index;
 
@@ -779,9 +779,11 @@ impl Display for ErrorKind {
 fn resolve<'a>(defs: &'a IndexMap<String, Schema>, local_schema: &'a Schema) -> Option<&'a Schema> {
     let schema = match local_schema.ref_value.as_ref() {
         Some(ref_value) => {
-            match Regex::new(r#"^#/\$defs/(\w+)$"#)
+            match REF_REGEX
+                .captures(ref_value)
                 .ok()
-                .and_then(|v| v.captures(ref_value).ok().flatten().and_then(|v| v.get(1)))
+                .flatten()
+                .and_then(|v| v.get(1))
                 .and_then(|v| defs.get(v.as_str()))
             {
                 Some(v) => v,
