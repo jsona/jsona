@@ -1,5 +1,6 @@
 import loadCrate from "../../../crates/jsona-wasm-core/Cargo.toml";
 import { Ast, FormatOptions, ToAstResult } from "./types";
+export * as types from "./types";
 
 export class Jsona {
   private static crate: any | undefined;
@@ -26,7 +27,7 @@ export class Jsona {
    * Parse jsona doc as ast
    * @param jsona JSONA document.
    */
-  public parse_ast(jsona: string): ToAstResult {
+  public parseAst(jsona: string): ToAstResult {
     try {
       return { ast: Jsona.crate.parse_ast(jsona) }
     } catch (errors) {
@@ -38,7 +39,7 @@ export class Jsona {
    *  Stringify ast to jsona doc
    * @param jsona JSONA document.
    */
-  public stringify_ast(ast: Ast): String {
+  public stringifyAst(ast: Ast): String {
     return Jsona.crate.stringify_ast(ast);
   }
 

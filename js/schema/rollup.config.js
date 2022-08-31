@@ -12,7 +12,7 @@ export default {
   },
   output: {
     sourcemap: false,
-    name: "jsona",
+    name: "jsonaSchema",
     format: "umd",
     dir: "dist",
   },
