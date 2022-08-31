@@ -34,7 +34,7 @@ impl SchemaError {
             SchemaError::InvalidCompoundValue { keys } => keys,
         }
     }
-    pub fn to_error_objects(&self, node: &Node, mapper: &Mapper) -> Vec<ErrorObject> {
+    pub fn to_error_object(&self, node: &Node, mapper: &Mapper) -> ErrorObject {
         let message = self.to_string();
         let (kind, range) = match self {
             SchemaError::ConflictDef { keys, .. } => {
@@ -54,6 +54,6 @@ impl SchemaError {
                 ("InvalidCompoundValue", keys.mapper_range(node, mapper))
             }
         };
-        vec![ErrorObject::new(kind, message, range)]
+        ErrorObject::new(kind, message, range)
     }
 }

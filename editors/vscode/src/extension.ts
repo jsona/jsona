@@ -1,4 +1,4 @@
-import type { Lsp } from "@jsona/lsp";
+import type { types } from "@jsona/lsp";
 import * as vscode from "vscode";
 import { createClient, syncSchemaCache } from "./client";
 import { registerCommands } from "./commands";
@@ -31,7 +31,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     c.onNotification(
       "jsona/initializeWorkspace",
-      (params: Lsp.Server.NotificationParams<"jsona/initializeWorkspace">) => {
+      (params: types.Server.NotificationParams<"jsona/initializeWorkspace">) => {
         let editor = vscode.window.activeTextEditor;
         if (editor?.document.uri.toString().startsWith(params.rootUri)) {
           updateSchemaIndicator(c, editor, schemaIndicator);
@@ -62,7 +62,7 @@ async function updateSchemaIndicator(c: BaseLanguageClient, editor: vscode.TextE
       if (documentUrl) {
         const res = await c.sendRequest("jsona/associatedSchema", {
           documentUri: documentUrl.toString(),
-        }) as Lsp.Client.RequestResponse<"jsona/associatedSchema">;
+        }) as types.Client.RequestResponse<"jsona/associatedSchema">;
         let url = res?.schema?.url;
         if (url) {
           schemaIndicator.text = url.split("/").slice(-1)[0]?.replace(/.jsona$/ , "") ?? "noschema";

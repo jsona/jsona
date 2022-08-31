@@ -3,6 +3,7 @@
   "workspaces": [
     "core",
     "lsp",
-    "util-types"
+    "util-types",
+    "schema"
   ]
 }

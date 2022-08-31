@@ -14,6 +14,7 @@ CRATES=( \
 
 NPMS=( \
     core \
+    schema \
     util-types \
     lsp \
 )

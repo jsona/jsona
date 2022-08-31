@@ -1,6 +1,6 @@
 import loadCrate from "../../../crates/jsona-wasm-cli/Cargo.toml";
 import { convertEnv, Environment, prepareEnv } from "@jsona/util-types";
-export * as Lsp from "./types";
+export * as types from "./types";
 
 export interface RpcMessage {
   jsonrpc: "2.0";
