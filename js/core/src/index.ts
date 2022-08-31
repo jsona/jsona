@@ -25,11 +25,11 @@ export class Jsona {
 
   /**
    * Parse jsona doc as json
-   * @param jsona JSONA document.
+   * @param input JSONA document.
    */
-  public parse(jsona: string): ToAstResult {
+  public parse(input: string): ToAstResult {
     try {
-      return { ast: Jsona.crate.parse(jsona) }
+      return { ast: Jsona.crate.parse(input) }
     } catch (errors) {
       return { errors: errors }
     }
