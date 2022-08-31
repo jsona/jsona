@@ -24,12 +24,25 @@ export class Jsona {
   }
 
   /**
-   * Parse jsona doc as ast
+   * Parse jsona doc as json
    * @param jsona JSONA document.
    */
-  public parseAst(jsona: string): ToAstResult {
+  public parse(jsona: string): ToAstResult {
     try {
-      return { ast: Jsona.crate.parse_ast(jsona) }
+      return { ast: Jsona.crate.parse(jsona) }
+    } catch (errors) {
+      return { errors: errors }
+    }
+  }
+
+
+  /**
+   * Parse jsona doc as ast
+   * @param input JSONA document.
+   */
+  public parseAst(input: string): ToAstResult {
+    try {
+      return { ast: Jsona.crate.parse_ast(input) }
     } catch (errors) {
       return { errors: errors }
     }
@@ -37,7 +50,7 @@ export class Jsona {
 
   /**
    *  Stringify ast to jsona doc
-   * @param jsona JSONA document.
+   * @param ast JSONA ast.
    */
   public stringifyAst(ast: Ast): String {
     return Jsona.crate.stringify_ast(ast);
