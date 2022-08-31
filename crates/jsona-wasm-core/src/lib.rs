@@ -1,11 +1,20 @@
 use jsona::dom::Node;
 use jsona::formatter::{self, Options};
-use jsona_ast::Ast;
+use jsona_ast::{Ast, Mapper};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn parse_ast(jsona: &str) -> Result<JsValue, JsValue> {
-    match jsona.parse::<Ast>() {
+pub fn parse(input: &str) -> Result<JsValue, JsValue> {
+    let mapper = Mapper::new_utf16(input, false);
+    match input.parse::<Node>() {
+        Ok(node) => Ok(JsValue::from_serde(&node.to_plain_json()).unwrap()),
+        Err(error) => Err(JsValue::from_serde(&error.to_error_objects(&mapper)).unwrap()),
+    }
+}
+
+#[wasm_bindgen]
+pub fn parse_ast(input: &str) -> Result<JsValue, JsValue> {
+    match input.parse::<Ast>() {
         Ok(ast) => Ok(JsValue::from_serde(&ast).unwrap()),
         Err(error) => Err(JsValue::from_serde(&error).unwrap()),
     }
