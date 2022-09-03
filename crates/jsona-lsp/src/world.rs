@@ -42,25 +42,12 @@ impl<E: Environment> std::ops::DerefMut for Workspaces<E> {
 
 impl<E: Environment> Workspaces<E> {
     pub fn by_document(&self, document_uri: &Url) -> &WorkspaceState<E> {
-        self.0
-            .iter()
-            .filter(|(key, _)| {
-                document_uri.as_str().starts_with(key.as_str()) || *key == &*DEFAULT_WORKSPACE_URI
-            })
-            .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
-            .map(|(_, ws)| ws)
-            .unwrap()
+        self.find_workspace(document_uri).unwrap().1
     }
 
-    pub fn by_document_mut(&mut self, url: &Url) -> &mut WorkspaceState<E> {
-        self.0
-            .iter_mut()
-            .filter(|(key, _)| {
-                url.as_str().starts_with(key.as_str()) || *key == &*DEFAULT_WORKSPACE_URI
-            })
-            .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
-            .map(|(_, ws)| ws)
-            .unwrap()
+    pub fn by_document_mut(&mut self, document_uri: &Url) -> &mut WorkspaceState<E> {
+        let uri = self.find_workspace(document_uri).unwrap().0.clone();
+        self.0.get_mut(&uri).unwrap()
     }
 
     pub fn try_get_document(
@@ -70,6 +57,16 @@ impl<E: Environment> Workspaces<E> {
         let ws = self.by_document(document_uri);
         let doc = ws.try_get_document(document_uri)?;
         Ok((ws, doc))
+    }
+
+    fn find_workspace(&self, document_uri: &Url) -> Option<(&Url, &WorkspaceState<E>)> {
+        self.0
+            .iter()
+            .filter(|(key, _)| {
+                document_uri.as_str().starts_with(key.as_str()) || *key == &*DEFAULT_WORKSPACE_URI
+            })
+            .max_by(|(a, _), (b, _)| a.as_str().len().cmp(&b.as_str().len()))
+            .or_else(|| self.0.first())
     }
 }
 
@@ -90,14 +87,7 @@ impl<E: Environment> WorldState<E> {
         );
         Self {
             id,
-            workspaces: {
-                let mut m = IndexMap::default();
-                m.insert(
-                    DEFAULT_WORKSPACE_URI.clone(),
-                    WorkspaceState::new(env.clone(), DEFAULT_WORKSPACE_URI.clone()),
-                );
-                AsyncRwLock::new(Workspaces(m))
-            },
+            workspaces: AsyncRwLock::new(Workspaces(IndexMap::default())),
             initialization_options: Default::default(),
             env,
         }
