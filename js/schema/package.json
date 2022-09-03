@@ -4,6 +4,7 @@
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "description": "A jsonschema dsl in jsona",
   "main": "dist/index.js",
+  "keywords": ["jsona", "schema", "jsonschema", "jsonaschema"],
   "files": [
     "dist"
   ],
