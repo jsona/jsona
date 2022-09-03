@@ -56,16 +56,7 @@ pub async fn associated_schema<E: Environment>(
     let workspaces = context.workspaces.read().await;
     let document_uri = &p.document_uri;
     let ws = workspaces.by_document(document_uri);
-    let mut association = ws.schemas.associations().query_for(document_uri);
-    if association.is_none() {
-        if let Ok(doc) = ws.try_get_document(document_uri) {
-            ws.schemas
-                .associations()
-                .add_from_document(document_uri, &doc.dom);
-
-            association = ws.schemas.associations().query_for(document_uri);
-        }
-    }
+    let association = ws.schemas.associations().query_for(document_uri);
     Ok(AssociatedSchemaResponse {
         schema: association.map(|s| SchemaInfo {
             url: s.url.clone(),
