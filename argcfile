@@ -69,7 +69,7 @@ install() {
 
 # @cmd Build wasm and js
 # @flag --debug
-# @arg name[core|util-types|lsp|all]
+# @arg name[core|util-types|schema|lsp|all]
 wasmjs() {
     __run() {
         name=$1

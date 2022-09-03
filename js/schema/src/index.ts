@@ -29,7 +29,7 @@ export default class JsonaSchema {
    */
   public parse(jsona: string): ParseResult {
     try {
-      return { schema: JsonaSchema.crate.parse(jsona) }
+      return { value: JsonaSchema.crate.parse(jsona) }
     } catch (errors) {
       return { errors: errors }
     }

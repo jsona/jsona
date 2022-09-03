@@ -18,7 +18,7 @@ export interface ErrorObject {
 }
 
 export interface ParseResult {
-  schema?: JSONSchema,
+  value?: JSONSchema,
   errors?: ErrorObject[],
 }
 
