@@ -154,7 +154,7 @@ version.npm() {
     if [[ -n "$argc_list" ]]; then
         for name in ${NPMS[@]}; do
             pkg_ver=$(node -p "require('./js/"$name"/package.json').version")
-            echo @jsona/$name@$pkg_ver
+            echo $name@$pkg_ver
         done
     else
         for item in ${argc_modules[@]}; do

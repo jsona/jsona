@@ -1,6 +1,6 @@
 {
   "name": "@jsona/lsp",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "description": "A Jsona lsp.",
   "main": "dist/index.js",
@@ -23,7 +23,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@jsona/util-types": "^0.1.4"
+    "@jsona/util-types": "^0.1.5"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.0",
