@@ -17,20 +17,19 @@ export interface LspInterface {
    */
   onMessage: (message: RpcMessage) => void;
 }
-
-export class JsonaLsp {
+export default class JsonaLsp {
   private static jsona: any | undefined;
-  private static initializing: boolean = false;
+  private static guard: boolean = false;
 
   private constructor(private env: Environment, private lspInner: any) {
-    if (!JsonaLsp.initializing) {
+    if (!JsonaLsp.guard) {
       throw new Error(
-        `an instance of Jsona can only be created by calling the "initialize" static method`
+        `an instance of Jsona can only be created by calling the "getInstance" static method`
       );
     }
   }
 
-  public static async init(
+  public static async getInstance(
     env: Environment,
     lspInterface: LspInterface
   ): Promise<JsonaLsp> {
@@ -41,14 +40,14 @@ export class JsonaLsp {
 
     prepareEnv(env);
 
-    JsonaLsp.initializing = true;
+    JsonaLsp.guard = true;
     const t = new JsonaLsp(
       env,
       JsonaLsp.jsona.create_lsp(convertEnv(env), {
         js_on_message: lspInterface.onMessage,
       })
     );
-    JsonaLsp.initializing = false;
+    JsonaLsp.guard = false;
 
     return t;
   }

@@ -1,7 +1,7 @@
 import fsPromise from "fs/promises";
 import { exit } from "process";
 import { pathToFileURL } from "url";
-import { RpcMessage, JsonaLsp } from "@jsona/lsp";
+import JsonaLsp, { RpcMessage} from "@jsona/lsp";
 import fetch, { Headers, Request, Response } from "node-fetch";
 
 let jsona: JsonaLsp;
@@ -12,7 +12,7 @@ process.on("message", async (message: RpcMessage) => {
   }
 
   if (typeof jsona === "undefined") {
-    jsona = await JsonaLsp.init(
+    jsona = await JsonaLsp.getInstance(
       {
         envVar: name => process.env[name],
         now: () => new Date(),

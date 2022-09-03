@@ -34,8 +34,13 @@ export interface FormatOptions {
 }
 
 
+export interface ToJsonResult {
+  value?: any,
+  errors?: ErrorObject[],
+}
+
 export interface ToAstResult {
-  ast?: Ast,
+  value?: Ast,
   errors?: ErrorObject[],
 }
 
