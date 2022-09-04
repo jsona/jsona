@@ -36,6 +36,7 @@ run() {
 # @arg entry=test-data
 chrome() {
     if [[ -z $argc_no_build ]]; then
+        export LOG_TOPICS="host2lsp,lsp2host"
         vscode browser
     fi
     vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
@@ -77,6 +78,9 @@ wasmjs() {
         ls -alh js/$name/dist
         if [[ -d editors/vscode/node_modules/@jsona/$name ]]; then
             cp -rf js/$name/dist/* editors/vscode/node_modules/@jsona/$name/dist/
+        fi
+        if [[ -d editors/monaco/node_modules/@jsona/$name ]]; then
+            cp -rf js/$name/dist/* editors/monaco/node_modules/@jsona/$name/dist/
         fi
     }
     if [[ -n $argc_debug ]]; then
