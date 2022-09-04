@@ -15,12 +15,8 @@ use url::Url;
 #[tracing::instrument(skip_all)]
 pub async fn configuration_change<E: Environment>(
     context: Context<World<E>>,
-    params: Params<DidChangeConfigurationParams>,
+    _params: Params<DidChangeConfigurationParams>,
 ) {
-    match params.optional() {
-        None => return,
-        Some(p) => p,
-    };
     update_configuration(context).await;
 }
 
