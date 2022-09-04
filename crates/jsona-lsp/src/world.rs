@@ -185,7 +185,7 @@ impl<E: Environment> WorkspaceState<E> {
             }
         }
 
-		self.refresh_associated_schemas().await;
+        self.refresh_associated_schemas().await;
 
         self.emit_initialize_workspace(context.clone()).await;
 
@@ -214,16 +214,16 @@ impl<E: Environment> WorkspaceState<E> {
         }
     }
 
-	pub(crate) async fn refresh_associated_schemas(&self) {
-		for (document_uri, doc) in self.documents.iter() {
-			let association = self.schemas.associations().query_for(document_uri);
-			if association.is_none() {
-				self.schemas
-					.associations()
-					.add_from_document(document_uri, &doc.dom);
-			}
-		}
-	}
+    pub(crate) async fn refresh_associated_schemas(&self) {
+        for (document_uri, doc) in self.documents.iter() {
+            let association = self.schemas.associations().query_for(document_uri);
+            if association.is_none() {
+                self.schemas
+                    .associations()
+                    .add_from_document(document_uri, &doc.dom);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
