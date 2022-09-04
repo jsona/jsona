@@ -3,7 +3,6 @@
 node_modules
 yarn.lock
 *.log
-js/**/dist
 
 # Logs
 logs/
@@ -21,5 +20,5 @@ node_modules/
 *.vsix
 
 .vscode-test-web
-/editors/vscode/dist
+dist
 /editors/vscode/out

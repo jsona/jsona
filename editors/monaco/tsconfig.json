@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "sourceMap": false,
+    "rootDir": "src",
+    "declaration": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "module": "ESNext",
+    "allowSyntheticDefaultImports": true,
+    "strict": false
+  },
+  "exclude": ["node_modules", "dist"]
+}
