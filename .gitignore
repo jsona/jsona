@@ -19,6 +19,12 @@ node_modules/
 # Compiled and tempory files
 *.vsix
 
-.vscode-test-web
+pkg
 dist
+.vscode-test-web
 /editors/vscode/out
+js/*/index_bg.*
+js/*/index_web.js
+js/*/index.js
+!js/lsp/index.js
+!yarn.lock

@@ -3,63 +3,40 @@ import {
   BrowserMessageWriter,
 } from "vscode-languageserver-protocol/browser";
 
-import JsonaLsp, { RpcMessage } from "@jsona/lsp";
+import { createLsp, RpcMessage, utilTypes, JsonaWasmLsp } from "@jsona/lsp";
+import { createRpc, createLogger } from "@jsona/lsp";
 
 const worker: Worker = self as any;
 
 const writer = new BrowserMessageWriter(worker);
 const reader = new BrowserMessageReader(worker);
 
-let jsona: JsonaLsp;
+let lsp: JsonaWasmLsp;
 let rootUri = "root:///";
-
-let com = {
-  idx: -1,
-  waitings: {} as Record<number, { resolve: (value) => any, reject: (reason?) => void }>,
-  timeouts: {} as Record<number, any>,
-  async readFile(uri: string) {
-    return com.send({ method: "fs/readFile", params: { uri }});
-  },
-  send(req:  Partial<RpcMessage>) {
-    const id = com.idx--;
-    req.jsonrpc = "2.0";
-    req.id = id;
-    return new Promise<Uint8Array>((resolveFn, rejectFn) => {
-      const resolve = v => {
-        com.clean(id);
-        return resolveFn(v)
-      }
-      const reject = v => {
-        com.clean(id);
-        return rejectFn(v)
-      }
-      com.timeouts[id] = setTimeout(() => reject("Operation timeout"), 10000);
-      com.waitings[id] = { resolve, reject  }
-      log('lsp2host', req);
-      writer.write(req as RpcMessage)
-    })
-  },
-  clean(id: number | string) {
-    delete com.waitings[id];
-    clearTimeout(com.timeouts[id]);
-    delete com.timeouts[id];
-  }
-}
+const logger = createLogger({
+  debug: import.meta.env.RUST_LOG === "debug",
+  topics: import.meta.env.LOG_TOPICS,
+});
+const log = logger.log;
+const rpc = createRpc({
+    write: v => writer.write(v),
+    log
+});
 
 reader.listen(async (message: RpcMessage) => {
-  if (!jsona) {
-    jsona = await JsonaLsp.getInstance(
-      {
+  if (!lsp) {
+    lsp = createLsp(
+      utilTypes.convertEnv({
         envVar: (name) => {
           if (name === "RUST_LOG") {
-            return import.meta.env.RUST_LOG;
+            return logger.level();
           } else {
             return "";
           }
         },
         now: () => new Date(),
-        readFile: com.readFile,
-        writeFile: () => Promise.reject("not implemented write_file"),
+        readFile: rpc.readFile,
+        writeFile: rpc.writeFile,
         stderr: async (bytes: Uint8Array) => {
           console.log(new TextDecoder().decode(bytes));
           return bytes.length;
@@ -87,41 +64,23 @@ reader.listen(async (message: RpcMessage) => {
           }
         },
         rootUri: () => rootUri,
-      },
+      }),
       {
-        onMessage(message) {
+        js_on_message: (message) => {
           log('lsp2host', message);
           writer.write(message);
         },
       }
-    );
+    )
   }
 
   log('host2lsp', message);
-  if (typeof message.id === "number" && message.id < 0) {
-    const wait = com.waitings[message.id];
-    if (wait) {
-      if (message?.error) {
-        wait.reject(message.error?.message || "Unknown error")
-      } else {
-        wait.resolve(message?.result)
-      }
-    }
-  } else {
+  if (!rpc.recv(message)) {
     if (message.method === "initialize") {
       let uri = message.params?.workspaceFolders[0]?.uri;
       if (uri) rootUri = uri;
     }
-    jsona.send(message);
+    lsp.send(message);
   }
 });
 
-function log(topic: "lsp2host" | "host2lsp" | "fetchFile", message: any) {
-  if((import.meta.env.LOG_TOPICS).indexOf(topic) > -1) {
-    if (message?.jsonrpc && message?.method)  {
-      console.log(topic, message.method, message);
-    } else {
-      console.log(topic, message);
-    }
-  }
-}

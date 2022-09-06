@@ -192,7 +192,6 @@ function createLanguageServiceDefaults(
 
 export const jsonaDefaults = createLanguageServiceDefaults(DEFAULT_OPTIONS);
 
-console.log(`register ${languageId}`);
 monaco.languages.register({
 	id: languageId,
 	extensions: ['.jsona'],

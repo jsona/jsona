@@ -744,8 +744,8 @@ version = "0.1.2"
 dependencies = [
  "jsona",
  "jsona-ast",
+ "serde",
  "wasm-bindgen",
- "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -754,8 +754,8 @@ version = "0.1.0"
 dependencies = [
  "jsona",
  "jsona-schema",
+ "serde",
  "wasm-bindgen",
- "wasm-bindgen-futures",
 ]
 
 [[package]]

@@ -47,7 +47,7 @@ const options = {
       "import.meta.env.RUST_LOG": JSON.stringify(process.env.RUST_LOG || "info"),
       "import.meta.env.LOG_TOPICS": JSON.stringify(process.env.LOG_TOPICS || ""),
     }),
-    esbuild({ minify: true, logLevel: "error" }),
+    esbuild({ minify: process.env.RUST_LOG !== "info", logLevel: "error" }),
     commonjs({
       ignore: ["url"],
     }),

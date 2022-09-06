@@ -7,7 +7,11 @@ use std::{
 use either::Either;
 use fancy_regex::Regex;
 use indexmap::IndexMap;
-use jsona::dom::{KeyOrIndex, Keys, Node};
+use jsona::{
+    dom::{KeyOrIndex, Keys, Node},
+    error::ErrorObject,
+    util::mapper::Mapper,
+};
 use jsona_schema::{Schema, SchemaType, REF_REGEX};
 use once_cell::sync::Lazy;
 use std::ops::Index;
@@ -675,6 +679,14 @@ impl Error {
             kind,
         }
     }
+    pub fn to_error_object(&self, node: &Node, mapper: &Mapper) -> ErrorObject {
+        let message = self.to_string();
+        ErrorObject::new(
+            self.kind.name(),
+            message,
+            self.keys.mapper_range(node, mapper),
+        )
+    }
 }
 
 impl Display for Error {
@@ -707,6 +719,35 @@ pub enum ErrorKind {
     AnyOf { errors: Vec<Error> },
     OneOf { errors: Vec<Error> },
     Not,
+}
+
+impl ErrorKind {
+    pub fn name(&self) -> &'static str {
+        match self {
+            ErrorKind::Type { .. } => "Type",
+            ErrorKind::Enum => "Enum",
+            ErrorKind::Const => "Const",
+            ErrorKind::AdditionalProperties { .. } => "AdditionalProperties",
+            ErrorKind::Required { .. } => "Required",
+            ErrorKind::MaxProperties => "MaxProperties",
+            ErrorKind::MinProperties => "MinProperties",
+            ErrorKind::AdditionalItems => "AdditionalItems",
+            ErrorKind::Contains => "Contains",
+            ErrorKind::MaxItems => "MaxItems",
+            ErrorKind::MinItems => "MinItems",
+            ErrorKind::UniqueItems => "UniqueItems",
+            ErrorKind::Pattern => "Pattern",
+            ErrorKind::MaxLength => "MaxLength",
+            ErrorKind::MinLength => "MinLength",
+            ErrorKind::Format => "Format",
+            ErrorKind::Maximum => "Maximum",
+            ErrorKind::Minimum => "Minimum",
+            ErrorKind::MultipleOf => "MultipleOf",
+            ErrorKind::AnyOf { .. } => "AnyOf",
+            ErrorKind::OneOf { .. } => "OneOf",
+            ErrorKind::Not => "Not",
+        }
+    }
 }
 
 impl Display for ErrorKind {

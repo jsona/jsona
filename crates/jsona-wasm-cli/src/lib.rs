@@ -1,5 +1,12 @@
+use std::str::FromStr;
+
 use environment::WasmEnvironment;
-use jsona::{formatter, parser::parse};
+use jsona::{
+    dom::Node,
+    error::ErrorObject,
+    formatter::{self, Options},
+    util::mapper::Mapper,
+};
 use jsona_util::schema::Schemas;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -27,81 +34,49 @@ struct LintResult {
 }
 
 #[wasm_bindgen]
-pub fn initialize() {
-    console_error_panic_hook::set_once();
+pub fn format(input: &str, format_options: JsValue) -> Result<String, JsError> {
+    let mut options: Options = Options::default();
+    options.update(
+        format_options
+            .into_serde()
+            .map_err(|_| JsError::new("invalid format options"))?,
+    );
+    Ok(formatter::format(input, options))
 }
 
 #[wasm_bindgen]
-pub fn format(_env: JsValue, jsona: &str, options: JsValue) -> Result<String, JsError> {
-    let camel_opts: formatter::OptionsIncompleteCamel = options.into_serde()?;
-    let mut options = formatter::Options::default();
-    options.update_camel(camel_opts);
-
-    let syntax = parse(jsona);
-
-    Ok(formatter::format_syntax(syntax.into_syntax(), options))
-}
-
-#[wasm_bindgen]
-pub async fn lint(env: JsValue, jsona: String, schema_url: String) -> Result<JsValue, JsError> {
+pub async fn lint(env: JsValue, input: String, schema_url: String) -> JsValue {
+    let mapper = Mapper::new_utf16(&input, false);
     let env = WasmEnvironment::from(env);
-    let syntax = parse(&jsona);
-
-    if !syntax.errors.is_empty() {
-        return Ok(JsValue::from_serde(&LintResult {
-            errors: syntax
-                .errors
-                .into_iter()
-                .map(|err| LintError {
-                    range: Range {
-                        start: err.range.start().into(),
-                        end: err.range.end().into(),
-                    }
-                    .into(),
-                    error: err.to_string(),
-                })
-                .collect(),
-        })?);
-    }
-
-    let dom = syntax.into_dom();
-
-    if let Err(errors) = dom.validate() {
-        return Ok(JsValue::from_serde(&LintResult {
-            errors: errors
-                .map(|err| LintError {
-                    range: None,
-                    error: err.to_string(),
-                })
-                .collect(),
-        })?);
-    }
+    let node = match Node::from_str(&input) {
+        Ok(v) => v,
+        Err(err) => return JsValue::from_serde(&err.to_error_objects(&mapper)).unwrap(),
+    };
 
     let schemas = Schemas::new(env);
 
+    let mut errors = vec![];
     if let Ok(url) = schema_url.parse() {
         if let Some(schema) = schemas.associations().query_for(&url) {
-            let schema_errors = schemas
-                .validate(&schema.url, &dom)
-                .await
-                .map_err(|err| JsError::new(&err.to_string()))?;
-
-            return Ok(JsValue::from_serde(&LintResult {
-                errors: schema_errors
-                    .into_iter()
-                    .map(|err| LintError {
+            match schemas.validate(&schema.url, &node).await {
+                Ok(errs) => {
+                    errors.extend(errs.into_iter().map(|v| v.to_error_object(&node, &mapper)));
+                }
+                Err(err) => {
+                    errors.push(ErrorObject {
+                        kind: "Unknown".to_string(),
+                        message: err.to_string(),
                         range: None,
-                        error: err.to_string(),
-                    })
-                    .collect(),
-            })?);
+                    });
+                }
+            };
         }
     }
-    Ok(JsValue::from_serde(&LintResult { errors: vec![] })?)
+    JsValue::from_serde(&errors).unwrap()
 }
 
 #[cfg(feature = "cli")]
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = runCli)]
 pub async fn run_cli(env: JsValue, args: JsValue) -> Result<(), JsError> {
     use clap::Parser;
     use environment::WasmEnvironment;
@@ -110,6 +85,7 @@ pub async fn run_cli(env: JsValue, args: JsValue) -> Result<(), JsError> {
     use tokio::io::AsyncWriteExt;
     use tracing::Instrument;
 
+    console_error_panic_hook::set_once();
     let env = WasmEnvironment::from(env);
     let args: Vec<String> = args.into_serde()?;
 
@@ -146,10 +122,11 @@ pub async fn run_cli(env: JsValue, args: JsValue) -> Result<(), JsError> {
 }
 
 #[cfg(feature = "lsp")]
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = createLsp)]
 pub fn create_lsp(env: JsValue, lsp_interface: JsValue) -> lsp::JsonaWasmLsp {
     use jsona_util::log::setup_stderr_logging;
 
+    console_error_panic_hook::set_once();
     let env = WasmEnvironment::from(env);
     setup_stderr_logging(env.clone(), false, false, None);
 

@@ -14,3 +14,10 @@ export interface Range {
    */
   end: number;
 }
+
+
+export interface ErrorObject {
+  kind: string,
+  message: string,
+  range?: Range,
+}
