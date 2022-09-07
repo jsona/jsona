@@ -12,9 +12,7 @@ yarn add @jsona/core
 ## Usage
 
 ```js
-import Jsona from '@jsona/core';
-
-const jsona = await Jsona.getInstance();
+import * as jsona from '@jsona/core';
 
 // parse as json
 jsona.parse(jsonaContent);
@@ -23,5 +21,5 @@ jsona.parse(jsonaContent);
 jsona.parseAst(jsonaContent);
 
 // format jsona doc
-jsona.format(jsonaContent);
+jsona.format(jsonaContent, {});
 ```

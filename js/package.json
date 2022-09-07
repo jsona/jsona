@@ -1,9 +1,0 @@
-{
-  "private": true,
-  "workspaces": [
-    "core",
-    "lsp",
-    "util-types",
-    "schema"
-  ]
-}

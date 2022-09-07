@@ -5,6 +5,7 @@
     "sourceMap": false,
     "moduleResolution": "node",
     "rootDir": "src",
+    "outDir": "dist",
     "module": "ESNext",
     "allowSyntheticDefaultImports": true,
     "declaration": true,

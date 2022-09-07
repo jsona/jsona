@@ -1,23 +1,38 @@
-import fsPromise from "fs/promises";
 import { exit } from "process";
-import { pathToFileURL } from "url";
-import JsonaLsp, { RpcMessage} from "@jsona/lsp";
+import fs from "fs/promises";
+import { pathToFileURL, fileURLToPath } from "url";
+import { createLsp, RpcMessage, utilTypes, JsonaWasmLsp } from "@jsona/lsp";
 import fetch, { Headers, Request, Response } from "node-fetch";
+import { createRpc, createLogger } from "@jsona/lsp";
 
-let jsona: JsonaLsp;
+let lsp: JsonaWasmLsp;
+
+const logger = createLogger({
+  debug: import.meta.env.RUST_LOG === "debug",
+  topics: import.meta.env.LOG_TOPICS,
+});
+const log = logger.log;
+let rpc = createRpc({
+  write: v => process.send(v),
+  log,
+});
 
 process.on("message", async (message: RpcMessage) => {
   if (message.method === "exit") {
     exit(0);
   }
 
-  if (typeof jsona === "undefined") {
-    jsona = await JsonaLsp.getInstance(
-      {
+  if (typeof lsp === "undefined") {
+    lsp = createLsp(
+      utilTypes.convertEnv({
         envVar: name => process.env[name],
         now: () => new Date(),
-        readFile: path => fsPromise.readFile(path),
-        writeFile: (path, content) => fsPromise.writeFile(path, content),
+        readFile: uri => uri.startsWith("file://") ?
+          fs.readFile(fileURLToPath(uri)) :
+          rpc.readFile(uri),
+        writeFile: (uri, content) => uri.startsWith("file://") ? 
+          fs.writeFile(fileURLToPath(uri), content) :
+          rpc.writeFile(uri, content),
         stderr: process.stderr,
         stdErrAtty: () => process.stderr.isTTY,
         stdin: process.stdin,
@@ -45,9 +60,9 @@ process.on("message", async (message: RpcMessage) => {
           Request,
           Response,
         },
-      },
+      }),
       {
-        onMessage(message) {
+        js_on_message: (message) => {
           log('lsp2host', message);
           process.send(message);
         },
@@ -56,25 +71,12 @@ process.on("message", async (message: RpcMessage) => {
   }
 
   log('host2lsp', message);
-  jsona.send(message);
+  if (!rpc.recv(message)) {
+    lsp.send(message);
+  }
 });
 
 // These are panics from Rust.
 process.on("unhandledRejection", up => {
   throw up;
 });
-
-function log(topic: "lsp2host" | "host2lsp" | "fetchFile", message: any) {
-  if((import.meta.env.LOG_TOPICS).indexOf(topic) > -1) {
-    if (typeof message === "object") {
-      console.log(topic, JSON.stringify(message));
-      if (message?.jsonrpc && message?.method)  {
-        console.log(topic, message.method, message);
-      } else {
-        console.log(topic, message);
-      }
-    } else {
-      console.log(topic, message);
-    }
-  }
-}

@@ -6,16 +6,12 @@ This is a JavaScript wrapper for the JSONA schema.
 
 ```
 npm i @jsona/schema
-yarn add @jsona/schema
 ```
 
 ## Usage
 
 ```js
-import JsonaSchema from '@jsona/schema';
+import { parse } from '@jsona/schema';
 
-const jsonaSchema = await JsonaSchema.getInstance();
-
-// parse as jsonschema
-jsonaSchema.parse(jsonaContent);
+const { value, errors } = parse(jsonaContent);
 ```
