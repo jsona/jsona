@@ -35,9 +35,23 @@ impl<E: Environment> Schemas<E> {
         &self.associations
     }
 
-    pub fn set_cache_path(&self, path: Option<Url>) {
-        tracing::info!("set cache path {:?}", path.as_ref().map(|v| v.as_str()));
-        self.fetcher.set_cache_path(path);
+    pub fn set_cache_path(&self, cache_path: Option<Url>) {
+        let cache_path = match cache_path {
+            Some(mut path) => {
+                path.set_fragment(None);
+                path.set_query(None);
+                if !path.path().ends_with('/') {
+                    path.set_path(&format!("{}/", path.path()));
+                }
+                Some(path)
+            }
+            None => None,
+        };
+        tracing::info!(
+            "set cache path {:?}",
+            cache_path.as_ref().map(|v| v.as_str())
+        );
+        self.fetcher.set_cache_path(cache_path);
     }
 }
 
