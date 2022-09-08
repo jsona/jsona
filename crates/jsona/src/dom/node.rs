@@ -8,7 +8,7 @@ use crate::private::Sealed;
 use crate::syntax::SyntaxElement;
 use crate::util::mapper;
 use crate::util::shared::Shared;
-use crate::util::{quote, unquote};
+use crate::util::{check_quote, quote, unquote};
 
 use indexmap::IndexMap;
 use once_cell::unsync::OnceCell;
@@ -698,6 +698,14 @@ impl Key {
         self.syntax().map(|v| v.text_range())
     }
 
+    pub fn annotation_name(&self) -> Option<StdString> {
+        if self.is_annotation() {
+            Some(self.value()[1..].to_string())
+        } else {
+            None
+        }
+    }
+
     pub fn to_origin_string(&self) -> StdString {
         match self.syntax() {
             Some(v) => v.to_string(),
@@ -707,6 +715,10 @@ impl Key {
 
     pub fn is_valid(&self) -> bool {
         self.errors().read().is_empty()
+    }
+
+    pub fn is_quote(&self) -> bool {
+        check_quote(self.value()).is_some()
     }
 
     pub fn mapper_range(&self, mapper: &mapper::Mapper) -> Option<mapper::Range> {
