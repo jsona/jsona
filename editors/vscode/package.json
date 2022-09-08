@@ -150,21 +150,23 @@
   "main": "./dist/extension.js",
   "browser": "./dist/browser-extension.js",
   "scripts": {
-    "package": "vsce package",
+    "package": "vsce package --yarn",
     "vscode:prepublish": "yarn build",
     "build:browser-extension": "rollup -c rollup.config.browser-extension.js",
     "build:browser-server": "rollup -c rollup.config.browser-server.js",
     "build:node": "rollup -c rollup.config.js",
     "build": "rimraf dist && yarn build:node && yarn build:browser-extension && yarn build:browser-server"
   },
-  "devDependencies": {
+  "dependencies": {
     "@jsona/lsp": "^0.1.9",
     "@jsona/util-types": "^0.1.5",
     "esbuild": "^0.15.0",
     "node-fetch": "^3.2.10",
     "typescript": "^4.7.4",
     "vscode-languageclient": "^8.0.2",
-    "which": "^2.0.2",
+    "which": "^2.0.2"
+  },
+  "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.2",
     "@rollup/plugin-node-resolve": "^13.3.0",
     "@rollup/plugin-replace": "^4.0.0",
