@@ -8,19 +8,19 @@ use std::collections::BTreeMap;
 pub struct Position {
     /// Cursor position in a document
     pub index: u64,
-    /// Line position in a document (could be zero-based or one-based based on the usage).
+    /// Line position in a document, (could be zero-based or one-based based on the usage).
     pub line: u64,
-    /// Character offset on a line in a document (could be zero-based or one-based based on the usage).
-    pub character: u64,
+    /// Column position line in a document, (could be zero-based or one-based based on the usage).
+    pub column: u64,
 }
 
 impl Position {
     #[must_use]
-    pub fn new(index: u64, line: u64, character: u64) -> Self {
+    pub fn new(index: u64, line: u64, column: u64) -> Self {
         Position {
             index,
             line,
-            character,
+            column,
         }
     }
 }
@@ -116,7 +116,7 @@ impl Mapper {
             start: Position {
                 index: 0,
                 line: 0,
-                character: 0,
+                column: 0,
             },
             end: self.end,
         }
@@ -127,7 +127,7 @@ impl Mapper {
         let mut position_to_offset = BTreeMap::new();
 
         let mut line: u64 = base;
-        let mut character: u64 = base;
+        let mut column: u64 = base;
         let mut last_offset = 0;
         let mut index: u64 = 0;
 
@@ -143,7 +143,7 @@ impl Mapper {
                     Position {
                         index,
                         line,
-                        character,
+                        column,
                     },
                 )
             }));
@@ -153,7 +153,7 @@ impl Mapper {
                     Position {
                         index,
                         line,
-                        character,
+                        column,
                     },
                     TextSize::from(b as u32),
                 )
@@ -161,11 +161,11 @@ impl Mapper {
 
             last_offset = new_offset;
 
-            character += character_size as u64;
+            column += character_size as u64;
             if c == '\n' {
                 // LF is at the start of each line.
                 line += 1;
-                character = base;
+                column = base;
             }
         }
 
@@ -175,14 +175,14 @@ impl Mapper {
             Position {
                 index,
                 line,
-                character,
+                column,
             },
         );
         position_to_offset.insert(
             Position {
                 index,
                 line,
-                character,
+                column,
             },
             TextSize::from(last_offset as u32),
         );
@@ -194,7 +194,7 @@ impl Mapper {
             end: Position {
                 index,
                 line,
-                character,
+                column,
             },
         }
     }
