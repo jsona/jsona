@@ -17,7 +17,7 @@ export namespace SchemaTypes {
   export interface Position {
     index: number;
     line: number;
-    character: number;
+    column: number;
   }
 
   export interface ErrorObject {

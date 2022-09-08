@@ -5,9 +5,8 @@
 // single line comment
 
 {
-    @foo /* abc */ @optional
-    @null(null) // single line comment
-    @bool(true)
+    @null /* abc */ @null2(null)
+    @bool(true) // single line comment
     @float(3.14)
     @number(-3)
     @string('abc "def" ghi')
@@ -40,7 +39,7 @@ xyz`,
     arrayEmpty: [], 
     arrayEmptyMultiLine: [ @array
     ],
-    arrayEmptyWithAnnotation: [],  // @array
+    arrayEmptyWithAnnotation: [], @array
     arraySimple: [ @array
         "a", @upper
         "b",
@@ -50,8 +49,8 @@ xyz`,
     objectEmpty: {},
     objectEmptyMultiLine: { @object
     },
-    objectEmptyWithAnnotation: {}, @use("Object4")
-    objectSimple: { @save("Object4")
+    objectEmptyWithAnnotation: {}, @def("Object4")
+    objectSimple: { @ref("Object4")
         k1: "v1", @upper
         k2: "v2",
     },
