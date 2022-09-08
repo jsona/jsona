@@ -33,7 +33,7 @@ const options = {
     extension: "src/extension.ts",
   },
   output: {
-    sourcemap: false,
+    sourcemap: process.env.DEBUG,
     format: "commonjs",
     dir: "dist",
     chunkFileNames: "[name].js",

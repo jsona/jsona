@@ -32,7 +32,7 @@ const options = {
     "server-worker": "src/server-worker.ts",
   },
   output: {
-    sourcemap: false,
+    sourcemap: process.env.DEBUG,
     format: "commonjs",
     dir: "dist",
     chunkFileNames: "[name].js",

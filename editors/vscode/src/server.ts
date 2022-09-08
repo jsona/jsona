@@ -27,18 +27,22 @@ process.on("message", async (message: RpcMessage) => {
       utilTypes.convertEnv({
         envVar: name => process.env[name],
         now: () => new Date(),
-        readFile: uri => uri.startsWith("file://") ?
-          fs.readFile(fileURLToPath(uri)) :
-          rpc.readFile(uri),
-        writeFile: (uri, content) => uri.startsWith("file://") ? 
-          fs.writeFile(fileURLToPath(uri), content) :
-          rpc.writeFile(uri, content),
+        readFile: uri => {
+          return uri.startsWith("file://") ?
+            fs.readFile(fileURLToPath(uri)) :
+            rpc.readFile(uri);
+        },
+        writeFile: (uri, content) => {
+          return uri.startsWith("file://") ? 
+            fs.writeFile(fileURLToPath(uri), content) :
+            rpc.writeFile(uri, content);
+        },
         stderr: process.stderr,
         stdErrAtty: () => process.stderr.isTTY,
         stdin: process.stdin,
         stdout: process.stdout,
         fetchFile: async (url: string) => {
-          log("fetchFile", url);
+          log("worker/fetchFile", url);
           const controller = new AbortController();
           const timeout = setTimeout(() => {
             controller.abort();
@@ -63,14 +67,14 @@ process.on("message", async (message: RpcMessage) => {
       }),
       {
         js_on_message: (message) => {
-          log('lsp2host', message);
+          log('lsp/worker2host', message);
           process.send(message);
         },
       }
     );
   }
 
-  log('host2lsp', message);
+  log('lsp/host2worker', message);
   if (!rpc.recv(message)) {
     lsp.send(message);
   }

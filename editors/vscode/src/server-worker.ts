@@ -48,7 +48,7 @@ reader.listen(async (message: RpcMessage) => {
           return bytes.length;
         },
         fetchFile: async (url) => {
-          log("fetchFile", url);
+          log("worker/fetchFile", url);
           const controller = new AbortController();
           const timeout = setTimeout(() => {
             controller.abort();
@@ -67,14 +67,14 @@ reader.listen(async (message: RpcMessage) => {
       }),
       {
         js_on_message: (message) => {
-          log('lsp2host', message);
+          log('lsp/worker2host', message);
           writer.write(message);
         },
       }
     )
   }
 
-  log('host2lsp', message);
+  log('lsp/host2worker', message);
   if (!rpc.recv(message)) {
     if (message.method === "initialize") {
       let uri = message.params?.workspaceFolders[0]?.uri;

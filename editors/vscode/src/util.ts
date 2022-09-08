@@ -15,6 +15,10 @@ export function getOutput(): vscode.OutputChannel {
   return output;
 }
 
+export function fromBase64(str: string) {
+  return atob(str).split('').map(function (c) { return c.charCodeAt(0); });
+}
+
 export async function showMessage(
   params: { kind: "info" | "warn" | "error"; message: string },
   c: BaseLanguageClient
