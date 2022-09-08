@@ -11,7 +11,7 @@ use std::{collections::HashSet, fmt::Display};
 
 mod error;
 
-pub use error::{SchemaError, SchemaResult};
+pub use error::{SchemaError, SchemaResult, ERROR_SOURCE};
 
 pub const REF_PREFIX: &str = "#/$defs/";
 

@@ -7,6 +7,8 @@ use thiserror::Error;
 
 pub type SchemaResult<T> = std::result::Result<T, Vec<SchemaError>>;
 
+pub const ERROR_SOURCE: &str = "schema";
+
 #[derive(Clone, Debug, Error)]
 pub enum SchemaError {
     #[error("conflict def {name}")]
@@ -81,6 +83,6 @@ impl SchemaError {
                 ("InvalidCompoundValue", keys.mapper_range(node, mapper))
             }
         };
-        ErrorObject::new(kind, message, range)
+        ErrorObject::new(ERROR_SOURCE, kind, message, range)
     }
 }

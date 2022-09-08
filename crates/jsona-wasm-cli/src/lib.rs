@@ -64,6 +64,7 @@ pub async fn lint(env: JsValue, input: String, schema_url: String) -> JsValue {
                 }
                 Err(err) => {
                     errors.push(ErrorObject {
+                        source: "unknown".to_string(),
                         kind: "Unknown".to_string(),
                         message: err.to_string(),
                         range: None,
