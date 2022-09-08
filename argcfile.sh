@@ -23,7 +23,7 @@ npm_vars() {
 build() {
     cargo build -r -p jsona
     build-js all
-    build-vscode package
+    vscode.build package
 }
 
 # @cmd Build js modules
@@ -51,22 +51,40 @@ build-js() {
     fi
 }
 
+
 # @cmd Build vscode extension
-# @arg kind[node|browser|package]
-build-vscode() {
+# @arg kind[node|browser]
+vscode.build() {
     pushd editors/vscode > /dev/null
     if [[ "$1" == "browser" ]]; then
         yarn build:browser-server
         yarn build:browser-extension
     elif [[ "$1" == "node" ]]; then
         yarn build:node
-    elif [[ "$1" == "package" ]]; then
-        yarn package
-        pkg_ver=$(node -p "require('./package.json').version")
-        ls -alh vscode-jsona-$pkg_ver.vsix
     else
         yarn build
     fi
+    popd > /dev/null
+}
+
+# @cmd Run web extension in chrome
+# @flag --no-build
+# @arg entry=test-data
+vscode.web() {
+    if [[ -z $argc_no_build ]]; then
+        export RUST_LOG="debug"
+        export LOG_TOPICS="host2lsp,lsp2host"
+        vscode.build browser
+    fi
+    vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
+}
+
+# @cmd Package vscode extension
+vscode.pkg() {
+    pushd editors/vscode > /dev/null
+        yarn package
+        pkg_ver=$(node -p "require('./package.json').version")
+        ls -alh vscode-jsona-$pkg_ver.vsix
     popd > /dev/null
 }
 
@@ -165,18 +183,6 @@ publish.npm() {
 # @arg args*
 run() {
     cargo run -p jsona-cli -- $@
-}
-
-# @cmd Run web extension in chrome
-# @flag --no-build
-# @arg entry=test-data
-run.webext() {
-    if [[ -z $argc_no_build ]]; then
-        export RUST_LOG="debug"
-        export LOG_TOPICS="host2lsp,lsp2host"
-        build-vscode browser
-    fi
-    vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
 }
 
 # @cmd Print jsona syntax
