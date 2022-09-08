@@ -37,6 +37,7 @@ export namespace CoreTypes {
   }
 
   export interface ErrorObject {
+    source: string,
     kind: string,
     message: string,
     range?: Range,

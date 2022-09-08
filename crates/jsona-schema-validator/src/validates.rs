@@ -16,6 +16,8 @@ use jsona_schema::{Schema, SchemaType, REF_REGEX};
 use once_cell::sync::Lazy;
 use std::ops::Index;
 
+const ERROR_SOURCE: &str = "validator";
+
 static TIME_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{6})?(([Zz])|([+|\-]([01][0-9]|2[0-3]):[0-5][0-9]))\z").unwrap()
 });
@@ -682,6 +684,7 @@ impl Error {
     pub fn to_error_object(&self, node: &Node, mapper: &Mapper) -> ErrorObject {
         let message = self.to_string();
         ErrorObject::new(
+            ERROR_SOURCE,
             self.kind.name(),
             message,
             self.keys.mapper_range(node, mapper),
