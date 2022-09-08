@@ -5,7 +5,7 @@ use jsona::{
 };
 use thiserror::Error;
 
-pub type SchemaResult<T> = std::result::Result<T, SchemaError>;
+pub type SchemaResult<T> = std::result::Result<T, Vec<SchemaError>>;
 
 #[derive(Clone, Debug, Error)]
 pub enum SchemaError {
@@ -34,6 +34,33 @@ impl SchemaError {
             SchemaError::InvalidCompoundValue { keys } => keys,
         }
     }
+
+    pub fn append_keys(self, prefix_keys: &Keys) -> Self {
+        match self {
+            SchemaError::ConflictDef { keys, name } => SchemaError::ConflictDef {
+                keys: prefix_keys.extend(keys),
+                name,
+            },
+            SchemaError::UnknownRef { keys, name } => SchemaError::UnknownRef {
+                keys: prefix_keys.extend(keys),
+                name,
+            },
+            SchemaError::UnexpectedType { keys } => SchemaError::UnexpectedType {
+                keys: prefix_keys.extend(keys),
+            },
+            SchemaError::UnmatchedSchemaType { keys } => SchemaError::UnmatchedSchemaType {
+                keys: prefix_keys.extend(keys),
+            },
+            SchemaError::InvalidSchemaValue { keys, error } => SchemaError::InvalidSchemaValue {
+                keys: prefix_keys.extend(keys),
+                error,
+            },
+            SchemaError::InvalidCompoundValue { keys } => SchemaError::UnmatchedSchemaType {
+                keys: prefix_keys.extend(keys),
+            },
+        }
+    }
+
     pub fn to_error_object(&self, node: &Node, mapper: &Mapper) -> ErrorObject {
         let message = self.to_string();
         let (kind, range) = match self {

@@ -174,7 +174,7 @@ impl Schema {
 }
 
 impl TryFrom<&Node> for Schema {
-    type Error = SchemaError;
+    type Error = Vec<SchemaError>;
 
     fn try_from(node: &Node) -> SchemaResult<Self> {
         let scope = SchemaParser {
@@ -359,20 +359,20 @@ impl SchemaParser {
         if let Some(def) = self.parse_string_annotation("@def")? {
             let mut defs = self.defs.borrow_mut();
             if defs.contains_key(&def) {
-                return Err(SchemaError::ConflictDef {
+                return Err(vec![SchemaError::ConflictDef {
                     keys: self.keys.clone(),
                     name: def,
-                });
+                }]);
             }
             defs.insert(def.clone(), Default::default());
             def_value = def;
         } else if let Some(ref_value) = self.parse_string_annotation("@ref")? {
             let defs = self.defs.borrow();
             if !defs.contains_key(&ref_value) {
-                return Err(SchemaError::UnknownRef {
+                return Err(vec![SchemaError::UnknownRef {
                     keys: self.keys.clone(),
                     name: ref_value,
-                });
+                }]);
             }
             return Ok(Schema {
                 ref_value: Some(format!("{}{}", self.ref_prefix, ref_value)),
@@ -392,18 +392,25 @@ impl SchemaParser {
             schema.schema_type = node_type.map(Into::into);
         } else if let Some(node_type) = node_type {
             if !schema_types.contains(&node_type) {
-                return Err(SchemaError::UnmatchedSchemaType {
+                return Err(vec![SchemaError::UnmatchedSchemaType {
                     keys: self.keys.clone(),
-                });
+                }]);
             }
         }
         match &self.node {
             Node::Object(obj) => {
+                let mut errors = vec![];
                 for (key, child) in obj.value().read().iter() {
                     let child_parser = self.spawn(key.clone(), child.clone());
                     let key = key.value();
                     let pattern = child_parser.parse_string_annotation("@pattern")?;
-                    let child_schema = child_parser.parse()?;
+                    let child_schema = match child_parser.parse() {
+                        Ok(v) => v,
+                        Err(errs) => {
+                            errors.extend(errs);
+                            continue;
+                        }
+                    };
                     if let Some(pattern) = pattern {
                         let props = schema.pattern_properties.get_or_insert(Default::default());
                         props.insert(pattern, child_schema);
@@ -421,14 +428,27 @@ impl SchemaParser {
                         }
                     }
                 }
+                if !errors.is_empty() {
+                    return Err(errors);
+                }
             }
             Node::Array(arr) => {
+                let mut errors = vec![];
                 let arr = arr.value().read();
                 if arr.len() > 0 {
                     let mut schemas = vec![];
                     for (i, child) in arr.iter().enumerate() {
                         let child_parser = self.spawn(i, child.clone());
-                        schemas.push(child_parser.parse()?);
+                        match child_parser.parse() {
+                            Ok(v) => schemas.push(v),
+                            Err(errs) => {
+                                errors.extend(errs);
+                                continue;
+                            }
+                        }
+                    }
+                    if !errors.is_empty() {
+                        return Err(errors);
                     }
                     if let Some(compound) = self.parse_string_annotation("@compound")? {
                         schema.schema_type = None;
@@ -437,9 +457,9 @@ impl SchemaParser {
                             "oneOf" => schema.one_of = Some(schemas),
                             "allOf" => schema.all_of = Some(schemas),
                             _ => {
-                                return Err(SchemaError::InvalidCompoundValue {
+                                return Err(vec![SchemaError::InvalidCompoundValue {
                                     keys: self.keys.join(KeyOrIndex::annotation("@compound")),
-                                });
+                                }]);
                             }
                         }
                     } else if arr.len() == 1 {
@@ -484,15 +504,15 @@ impl SchemaParser {
                 let value = Node::from(value).to_plain_json();
                 match serde_json::from_value(value) {
                     Ok(v) => Ok(Some(v)),
-                    Err(err) => Err(SchemaError::InvalidSchemaValue {
+                    Err(err) => Err(vec![SchemaError::InvalidSchemaValue {
                         keys: self.keys.clone().join(key),
                         error: err.to_string(),
-                    }),
+                    }]),
                 }
             }
-            Some((key, None)) => Err(SchemaError::UnexpectedType {
+            Some((key, None)) => Err(vec![SchemaError::UnexpectedType {
                 keys: self.keys.clone().join(key),
-            }),
+            }]),
             None => Ok(None),
         }
     }
@@ -500,9 +520,9 @@ impl SchemaParser {
     fn parse_string_annotation(&self, name: &str) -> SchemaResult<Option<String>> {
         match self.node.get_as_string(name) {
             Some((_, Some(value))) => Ok(Some(value.value().to_string())),
-            Some((key, None)) => Err(SchemaError::UnexpectedType {
+            Some((key, None)) => Err(vec![SchemaError::UnexpectedType {
                 keys: self.keys.clone().join(key),
-            }),
+            }]),
             None => Ok(None),
         }
     }

@@ -28,9 +28,13 @@ pub fn parse(input: &str) -> JsValue {
             value: Some(v),
             errors: None,
         },
-        Err(err) => ParseResult {
+        Err(errs) => ParseResult {
             value: None,
-            errors: Some(vec![err.to_error_object(&node, &mapper)]),
+            errors: Some(
+                errs.into_iter()
+                    .map(|v| v.to_error_object(&node, &mapper))
+                    .collect(),
+            ),
         },
     };
     JsValue::from_serde(&result).unwrap()

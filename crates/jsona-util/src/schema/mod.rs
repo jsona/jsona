@@ -64,9 +64,10 @@ impl<E: Environment> Schemas<E> {
             match self.fetcher.fetch(schema_uri).await.and_then(|v| {
                 std::str::from_utf8(&v)
                     .map_err(|v| anyhow!("{}", v))
-                    .and_then(|v| Node::from_str(v).map_err(|err| anyhow!("{}", err)))
+                    .and_then(|v| Node::from_str(v).map_err(|_| anyhow!("invalid jsona doc")))
                     .and_then(|v| {
-                        JSONASchemaValidator::try_from(&v).map_err(|err| anyhow!("{}", err))
+                        JSONASchemaValidator::try_from(&v)
+                            .map_err(|_| anyhow!("invalid jsona schema"))
                     })
             }) {
                 Ok(s) => Arc::new(s),

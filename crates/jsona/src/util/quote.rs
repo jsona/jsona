@@ -273,7 +273,7 @@ pub fn quote(s: &str, force: bool) -> String {
     output
 }
 
-fn check_quote(s: &str) -> Option<char> {
+pub fn check_quote(s: &str) -> Option<char> {
     let mut backtick = false;
     let mut plain = true;
     let mut single = true;
