@@ -139,6 +139,7 @@ impl SyntaxKind {
                 | INTEGER
                 | SINGLE_QUOTE
                 | DOUBLE_QUOTE
+                | BACKTICK_QUOTE
                 | FLOAT
         )
     }

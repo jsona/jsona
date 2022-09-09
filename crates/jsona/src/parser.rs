@@ -372,13 +372,13 @@ impl<'p> Parser<'p> {
                 FLOAT => {
                     let value = self.lexer.slice();
                     if value.starts_with(['+', '-']) {
-                        return self.consume_error_token("unexpect identifier");
+                        return self.consume_error_token("unexpected identifier");
                     } else {
                         let mut dot = false;
                         for (i, s) in value.split('.').enumerate() {
                             if s.is_empty() {
                                 if i == 0 && after_dot {
-                                    return self.consume_error_token(r#"unexpect ".""#);
+                                    return self.consume_error_token(r#"unexpected ".""#);
                                 }
                                 self.consume_token(PERIOD, ".");
                                 dot = true;
@@ -459,6 +459,10 @@ impl<'p> Parser<'p> {
                 self.validate_string();
                 self.consume_current_token()
             }
+            BACKTICK_QUOTE => {
+                self.validate_backtick();
+                self.consume_current_token()
+            }
             FLOAT if self.parse_keys_mode == ParseKeysMode::None => {
                 if self.lexer.slice().starts_with('0') {
                     self.consume_error_token("zero-padded numbers are not allowed")
@@ -468,7 +472,7 @@ impl<'p> Parser<'p> {
                     self.consume_current_token()
                 }
             }
-            _ => self.consume_error_token("expected identifier"),
+            _ => self.consume_error_token("expect identifier"),
         }
     }
 
@@ -485,7 +489,7 @@ impl<'p> Parser<'p> {
     fn must_peek_eof(&mut self) -> ParserResult<()> {
         match self.peek_token() {
             Ok(_) => {
-                self.report_error("expected EOF");
+                self.report_error("expect EOF");
                 Err(())
             }
             Err(_) => Ok(()),
