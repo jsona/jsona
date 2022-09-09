@@ -33,9 +33,8 @@ The examples below cover all the features of JSONA.
 // single line comment
 
 {
-    @foo /* abc */ @optional
-    @null(null) // single line comment
-    @bool(true)
+    @null /* abc */ @nullVerbose(null)
+    @bool(true) // single line comment
     @float(3.14)
     @number(-3)
     @string('abc "def" ghi')
@@ -68,7 +67,7 @@ xyz`,
     arrayEmpty: [], 
     arrayEmptyMultiLine: [ @array
     ],
-    arrayEmptyWithAnnotation: [],  // @array
+    arrayEmptyWithAnnotation: [], @array
     arraySimple: [ @array
         "a", @upper
         "b",
@@ -78,14 +77,15 @@ xyz`,
     objectEmpty: {},
     objectEmptyMultiLine: { @object
     },
-    objectEmptyWithAnnotation: {}, @use("Object4")
-    objectSimple: { @save("Object4")
+    objectEmptyWithAnnotation: {}, @def("Object4")
+    objectSimple: { @ref("Object4")
         k1: "v1", @upper
         k2: "v2",
     },
     objectOneLine: { k1: "v1", k2: "v2" }, @object
     objectExtraComma: { k1: "v1", k2: "v2", },
 }
+
 ```
 
 ## JSON
@@ -207,19 +207,6 @@ Here's a list of where all the annotations are in JSONA:
 
 ### Annotation value
 
-Annotation values ​​must be enclosed in parentheses, but can be omitted.
+Annotation value ​​must be enclosed in parentheses, if value is null, parentheses and null can be omitted.
 
-Annotation values ​​must be valid but no annotation JSONA, annotation values ​​cannot nest annotation values.
-
-```
-@anno
-@anno(null)
-@anno(true)
-@anno('a')
-@anno(3)
-@anno(0.3)
-@anno([])
-@anno(['a'])
-@anno({})
-@anno({a:3})
-```
+Annotation value must not contain nested annotation. 

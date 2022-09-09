@@ -73,7 +73,8 @@ jsona lint foo.jsona
 JSONA supports validation via [JSONA Schemas](crates/jsona-schema-validator).
 
 ```sh
-jsona lint --schema https://example.com/foo-schema.json foo.jsona
+jsona lint --schema https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.8/openapi.jsona api.jsona
+jsona lint -S api.jsona # use default schemastore
 ```
 
 ### Formatting

@@ -11,4 +11,4 @@ JSONA LSP Server and IDE support.
 - [x] Formatting
 - [x] Hover
 - [x] Selection Range
-- [x] Schema-related Commands
+- [x] Associate Schema

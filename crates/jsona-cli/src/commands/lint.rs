@@ -14,31 +14,29 @@ use tokio::io::AsyncReadExt;
 impl<E: Environment> App<E> {
     pub async fn execute_lint(&mut self, cmd: LintCommand) -> Result<(), anyhow::Error> {
         if let Some(store) = &cmd.schemastore {
-            if store.is_empty() || store == "-" {
-                self.schemas
-                    .associations()
-                    .add_from_schemastore(&None, &self.env.root_uri())
-                    .await
-                    .with_context(|| "failed to load schema store")?;
-            } else {
-                let url = self
-                    .env
-                    .to_url(store)
-                    .ok_or_else(|| anyhow!("invalid schemastore {store}"))?;
+            let url = self
+                .env
+                .to_url(store)
+                .ok_or_else(|| anyhow!("invalid schemastore {store}"))?;
 
-                self.schemas
-                    .associations()
-                    .add_from_schemastore(&Some(url), &self.env.root_uri())
-                    .await
-                    .with_context(|| "failed to load schema store")?;
-            }
+            self.schemas
+                .associations()
+                .add_from_schemastore(&Some(url), &self.env.root_uri())
+                .await
+                .with_context(|| "failed to load schema store")?;
+        } else if cmd.default_schemastore {
+            self.schemas
+                .associations()
+                .add_from_schemastore(&None, &self.env.root_uri())
+                .await
+                .with_context(|| "failed to load schema store")?;
         }
         if let Some(name) = &cmd.schema {
             let url = self
                 .schemas
                 .associations()
                 .get_schema_url(name)
-                .ok_or_else(|| anyhow!("invalid schema `{}`", name))?;
+                .ok_or_else(|| anyhow!("invalid or not found schema `{}`", name))?;
             self.schemas.associations().add(
                 AssociationRule::glob("**")?,
                 SchemaAssociation {
@@ -140,13 +138,17 @@ pub struct LintCommand {
 
     /// URL to the schema to be used for validation.
     ///
-    /// If schemastore passed, schema name can be used.
+    /// If --schemastore present, a schema name can be used.
     #[clap(long)]
     pub schema: Option<String>,
 
-    /// URL to a schema store (index), pass "-" to point to default schema store.
+    /// URL to a custom schema store
     #[clap(long)]
     pub schemastore: Option<String>,
+
+    /// Use default schemastore
+    #[clap(short = 'S', long = "default-schemastore")]
+    pub default_schemastore: bool,
 
     /// Paths or glob patterns to JSONA documents.
     pub files: Vec<String>,

@@ -5,7 +5,7 @@
 // single line comment
 
 {
-    @null /* abc */ @null2(null)
+    @null /* abc */ @nullVerbose(null)
     @bool(true) // single line comment
     @float(3.14)
     @number(-3)
