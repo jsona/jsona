@@ -8,6 +8,7 @@ pub(crate) fn include_fixtures(file: &str) -> String {
         file_path = file_path.join(p);
     }
 
-    println!("path {}", file_path.display());
-    std::fs::read_to_string(&file_path).unwrap().replace("\r\n", "\n")
+    std::fs::read_to_string(&file_path)
+        .unwrap()
+        .replace("\r\n", "\n")
 }
