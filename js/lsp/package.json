@@ -1,6 +1,6 @@
 {
   "name": "@jsona/lsp",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "description": "A Jsona lsp.",
   "keywords": ["jsona", "lsp"],
@@ -23,6 +23,6 @@
     "build": "node build.cjs"
   },
   "dependencies": {
-    "@jsona/util-types": "^0.1.5"
+    "@jsona/util-types": "^0.2.0"
   }
 }

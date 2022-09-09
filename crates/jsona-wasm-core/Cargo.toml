@@ -1,6 +1,6 @@
 [package]
 name = "jsona-wasm-core"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 publish = false
 
@@ -10,7 +10,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-jsona = { path = "../jsona", version = "0.5" }
+jsona = { path = "../jsona", version = "0.6" }
 jsona-ast = { path = "../jsona-ast", version = "0.1" }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 serde = { version = "1", features = ["derive"] }

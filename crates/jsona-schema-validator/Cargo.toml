@@ -1,6 +1,6 @@
 [package]
 name = "jsona-schema-validator"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "A jsonaschema validator implementation."
 repository = "https://github.com/jsona/jsona"
@@ -12,8 +12,8 @@ license = "MIT OR Apache-2.0"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-jsona = { path = "../jsona", version = "0.5" }
-jsona-schema = { path = "../jsona-schema", version = "0.2" }
+jsona = { path = "../jsona", version = "0.6" }
+jsona-schema = { path = "../jsona-schema", version = "0.3" }
 regex = "1.5"
 fancy-regex = "0.10"
 either = { version = "1.7", features = ["serde"] }

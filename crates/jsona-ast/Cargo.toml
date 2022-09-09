@@ -9,5 +9,5 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-jsona = { path = "../jsona", version = "0.5" }
+jsona = { path = "../jsona", version = "0.6" }
 serde_json = { version = "1", features = ["preserve_order"] }

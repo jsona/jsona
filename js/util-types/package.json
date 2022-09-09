@@ -1,6 +1,6 @@
 {
   "name": "@jsona/util-types",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "description": "A Jsona util types.",
   "main": "dist/index.js",

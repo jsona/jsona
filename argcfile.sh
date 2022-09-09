@@ -44,6 +44,9 @@ build-js() {
     }
     if [[ $# -eq 0 ]] || [[ $name == all ]]; then
         for path in ${NPM_PATHS[@]}; do
+            if [[ $path =~ vscode ]]; then
+                continue
+            fi
             name=${path##*/}
             _build_js $path
         done
@@ -79,7 +82,7 @@ vscode.build() {
 
 # @cmd Run web extension in chrome
 # @flag --no-build
-# @arg entry=test-data
+# @arg entry=tests/fixtures
 vscode.web() {
     if [[ -z $argc_no_build ]]; then
         export DEBUG="true"
@@ -99,10 +102,9 @@ vscode.pkg() {
 }
 
 # @cmd Update crate version
-# @flag --list print crate versions
 # @arg crates* crate with version, e.g. jsona@0.5.1
 version.crate() {
-    if [[ -n "$argc_list" ]]; then
+    if [[ $# -eq 0 ]]; then
         for name in ${CRATES[@]}; do
             id=$(cargo pkgid -p $name)
             echo $name@${id##*#}
@@ -145,10 +147,9 @@ version.npm() {
                 continue
             fi
             sed -i 's/^  "version": ".*",/  "version": "'$version'",/' $path/package.json
-            for path in ${NPM_PATHS[@]}; do
-                sed -i 's|"@jsona/'$name'": ".*"|"@jsona/'$name'": "^'$version'"|' $path/package.json
+            for dep_path in ${NPM_PATHS[@]}; do
+                sed -i 's|"'$name'": ".*"|"'$name'": "^'$version'"|' $dep_path/package.json
             done
-            sed -i 's|"@jsona/'$name'": ".*"|"@jsona/'$name'": "^'$version'"|' editors/vscode/package.json
         done
     fi
 }
@@ -162,6 +163,7 @@ publish.crate() {
             read -p "Upgrade $name from $online_ver to $crate_ver (y/n)? " choice
             if [[ "$choice" == y ]]; then
                 cargo publish -p $name
+                sleep 15
             fi
         fi
     done
@@ -172,13 +174,14 @@ publish.crate() {
 publish.npm() {
     npm_vars
     for i in ${!NPM_NAMES[@]}; do
-        if [[ $name =~ ^test ]]; then
+        local name=${NPM_NAMES[$i]}
+        local path=${NPM_PATHS[$i]}
+        local access=$(node -p "require('./"$path"/package.json').publishConfig?.access")
+        if [[ $access != "public" ]]; then
             continue
         fi
-        name=${NPM_NAMES[$i]}
-        path=${NPM_PATHS[$i]}
-        online_ver=$(npm show $name version)
-        pkg_ver=$(node -p "require('./"$path"/package.json').version")
+        local online_ver=$(npm show $name version)
+        local pkg_ver=$(node -p "require('./"$path"/package.json').version")
         if [[ "$online_ver" != "$pkg_ver" ]]; then
             read -p "Upgrade $name from $online_ver to $pkg_ver (y/n)? " choice
             if [[ "$choice" == y ]]; then

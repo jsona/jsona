@@ -1,6 +1,6 @@
 [package]
 name = "jsona"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2021"
 description = "A JSONA parser, analyzer and formatter library"
