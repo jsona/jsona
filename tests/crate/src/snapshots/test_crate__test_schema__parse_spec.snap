@@ -1,0 +1,115 @@
+---
+source: tests/crate/src/test_schema.rs
+expression: output
+---
+{
+  "$defs": {
+    "Object": {
+      "type": "object",
+      "properties": {
+        "k1": {
+          "type": "string"
+        },
+        "k2": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "_": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "A value",
+          "type": "object",
+          "properties": {
+            "null": {},
+            "bool": {
+              "type": "boolean",
+              "default": true
+            },
+            "float": {
+              "type": "number"
+            },
+            "integer": {
+              "type": "integer",
+              "maximum": 10
+            },
+            "string": {
+              "type": "string",
+              "enum": [
+                "apple",
+                "orange",
+                "banana"
+              ]
+            },
+            "array": {
+              "oneOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "object1": {
+              "$ref": "#/$defs/Object"
+            },
+            "object2": {
+              "$ref": "#/$defs/Object"
+            },
+            "object3": {
+              "type": "object",
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "float"
+          ]
+        }
+      }
+    },
+    "null": {
+      "description": "A null annotation",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "null"
+        }
+      }
+    },
+    "bool": {
+      "description": "A bool annotation",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "boolean"
+        }
+      }
+    },
+    "object": {
+      "description": "A object annotation",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "object",
+          "properties": {
+            "k1": {
+              "type": "string"
+            },
+            "k2": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

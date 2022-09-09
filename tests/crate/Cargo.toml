@@ -1,0 +1,15 @@
+[package]
+name = "test-crate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+jsona = { path = "../../crates/jsona", version = "*" }
+jsona-schema = { path = "../../crates/jsona-schema", version = "*" }
+jsona-schema-validator = { path = "../../crates/jsona-schema-validator", version = "*" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+indexmap = { version = "~1.6", features = ["serde"] }
+
+[dev-dependencies]
+insta = "1.19"

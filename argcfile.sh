@@ -23,7 +23,7 @@ npm_vars() {
 build() {
     cargo build -r -p jsona
     build-js all
-    vscode.build package
+    vscode.pkg
 }
 
 # @cmd Build js modules
@@ -51,6 +51,10 @@ build-js() {
     fi
 }
 
+# @cmd Test js
+test.js() {
+    (cd tests/js && yarn test $@)
+}
 
 # @cmd Build vscode extension
 # @arg kind[node|browser]
@@ -161,9 +165,11 @@ publish.crate() {
 
 # @cmd Publish to npm
 publish.npm() {
-    NPM_NAMES=( $(yarn workspaces info  | jq -r 'to_entries[] | .key') )
-    NPM_PATHS=( $(yarn workspaces info  | jq -r 'to_entries[] | .value.location') )
+    npm_vars
     for i in ${!NPM_NAMES[@]}; do
+        if [[ $name =~ ^test ]]; then
+            continue
+        fi
         name=${NPM_NAMES[$i]}
         path=${NPM_PATHS[$i]}
         online_ver=$(npm show $name version)

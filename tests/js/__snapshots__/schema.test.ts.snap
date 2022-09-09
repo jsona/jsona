@@ -1,0 +1,118 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`parse schema.jsona 1`] = `
+Object {
+  "errors": null,
+  "value": Object {
+    "$defs": Object {
+      "Object": Object {
+        "properties": Object {
+          "k1": Object {
+            "type": "string",
+          },
+          "k2": Object {
+            "type": "string",
+          },
+        },
+        "type": "object",
+      },
+    },
+    "properties": Object {
+      "_": Object {
+        "properties": Object {
+          "value": Object {
+            "description": "A value",
+            "properties": Object {
+              "array": Object {
+                "oneOf": Array [
+                  Object {
+                    "type": "integer",
+                  },
+                  Object {
+                    "type": "string",
+                  },
+                ],
+              },
+              "bool": Object {
+                "default": true,
+                "type": "boolean",
+              },
+              "float": Object {
+                "type": "number",
+              },
+              "integer": Object {
+                "maximum": 10,
+                "type": "integer",
+              },
+              "null": Object {},
+              "object1": Object {
+                "$ref": "#/$defs/Object",
+              },
+              "object2": Object {
+                "$ref": "#/$defs/Object",
+              },
+              "object3": Object {
+                "patternProperties": Object {
+                  ".*": Object {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "string": Object {
+                "enum": Array [
+                  "apple",
+                  "orange",
+                  "banana",
+                ],
+                "type": "string",
+              },
+            },
+            "required": Array [
+              "float",
+            ],
+            "type": "object",
+          },
+        },
+        "type": "object",
+      },
+      "bool": Object {
+        "description": "A bool annotation",
+        "properties": Object {
+          "value": Object {
+            "type": "boolean",
+          },
+        },
+        "type": "object",
+      },
+      "null": Object {
+        "description": "A null annotation",
+        "properties": Object {
+          "value": Object {
+            "type": "null",
+          },
+        },
+        "type": "object",
+      },
+      "object": Object {
+        "description": "A object annotation",
+        "properties": Object {
+          "value": Object {
+            "properties": Object {
+              "k1": Object {
+                "type": "string",
+              },
+              "k2": Object {
+                "type": "string",
+              },
+            },
+            "type": "object",
+          },
+        },
+        "type": "object",
+      },
+    },
+    "type": "object",
+  },
+}
+`;
