@@ -18,14 +18,37 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - uses: extractions/setup-crate@v1
+      with:
+        owner: sigoden
+        name: argc
+
+    - uses: extractions/setup-crate@v1
+      with:
+        owner: rustwasm
+        name: wasm-pack
+
+    - name: Install Rust Toolchain Components
+      uses: actions-rs/toolchain@v1
+      with:
+        components: clippy, rustfmt
+        override: true
+        toolchain: stable
+        target: wasm32-unknown-unknown
+
+    - uses: Swatinem/rust-cache@v1
+
     - uses: actions/setup-node@v3
       with:
-        node-version: '14'
+        node-version: '16'
         cache: 'yarn'
-        cache-dependency-path: editors/vscode/yarn.lock
 
-    - run: yarn install --frozen-lockfile
-      working-directory: editors/vscode
+    - run: corepack enable
+
+    - run: argc prepare
+
+    - run: argc build-js
+
     - run: yarn package -o jsona.vsix
       working-directory: editors/vscode
 
@@ -34,7 +57,7 @@ jobs:
       if: ${{ startsWith(github.ref, 'refs/tags/') }}
       with:
         draft: false
-        files: jsona.vsix
+        files: editors/vscode/jsona.vsix
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

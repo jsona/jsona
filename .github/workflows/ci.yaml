@@ -42,11 +42,11 @@ jobs:
 
     - uses: Swatinem/rust-cache@v1
 
-    - name: Test
-      run: cargo test --all
-
     - name: Clippy
       run: cargo clippy --all --all-targets
 
     - name: Format
       run: cargo fmt --all --check
+
+    - name: Test
+      run: cargo test --all
