@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# external tools: jq wasm-pack yarn
-
 set -e
 
 CRATES=( \
@@ -17,6 +15,14 @@ CRATES=( \
 npm_vars() {
     NPM_NAMES=( $(yarn workspaces info | sed '1d;$d' | jq -r 'to_entries[] | .key' | tr -d '\r') )
     NPM_PATHS=( $(yarn workspaces info | sed '1d;$d' | jq -r 'to_entries[] | .value.location' | tr -d '\r') )
+}
+
+# @cmd Prepare env
+prepare() {
+    cargo --version
+    wasm-pack --version
+    jq --version
+    yarn
 }
 
 # @cmd Build all
@@ -88,9 +94,8 @@ vscode.pkg() {
     pushd editors/vscode > /dev/null
         yarn package
         pkg_ver=$(node -p "require('./package.json').version")
-    mv vscode-jsona-$pkg_ver.vsix ../..
+        ls -lh vscode-jsona-$pkg_ver.vsix
     popd > /dev/null
-    ls -alh vscode-jsona-$pkg_ver.vsix
 }
 
 # @cmd Update crate version

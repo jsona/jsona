@@ -6,6 +6,7 @@
     "rootDir": "src",
     "moduleResolution": "node",
     "module": "ESNext",
+    "newLine": "lf",
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "strict": false
