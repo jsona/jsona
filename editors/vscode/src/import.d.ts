@@ -1,7 +1,7 @@
 interface ImportMeta {
   readonly env: {
     readonly BROWSER: boolean;
-    readonly RUST_LOG: string;
+    readonly DEBUG: boolean;
     readonly LOG_TOPICS: string;
   };
 }

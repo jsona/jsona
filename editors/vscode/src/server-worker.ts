@@ -14,7 +14,7 @@ const reader = new BrowserMessageReader(worker);
 let lsp: JsonaWasmLsp;
 let rootUri = "root:///";
 const logger = createLogger({
-  debug: import.meta.env.RUST_LOG === "debug",
+  debug: import.meta.env.DEBUG,
   topics: import.meta.env.LOG_TOPICS,
 });
 const log = logger.log;

@@ -72,7 +72,7 @@ vscode.build() {
 # @arg entry=test-data
 vscode.web() {
     if [[ -z $argc_no_build ]]; then
-        export RUST_LOG="debug"
+        export DEBUG="true"
         export LOG_TOPICS="host2lsp,lsp2host"
         vscode.build browser
     fi

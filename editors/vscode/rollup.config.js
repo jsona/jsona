@@ -33,7 +33,7 @@ const options = {
     extension: "src/extension.ts",
   },
   output: {
-    sourcemap: process.env.DEBUG,
+    sourcemap: !!process.env.DEBUG,
     format: "commonjs",
     dir: "dist",
     chunkFileNames: "[name].js",
@@ -45,10 +45,10 @@ const options = {
     replace({
       preventAssignment: true,
       "import.meta.env.BROWSER": false,
-      "import.meta.env.RUST_LOG": JSON.stringify(process.env.RUST_LOG || "info"),
+      "import.meta.env.DEBUG": !!process.env.DEBUG,
       "import.meta.env.LOG_TOPICS": JSON.stringify(process.env.LOG_TOPICS || ""),
     }),
-    esbuild({ minify: process.env.RUST_LOG !== "info" }),
+    esbuild({ minify: !!process.env.DEBUG }),
     commonjs(),
     resolve({
       preferBuiltins: true,
