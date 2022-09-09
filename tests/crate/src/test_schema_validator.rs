@@ -1,0 +1,10 @@
+snapshot_schema_validator_point!(
+    "schema.jsona",
+    point_spec,
+    "@",
+    "@bo",
+    "@object",
+    "bo",
+    "bool",
+    "object2.k1"
+);

@@ -1,0 +1,42 @@
+/*
+ multiple line comment
+*/
+{ // single line comment
+    null: null, @null /* inline comment */ @null2(null) 
+    boolTrue: true, @bool(true)
+    boolFalse: false, @bool(false)
+    float: 3.14, @number(3.14)
+    floatNegative: -3.14, @number(-3.14)
+    floatNegativeWithoutInteger: -.14, @number(-1.4)
+    floatNegativeWithoutDecimal: -3., @float(-3.)
+    integer: 3, @int(3)
+    integerNegative: -3, @number(-3)
+    integerHex: 0x1a, @number(0x1a)
+    integerBinary: 0b01, @number(0b01)
+    integerOctal: 0o12, @number(0o12)
+    'key "single Quote"': 'value "single Quote"', @string('value "single Quote"')
+    "key 'double Quote'": "value 'double Quote'", @string("value 'double Quote'")
+    `value 'backtick'
+"quote"`: `value 'backtick'
+"quote"`, @string(`value 'backtick'
+"quote"`)
+    stringEscape1: '\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}',
+    stringEscape2: "\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}",
+    stringEscape3: `\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}`,
+
+    array: [ @array
+        "a",
+        "b",
+    ],
+    arrayEmpty: [], @array
+    arrayOnline: ["a", "b"], @array
+    arrayExtraComma: ["a", "b",], // tailing comma
+
+    object: { @object @def("Object4")
+        k1: "v1",
+        k2: "v2",
+    },
+    objectEmpty: {}, @object
+    objectOneLine: { k1: "v1", k2: "v2" }, @object
+    objectExtraComma: { k1: "v1", k2: "v2", }, // tailing comma
+}

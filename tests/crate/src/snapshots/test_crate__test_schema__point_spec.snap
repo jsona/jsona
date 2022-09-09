@@ -1,0 +1,35 @@
+---
+source: tests/crate/src/test_schema.rs
+expression: "serde_json::to_string_pretty(&output).unwrap()"
+---
+{
+  "_.value.bool": [
+    {
+      "type": "boolean",
+      "default": true
+    }
+  ],
+  "_.value.array": [
+    {
+      "type": "integer"
+    },
+    {
+      "type": "string"
+    }
+  ],
+  "_.value.object2.k1": [
+    {
+      "type": "string"
+    }
+  ],
+  "null.value": [
+    {
+      "type": "null"
+    }
+  ],
+  "object.value.k2": [
+    {
+      "type": "string"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{ @jsonaschema("schema")
+  _: {
+    value: { @describe("A value")
+      null: null, @anytype
+      bool: true, @default
+      float: 3.14, @required
+      integer: 3, @schema({maximum: 10})
+      string: "apple", @schema({enum:["apple","orange","banana"]})
+      array: [ @compound("oneOf")
+        3,
+        "a"
+      ],
+      object1: { @def("Object")
+        k1: "v1",
+        k2: "v2"
+      },
+      object2: { @ref("Object")
+      },
+      object3: {
+        k: "", @pattern(".*")
+      }
+    }
+  },
+  null: { @describe("A null annotation")
+    value: null,
+  },
+  bool: { @describe("A bool annotation")
+    value: true,
+  },
+  object: { @describe("A object annotation")
+    value: {
+      k1: "v1",
+      k2: "v2",
+    }
+  }
+}

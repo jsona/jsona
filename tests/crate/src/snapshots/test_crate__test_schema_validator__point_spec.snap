@@ -1,0 +1,63 @@
+---
+source: tests/crate/src/test_schema_validator.rs
+expression: "serde_json::to_string_pretty(&output).unwrap()"
+---
+{
+  "@": [
+    {
+      "type": "object",
+      "properties": {
+        "@null": {
+          "type": "null"
+        },
+        "@bool": {
+          "type": "boolean"
+        },
+        "@object": {
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "@bo": [
+    {
+      "type": "object",
+      "properties": {
+        "@null": {
+          "type": "null"
+        },
+        "@bool": {
+          "type": "boolean"
+        },
+        "@object": {
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "@object": [
+    {
+      "type": "object",
+      "properties": {
+        "k1": {
+          "type": "string"
+        },
+        "k2": {
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "bo": [],
+  "bool": [
+    {
+      "type": "boolean",
+      "default": true
+    }
+  ],
+  "object2.k1": [
+    {
+      "type": "string"
+    }
+  ]
+}

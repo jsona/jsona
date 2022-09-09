@@ -1,0 +1,598 @@
+---
+source: tests/crate/src/test_jsona.rs
+expression: output
+---
+VALUE@0..1375
+  BLOCK_COMMENT@0..28 "/*\n multiple line comment\n*/"
+  NEWLINE@28..29 "\n"
+  OBJECT@29..1374
+    BRACE_START@29..30 "{"
+    WHITESPACE@30..31 " "
+    LINE_COMMENT@31..53 "// single line comment"
+    NEWLINE@53..54 "\n"
+    WHITESPACE@54..58 "    "
+    PROPERTY@58..115
+      KEY@58..62
+        NULL@58..62 "null"
+      COLON@62..63 ":"
+      WHITESPACE@63..64 " "
+      VALUE@64..115
+        SCALAR@64..68
+          NULL@64..68 "null"
+        COMMA@68..69 ","
+        WHITESPACE@69..70 " "
+        ANNOTATIONS@70..115
+          ANNOTATION_PROPERTY@70..97
+            ANNOTATION_KEY@70..75 "@null"
+            WHITESPACE@75..76 " "
+            BLOCK_COMMENT@76..96 "/* inline comment */"
+            WHITESPACE@96..97 " "
+          ANNOTATION_PROPERTY@97..109
+            ANNOTATION_KEY@97..103 "@null2"
+            ANNOTATION_VALUE@103..109
+              PARENTHESES_START@103..104 "("
+              VALUE@104..108
+                SCALAR@104..108
+                  NULL@104..108 "null"
+              PARENTHESES_END@108..109 ")"
+          WHITESPACE@109..110 " "
+          NEWLINE@110..111 "\n"
+          WHITESPACE@111..115 "    "
+    PROPERTY@115..147
+      KEY@115..123
+        IDENT@115..123 "boolTrue"
+      COLON@123..124 ":"
+      WHITESPACE@124..125 " "
+      VALUE@125..147
+        SCALAR@125..129
+          BOOL@125..129 "true"
+        COMMA@129..130 ","
+        WHITESPACE@130..131 " "
+        ANNOTATIONS@131..147
+          ANNOTATION_PROPERTY@131..142
+            ANNOTATION_KEY@131..136 "@bool"
+            ANNOTATION_VALUE@136..142
+              PARENTHESES_START@136..137 "("
+              VALUE@137..141
+                SCALAR@137..141
+                  BOOL@137..141 "true"
+              PARENTHESES_END@141..142 ")"
+          NEWLINE@142..143 "\n"
+          WHITESPACE@143..147 "    "
+    PROPERTY@147..182
+      KEY@147..156
+        IDENT@147..156 "boolFalse"
+      COLON@156..157 ":"
+      WHITESPACE@157..158 " "
+      VALUE@158..182
+        SCALAR@158..163
+          BOOL@158..163 "false"
+        COMMA@163..164 ","
+        WHITESPACE@164..165 " "
+        ANNOTATIONS@165..182
+          ANNOTATION_PROPERTY@165..177
+            ANNOTATION_KEY@165..170 "@bool"
+            ANNOTATION_VALUE@170..177
+              PARENTHESES_START@170..171 "("
+              VALUE@171..176
+                SCALAR@171..176
+                  BOOL@171..176 "false"
+              PARENTHESES_END@176..177 ")"
+          NEWLINE@177..178 "\n"
+          WHITESPACE@178..182 "    "
+    PROPERTY@182..213
+      KEY@182..187
+        IDENT@182..187 "float"
+      COLON@187..188 ":"
+      WHITESPACE@188..189 " "
+      VALUE@189..213
+        SCALAR@189..193
+          FLOAT@189..193 "3.14"
+        COMMA@193..194 ","
+        WHITESPACE@194..195 " "
+        ANNOTATIONS@195..213
+          ANNOTATION_PROPERTY@195..208
+            ANNOTATION_KEY@195..202 "@number"
+            ANNOTATION_VALUE@202..208
+              PARENTHESES_START@202..203 "("
+              VALUE@203..207
+                SCALAR@203..207
+                  FLOAT@203..207 "3.14"
+              PARENTHESES_END@207..208 ")"
+          NEWLINE@208..209 "\n"
+          WHITESPACE@209..213 "    "
+    PROPERTY@213..254
+      KEY@213..226
+        IDENT@213..226 "floatNegative"
+      COLON@226..227 ":"
+      WHITESPACE@227..228 " "
+      VALUE@228..254
+        SCALAR@228..233
+          FLOAT@228..233 "-3.14"
+        COMMA@233..234 ","
+        WHITESPACE@234..235 " "
+        ANNOTATIONS@235..254
+          ANNOTATION_PROPERTY@235..249
+            ANNOTATION_KEY@235..242 "@number"
+            ANNOTATION_VALUE@242..249
+              PARENTHESES_START@242..243 "("
+              VALUE@243..248
+                SCALAR@243..248
+                  FLOAT@243..248 "-3.14"
+              PARENTHESES_END@248..249 ")"
+          NEWLINE@249..250 "\n"
+          WHITESPACE@250..254 "    "
+    PROPERTY@254..307
+      KEY@254..281
+        IDENT@254..281 "floatNegativeWithoutInteger"
+      COLON@281..282 ":"
+      WHITESPACE@282..283 " "
+      VALUE@283..307
+        SCALAR@283..287
+          FLOAT@283..287 "-.14"
+        COMMA@287..288 ","
+        WHITESPACE@288..289 " "
+        ANNOTATIONS@289..307
+          ANNOTATION_PROPERTY@289..302
+            ANNOTATION_KEY@289..296 "@number"
+            ANNOTATION_VALUE@296..302
+              PARENTHESES_START@296..297 "("
+              VALUE@297..301
+                SCALAR@297..301
+                  FLOAT@297..301 "-1.4"
+              PARENTHESES_END@301..302 ")"
+          NEWLINE@302..303 "\n"
+          WHITESPACE@303..307 "    "
+    PROPERTY@307..357
+      KEY@307..334
+        IDENT@307..334 "floatNegativeWithoutDecimal"
+      COLON@334..335 ":"
+      WHITESPACE@335..336 " "
+      VALUE@336..357
+        SCALAR@336..339
+          FLOAT@336..339 "-3."
+        COMMA@339..340 ","
+        WHITESPACE@340..341 " "
+        ANNOTATIONS@341..357
+          ANNOTATION_PROPERTY@341..352
+            ANNOTATION_KEY@341..347 "@float"
+            ANNOTATION_VALUE@347..352
+              PARENTHESES_START@347..348 "("
+              VALUE@348..351
+                SCALAR@348..351
+                  FLOAT@348..351 "-3."
+              PARENTHESES_END@351..352 ")"
+          NEWLINE@352..353 "\n"
+          WHITESPACE@353..357 "    "
+    PROPERTY@357..381
+      KEY@357..364
+        IDENT@357..364 "integer"
+      COLON@364..365 ":"
+      WHITESPACE@365..366 " "
+      VALUE@366..381
+        SCALAR@366..367
+          INTEGER@366..367 "3"
+        COMMA@367..368 ","
+        WHITESPACE@368..369 " "
+        ANNOTATIONS@369..381
+          ANNOTATION_PROPERTY@369..376
+            ANNOTATION_KEY@369..373 "@int"
+            ANNOTATION_VALUE@373..376
+              PARENTHESES_START@373..374 "("
+              VALUE@374..375
+                SCALAR@374..375
+                  INTEGER@374..375 "3"
+              PARENTHESES_END@375..376 ")"
+          NEWLINE@376..377 "\n"
+          WHITESPACE@377..381 "    "
+    PROPERTY@381..418
+      KEY@381..396
+        IDENT@381..396 "integerNegative"
+      COLON@396..397 ":"
+      WHITESPACE@397..398 " "
+      VALUE@398..418
+        SCALAR@398..400
+          INTEGER@398..400 "-3"
+        COMMA@400..401 ","
+        WHITESPACE@401..402 " "
+        ANNOTATIONS@402..418
+          ANNOTATION_PROPERTY@402..413
+            ANNOTATION_KEY@402..409 "@number"
+            ANNOTATION_VALUE@409..413
+              PARENTHESES_START@409..410 "("
+              VALUE@410..412
+                SCALAR@410..412
+                  INTEGER@410..412 "-3"
+              PARENTHESES_END@412..413 ")"
+          NEWLINE@413..414 "\n"
+          WHITESPACE@414..418 "    "
+    PROPERTY@418..454
+      KEY@418..428
+        IDENT@418..428 "integerHex"
+      COLON@428..429 ":"
+      WHITESPACE@429..430 " "
+      VALUE@430..454
+        SCALAR@430..434
+          INTEGER_HEX@430..434 "0x1a"
+        COMMA@434..435 ","
+        WHITESPACE@435..436 " "
+        ANNOTATIONS@436..454
+          ANNOTATION_PROPERTY@436..449
+            ANNOTATION_KEY@436..443 "@number"
+            ANNOTATION_VALUE@443..449
+              PARENTHESES_START@443..444 "("
+              VALUE@444..448
+                SCALAR@444..448
+                  INTEGER_HEX@444..448 "0x1a"
+              PARENTHESES_END@448..449 ")"
+          NEWLINE@449..450 "\n"
+          WHITESPACE@450..454 "    "
+    PROPERTY@454..493
+      KEY@454..467
+        IDENT@454..467 "integerBinary"
+      COLON@467..468 ":"
+      WHITESPACE@468..469 " "
+      VALUE@469..493
+        SCALAR@469..473
+          INTEGER_BIN@469..473 "0b01"
+        COMMA@473..474 ","
+        WHITESPACE@474..475 " "
+        ANNOTATIONS@475..493
+          ANNOTATION_PROPERTY@475..488
+            ANNOTATION_KEY@475..482 "@number"
+            ANNOTATION_VALUE@482..488
+              PARENTHESES_START@482..483 "("
+              VALUE@483..487
+                SCALAR@483..487
+                  INTEGER_BIN@483..487 "0b01"
+              PARENTHESES_END@487..488 ")"
+          NEWLINE@488..489 "\n"
+          WHITESPACE@489..493 "    "
+    PROPERTY@493..531
+      KEY@493..505
+        IDENT@493..505 "integerOctal"
+      COLON@505..506 ":"
+      WHITESPACE@506..507 " "
+      VALUE@507..531
+        SCALAR@507..511
+          INTEGER_OCT@507..511 "0o12"
+        COMMA@511..512 ","
+        WHITESPACE@512..513 " "
+        ANNOTATIONS@513..531
+          ANNOTATION_PROPERTY@513..526
+            ANNOTATION_KEY@513..520 "@number"
+            ANNOTATION_VALUE@520..526
+              PARENTHESES_START@520..521 "("
+              VALUE@521..525
+                SCALAR@521..525
+                  INTEGER_OCT@521..525 "0o12"
+              PARENTHESES_END@525..526 ")"
+          NEWLINE@526..527 "\n"
+          WHITESPACE@527..531 "    "
+    PROPERTY@531..613
+      KEY@531..551
+        SINGLE_QUOTE@531..551 "'key \"single Quote\"'"
+      COLON@551..552 ":"
+      WHITESPACE@552..553 " "
+      VALUE@553..613
+        SCALAR@553..575
+          SINGLE_QUOTE@553..575 "'value \"single Quote\"'"
+        COMMA@575..576 ","
+        WHITESPACE@576..577 " "
+        ANNOTATIONS@577..613
+          ANNOTATION_PROPERTY@577..608
+            ANNOTATION_KEY@577..584 "@string"
+            ANNOTATION_VALUE@584..608
+              PARENTHESES_START@584..585 "("
+              VALUE@585..607
+                SCALAR@585..607
+                  SINGLE_QUOTE@585..607 "'value \"single Quote\"'"
+              PARENTHESES_END@607..608 ")"
+          NEWLINE@608..609 "\n"
+          WHITESPACE@609..613 "    "
+    PROPERTY@613..695
+      KEY@613..633
+        DOUBLE_QUOTE@613..633 "\"key 'double Quote'\""
+      COLON@633..634 ":"
+      WHITESPACE@634..635 " "
+      VALUE@635..695
+        SCALAR@635..657
+          DOUBLE_QUOTE@635..657 "\"value 'double Quote'\""
+        COMMA@657..658 ","
+        WHITESPACE@658..659 " "
+        ANNOTATIONS@659..695
+          ANNOTATION_PROPERTY@659..690
+            ANNOTATION_KEY@659..666 "@string"
+            ANNOTATION_VALUE@666..690
+              PARENTHESES_START@666..667 "("
+              VALUE@667..689
+                SCALAR@667..689
+                  DOUBLE_QUOTE@667..689 "\"value 'double Quote'\""
+              PARENTHESES_END@689..690 ")"
+          NEWLINE@690..691 "\n"
+          WHITESPACE@691..695 "    "
+    PROPERTY@695..791
+      KEY@695..721
+        BACKTICK_QUOTE@695..721 "`value 'backtick'\n\"quote\"`"
+      COLON@721..722 ":"
+      WHITESPACE@722..723 " "
+      VALUE@723..791
+        SCALAR@723..749
+          BACKTICK_QUOTE@723..749 "`value 'backtick'\n\"quote\"`"
+        COMMA@749..750 ","
+        WHITESPACE@750..751 " "
+        ANNOTATIONS@751..791
+          ANNOTATION_PROPERTY@751..786
+            ANNOTATION_KEY@751..758 "@string"
+            ANNOTATION_VALUE@758..786
+              PARENTHESES_START@758..759 "("
+              VALUE@759..785
+                SCALAR@759..785
+                  BACKTICK_QUOTE@759..785 "`value 'backtick'\n\"quote\"`"
+              PARENTHESES_END@785..786 ")"
+          NEWLINE@786..787 "\n"
+          WHITESPACE@787..791 "    "
+    PROPERTY@791..855
+      KEY@791..804
+        IDENT@791..804 "stringEscape1"
+      COLON@804..805 ":"
+      WHITESPACE@805..806 " "
+      VALUE@806..855
+        SCALAR@806..849
+          SINGLE_QUOTE@806..849 "'\\0\\b\\f\\n\\r\\t\\u000b\\'\\\\\\xA9\\u00A9\\u{2F804}'"
+        COMMA@849..850 ","
+        NEWLINE@850..851 "\n"
+        WHITESPACE@851..855 "    "
+    PROPERTY@855..919
+      KEY@855..868
+        IDENT@855..868 "stringEscape2"
+      COLON@868..869 ":"
+      WHITESPACE@869..870 " "
+      VALUE@870..919
+        SCALAR@870..913
+          DOUBLE_QUOTE@870..913 "\"\\0\\b\\f\\n\\r\\t\\u000b\\'\\\\\\xA9\\u00A9\\u{2F804}\""
+        COMMA@913..914 ","
+        NEWLINE@914..915 "\n"
+        WHITESPACE@915..919 "    "
+    PROPERTY@919..984
+      KEY@919..932
+        IDENT@919..932 "stringEscape3"
+      COLON@932..933 ":"
+      WHITESPACE@933..934 " "
+      VALUE@934..984
+        SCALAR@934..977
+          BACKTICK_QUOTE@934..977 "`\\0\\b\\f\\n\\r\\t\\u000b\\'\\\\\\xA9\\u00A9\\u{2F804}`"
+        COMMA@977..978 ","
+        NEWLINE@978..980 "\n\n"
+        WHITESPACE@980..984 "    "
+    PROPERTY@984..1037
+      KEY@984..989
+        IDENT@984..989 "array"
+      COLON@989..990 ":"
+      WHITESPACE@990..991 " "
+      VALUE@991..1037
+        ARRAY@991..1031
+          BRACKET_START@991..992 "["
+          WHITESPACE@992..993 " "
+          ANNOTATIONS@993..1008
+            ANNOTATION_PROPERTY@993..1008
+              ANNOTATION_KEY@993..999 "@array"
+              NEWLINE@999..1000 "\n"
+              WHITESPACE@1000..1008 "        "
+          VALUE@1008..1021
+            SCALAR@1008..1011
+              DOUBLE_QUOTE@1008..1011 "\"a\""
+            COMMA@1011..1012 ","
+            NEWLINE@1012..1013 "\n"
+            WHITESPACE@1013..1021 "        "
+          VALUE@1021..1030
+            SCALAR@1021..1024
+              DOUBLE_QUOTE@1021..1024 "\"b\""
+            COMMA@1024..1025 ","
+            NEWLINE@1025..1026 "\n"
+            WHITESPACE@1026..1030 "    "
+          BRACKET_END@1030..1031 "]"
+        COMMA@1031..1032 ","
+        NEWLINE@1032..1033 "\n"
+        WHITESPACE@1033..1037 "    "
+    PROPERTY@1037..1064
+      KEY@1037..1047
+        IDENT@1037..1047 "arrayEmpty"
+      COLON@1047..1048 ":"
+      WHITESPACE@1048..1049 " "
+      VALUE@1049..1064
+        ARRAY@1049..1051
+          BRACKET_START@1049..1050 "["
+          BRACKET_END@1050..1051 "]"
+        COMMA@1051..1052 ","
+        WHITESPACE@1052..1053 " "
+        ANNOTATIONS@1053..1064
+          ANNOTATION_PROPERTY@1053..1064
+            ANNOTATION_KEY@1053..1059 "@array"
+            NEWLINE@1059..1060 "\n"
+            WHITESPACE@1060..1064 "    "
+    PROPERTY@1064..1100
+      KEY@1064..1075
+        IDENT@1064..1075 "arrayOnline"
+      COLON@1075..1076 ":"
+      WHITESPACE@1076..1077 " "
+      VALUE@1077..1100
+        ARRAY@1077..1087
+          BRACKET_START@1077..1078 "["
+          VALUE@1078..1083
+            SCALAR@1078..1081
+              DOUBLE_QUOTE@1078..1081 "\"a\""
+            COMMA@1081..1082 ","
+            WHITESPACE@1082..1083 " "
+          VALUE@1083..1086
+            SCALAR@1083..1086
+              DOUBLE_QUOTE@1083..1086 "\"b\""
+          BRACKET_END@1086..1087 "]"
+        COMMA@1087..1088 ","
+        WHITESPACE@1088..1089 " "
+        ANNOTATIONS@1089..1100
+          ANNOTATION_PROPERTY@1089..1100
+            ANNOTATION_KEY@1089..1095 "@array"
+            NEWLINE@1095..1096 "\n"
+            WHITESPACE@1096..1100 "    "
+    PROPERTY@1100..1152
+      KEY@1100..1115
+        IDENT@1100..1115 "arrayExtraComma"
+      COLON@1115..1116 ":"
+      WHITESPACE@1116..1117 " "
+      VALUE@1117..1152
+        ARRAY@1117..1128
+          BRACKET_START@1117..1118 "["
+          VALUE@1118..1123
+            SCALAR@1118..1121
+              DOUBLE_QUOTE@1118..1121 "\"a\""
+            COMMA@1121..1122 ","
+            WHITESPACE@1122..1123 " "
+          VALUE@1123..1127
+            SCALAR@1123..1126
+              DOUBLE_QUOTE@1123..1126 "\"b\""
+            COMMA@1126..1127 ","
+          BRACKET_END@1127..1128 "]"
+        COMMA@1128..1129 ","
+        WHITESPACE@1129..1130 " "
+        LINE_COMMENT@1130..1146 "// tailing comma"
+        NEWLINE@1146..1148 "\n\n"
+        WHITESPACE@1148..1152 "    "
+    PROPERTY@1152..1233
+      KEY@1152..1158
+        IDENT@1152..1158 "object"
+      COLON@1158..1159 ":"
+      WHITESPACE@1159..1160 " "
+      VALUE@1160..1233
+        OBJECT@1160..1227
+          BRACE_START@1160..1161 "{"
+          WHITESPACE@1161..1162 " "
+          ANNOTATIONS@1162..1194
+            ANNOTATION_PROPERTY@1162..1170
+              ANNOTATION_KEY@1162..1169 "@object"
+              WHITESPACE@1169..1170 " "
+            ANNOTATION_PROPERTY@1170..1185
+              ANNOTATION_KEY@1170..1174 "@def"
+              ANNOTATION_VALUE@1174..1185
+                PARENTHESES_START@1174..1175 "("
+                VALUE@1175..1184
+                  SCALAR@1175..1184
+                    DOUBLE_QUOTE@1175..1184 "\"Object4\""
+                PARENTHESES_END@1184..1185 ")"
+            NEWLINE@1185..1186 "\n"
+            WHITESPACE@1186..1194 "        "
+          PROPERTY@1194..1212
+            KEY@1194..1196
+              IDENT@1194..1196 "k1"
+            COLON@1196..1197 ":"
+            WHITESPACE@1197..1198 " "
+            VALUE@1198..1212
+              SCALAR@1198..1202
+                DOUBLE_QUOTE@1198..1202 "\"v1\""
+              COMMA@1202..1203 ","
+              NEWLINE@1203..1204 "\n"
+              WHITESPACE@1204..1212 "        "
+          PROPERTY@1212..1226
+            KEY@1212..1214
+              IDENT@1212..1214 "k2"
+            COLON@1214..1215 ":"
+            WHITESPACE@1215..1216 " "
+            VALUE@1216..1226
+              SCALAR@1216..1220
+                DOUBLE_QUOTE@1216..1220 "\"v2\""
+              COMMA@1220..1221 ","
+              NEWLINE@1221..1222 "\n"
+              WHITESPACE@1222..1226 "    "
+          BRACE_END@1226..1227 "}"
+        COMMA@1227..1228 ","
+        NEWLINE@1228..1229 "\n"
+        WHITESPACE@1229..1233 "    "
+    PROPERTY@1233..1262
+      KEY@1233..1244
+        IDENT@1233..1244 "objectEmpty"
+      COLON@1244..1245 ":"
+      WHITESPACE@1245..1246 " "
+      VALUE@1246..1262
+        OBJECT@1246..1248
+          BRACE_START@1246..1247 "{"
+          BRACE_END@1247..1248 "}"
+        COMMA@1248..1249 ","
+        WHITESPACE@1249..1250 " "
+        ANNOTATIONS@1250..1262
+          ANNOTATION_PROPERTY@1250..1262
+            ANNOTATION_KEY@1250..1257 "@object"
+            NEWLINE@1257..1258 "\n"
+            WHITESPACE@1258..1262 "    "
+    PROPERTY@1262..1313
+      KEY@1262..1275
+        IDENT@1262..1275 "objectOneLine"
+      COLON@1275..1276 ":"
+      WHITESPACE@1276..1277 " "
+      VALUE@1277..1313
+        OBJECT@1277..1299
+          BRACE_START@1277..1278 "{"
+          WHITESPACE@1278..1279 " "
+          PROPERTY@1279..1289
+            KEY@1279..1281
+              IDENT@1279..1281 "k1"
+            COLON@1281..1282 ":"
+            WHITESPACE@1282..1283 " "
+            VALUE@1283..1289
+              SCALAR@1283..1287
+                DOUBLE_QUOTE@1283..1287 "\"v1\""
+              COMMA@1287..1288 ","
+              WHITESPACE@1288..1289 " "
+          PROPERTY@1289..1298
+            KEY@1289..1291
+              IDENT@1289..1291 "k2"
+            COLON@1291..1292 ":"
+            WHITESPACE@1292..1293 " "
+            VALUE@1293..1298
+              SCALAR@1293..1297
+                DOUBLE_QUOTE@1293..1297 "\"v2\""
+              WHITESPACE@1297..1298 " "
+          BRACE_END@1298..1299 "}"
+        COMMA@1299..1300 ","
+        WHITESPACE@1300..1301 " "
+        ANNOTATIONS@1301..1313
+          ANNOTATION_PROPERTY@1301..1313
+            ANNOTATION_KEY@1301..1308 "@object"
+            NEWLINE@1308..1309 "\n"
+            WHITESPACE@1309..1313 "    "
+    PROPERTY@1313..1373
+      KEY@1313..1329
+        IDENT@1313..1329 "objectExtraComma"
+      COLON@1329..1330 ":"
+      WHITESPACE@1330..1331 " "
+      VALUE@1331..1373
+        OBJECT@1331..1354
+          BRACE_START@1331..1332 "{"
+          WHITESPACE@1332..1333 " "
+          PROPERTY@1333..1343
+            KEY@1333..1335
+              IDENT@1333..1335 "k1"
+            COLON@1335..1336 ":"
+            WHITESPACE@1336..1337 " "
+            VALUE@1337..1343
+              SCALAR@1337..1341
+                DOUBLE_QUOTE@1337..1341 "\"v1\""
+              COMMA@1341..1342 ","
+              WHITESPACE@1342..1343 " "
+          PROPERTY@1343..1353
+            KEY@1343..1345
+              IDENT@1343..1345 "k2"
+            COLON@1345..1346 ":"
+            WHITESPACE@1346..1347 " "
+            VALUE@1347..1353
+              SCALAR@1347..1351
+                DOUBLE_QUOTE@1347..1351 "\"v2\""
+              COMMA@1351..1352 ","
+              WHITESPACE@1352..1353 " "
+          BRACE_END@1353..1354 "}"
+        COMMA@1354..1355 ","
+        WHITESPACE@1355..1356 " "
+        LINE_COMMENT@1356..1372 "// tailing comma"
+        NEWLINE@1372..1373 "\n"
+    BRACE_END@1373..1374 "}"
+  NEWLINE@1374..1375 "\n"
+

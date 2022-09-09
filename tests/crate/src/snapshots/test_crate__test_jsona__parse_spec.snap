@@ -1,0 +1,50 @@
+---
+source: tests/crate/src/test_jsona.rs
+expression: output
+---
+{
+  "null": null,
+  "boolTrue": true,
+  "boolFalse": false,
+  "float": 3.14,
+  "floatNegative": -3.14,
+  "floatNegativeWithoutInteger": -0.14,
+  "floatNegativeWithoutDecimal": -3.0,
+  "integer": 3,
+  "integerNegative": -3,
+  "integerHex": 26,
+  "integerBinary": 1,
+  "integerOctal": 10,
+  "key \"single Quote\"": "value \"single Quote\"",
+  "key 'double Quote'": "value 'double Quote'",
+  "value 'backtick'\n\"quote\"": "value 'backtick'\n\"quote\"",
+  "stringEscape1": "\u0000\b\f\n\r\t\u000b'\\©©你",
+  "stringEscape2": "\u0000\b\f\n\r\t\u000b'\\©©你",
+  "stringEscape3": "\u0000\b\f\n\r\t\u000b'\\©©你",
+  "array": [
+    "a",
+    "b"
+  ],
+  "arrayEmpty": [],
+  "arrayOnline": [
+    "a",
+    "b"
+  ],
+  "arrayExtraComma": [
+    "a",
+    "b"
+  ],
+  "object": {
+    "k1": "v1",
+    "k2": "v2"
+  },
+  "objectEmpty": {},
+  "objectOneLine": {
+    "k1": "v1",
+    "k2": "v2"
+  },
+  "objectExtraComma": {
+    "k1": "v1",
+    "k2": "v2"
+  }
+}
