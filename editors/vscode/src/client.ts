@@ -119,7 +119,7 @@ async function createNodeClient(context: vscode.ExtensionContext) {
 }
 
 export async function syncSchemaCache(context: vscode.ExtensionContext) {
-  const cachePath = vscode.Uri.joinPath(context.globalStorageUri, "schema_cache");
+  const cachePath = vscode.Uri.joinPath(context.globalStorageUri, "schema-cache-v1");
   try {
     if (vscode.workspace.getConfiguration().get(SCHEMA_CACHE_KEY)) {
       await vscode.workspace.fs.createDirectory(cachePath);

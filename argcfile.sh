@@ -73,6 +73,7 @@ vscode.build() {
 vscode.web() {
     if [[ -z $argc_no_build ]]; then
         export DEBUG="true"
+        export LOG_TOPICS="worker,lsp" 
         vscode.build browser
     fi
     vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
@@ -83,8 +84,9 @@ vscode.pkg() {
     pushd editors/vscode > /dev/null
         yarn package
         pkg_ver=$(node -p "require('./package.json').version")
-        ls -alh vscode-jsona-$pkg_ver.vsix
+    mv vscode-jsona-$pkg_ver.vsix ../..
     popd > /dev/null
+    ls -alh vscode-jsona-$pkg_ver.vsix
 }
 
 # @cmd Update crate version
