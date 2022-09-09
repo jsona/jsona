@@ -31,8 +31,8 @@ impl JSONASchemaValidator {
             ));
         }
         for (keys, value) in visit_annotations(node).into_iter() {
-            if let Some(key) = keys.last_annotation_key().and_then(|v| v.annotation_name()) {
-                if let Some(schema) = self.get_entry_schema(&key) {
+            if let Some(key) = keys.last_annotation_key() {
+                if let Some(schema) = self.get_entry_schema(key.value()) {
                     collect_errors.extend(validates::validate(defs, schema, &keys, &value));
                 }
             }
@@ -43,20 +43,19 @@ impl JSONASchemaValidator {
     pub fn pointer(&self, keys: &Keys) -> Vec<&Schema> {
         let (annotation_key, keys) = keys.shift_annotation();
         let new_keys = match annotation_key {
-            Some(key) => match key.annotation_name() {
-                Some(name) => {
-                    if !self.contains_annotation_key(&name) {
-                        return vec![&self.annotations];
-                    }
-                    let new_keys = Keys::new(
-                        [KeyOrIndex::property(&name), KeyOrIndex::property("value")].into_iter(),
-                    );
-                    new_keys.extend(keys)
-                }
-                None => {
+            Some(key) => {
+                if !self.contains_annotation_key(key.value()) {
                     return vec![&self.annotations];
                 }
-            },
+                let new_keys = Keys::new(
+                    [
+                        KeyOrIndex::property(key.annotation_name().unwrap()),
+                        KeyOrIndex::property("value"),
+                    ]
+                    .into_iter(),
+                );
+                new_keys.extend(keys)
+            }
             None => {
                 let new_keys = Keys::new(
                     [
@@ -131,7 +130,7 @@ impl TryFrom<&Node> for JSONASchemaValidator {
                             schema_type: SchemaType::from_node(&value).map(|v| v.into()),
                             ..Default::default()
                         };
-                        annotation_schemas.insert(key.value().to_string(), schema);
+                        annotation_schemas.insert(format!("@{}", key.value()), schema);
                     }
                 }
                 None => {
