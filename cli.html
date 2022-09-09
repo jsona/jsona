@@ -185,7 +185,8 @@ As an example if you wish to only see error messages, you can do the following:<
 </code></pre>
 <h4 id="schema-validation"><a class="header" href="#schema-validation">Schema Validation</a></h4>
 <p>JSONA supports validation via <a href="crates/jsona-schema-validator">JSONA Schemas</a>.</p>
-<pre><code class="language-sh">jsona lint --schema https://example.com/foo-schema.json foo.jsona
+<pre><code class="language-sh">jsona lint --schema https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.8/openapi.jsona api.jsona
+jsona lint -S api.jsona # use default schemastore
 </code></pre>
 <h3 id="formatting"><a class="header" href="#formatting">Formatting</a></h3>
 <p>It is possible to format files in-place or via standard i/o.</p>

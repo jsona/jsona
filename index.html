@@ -172,9 +172,8 @@
 // single line comment
 
 {
-    @foo /* abc */ @optional
-    @null(null) // single line comment
-    @bool(true)
+    @null /* abc */ @nullVerbose(null)
+    @bool(true) // single line comment
     @float(3.14)
     @number(-3)
     @string('abc &quot;def&quot; ghi')
@@ -207,7 +206,7 @@ xyz`,
     arrayEmpty: [], 
     arrayEmptyMultiLine: [ @array
     ],
-    arrayEmptyWithAnnotation: [],  // @array
+    arrayEmptyWithAnnotation: [], @array
     arraySimple: [ @array
         &quot;a&quot;, @upper
         &quot;b&quot;,
@@ -217,14 +216,15 @@ xyz`,
     objectEmpty: {},
     objectEmptyMultiLine: { @object
     },
-    objectEmptyWithAnnotation: {}, @use(&quot;Object4&quot;)
-    objectSimple: { @save(&quot;Object4&quot;)
+    objectEmptyWithAnnotation: {}, @def(&quot;Object4&quot;)
+    objectSimple: { @ref(&quot;Object4&quot;)
         k1: &quot;v1&quot;, @upper
         k2: &quot;v2&quot;,
     },
     objectOneLine: { k1: &quot;v1&quot;, k2: &quot;v2&quot; }, @object
     objectExtraComma: { k1: &quot;v1&quot;, k2: &quot;v2&quot;, },
 }
+
 </code></pre>
 <h2 id="json"><a class="header" href="#json">JSON</a></h2>
 <p>JSONA is a superset of JSON, borrowing the syntax of ECMAScript to alleviate some of the limitations of JSON.</p>
@@ -310,19 +310,8 @@ xyz`,
 @anno
 </code></pre>
 <h3 id="annotation-value"><a class="header" href="#annotation-value">Annotation value</a></h3>
-<p>Annotation values ​​must be enclosed in parentheses, but can be omitted.</p>
-<p>Annotation values ​​must be valid but no annotation JSONA, annotation values ​​cannot nest annotation values.</p>
-<pre><code>@anno
-@anno(null)
-@anno(true)
-@anno('a')
-@anno(3)
-@anno(0.3)
-@anno([])
-@anno(['a'])
-@anno({})
-@anno({a:3})
-</code></pre>
+<p>Annotation value ​​must be enclosed in parentheses, if value is null, parentheses and null can be omitted.</p>
+<p>Annotation value must not contain nested annotation. </p>
 
                     </main>
 

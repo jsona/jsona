@@ -173,9 +173,8 @@
 // single line comment
 
 {
-    @foo /* abc */ @optional
-    @null(null) // single line comment
-    @bool(true)
+    @null /* abc */ @nullVerbose(null)
+    @bool(true) // single line comment
     @float(3.14)
     @number(-3)
     @string('abc &quot;def&quot; ghi')
@@ -208,7 +207,7 @@ xyz`,
     arrayEmpty: [], 
     arrayEmptyMultiLine: [ @array
     ],
-    arrayEmptyWithAnnotation: [],  // @array
+    arrayEmptyWithAnnotation: [], @array
     arraySimple: [ @array
         &quot;a&quot;, @upper
         &quot;b&quot;,
@@ -218,14 +217,15 @@ xyz`,
     objectEmpty: {},
     objectEmptyMultiLine: { @object
     },
-    objectEmptyWithAnnotation: {}, @use(&quot;Object4&quot;)
-    objectSimple: { @save(&quot;Object4&quot;)
+    objectEmptyWithAnnotation: {}, @def(&quot;Object4&quot;)
+    objectSimple: { @ref(&quot;Object4&quot;)
         k1: &quot;v1&quot;, @upper
         k2: &quot;v2&quot;,
     },
     objectOneLine: { k1: &quot;v1&quot;, k2: &quot;v2&quot; }, @object
     objectExtraComma: { k1: &quot;v1&quot;, k2: &quot;v2&quot;, },
 }
+
 </code></pre>
 <h2 id="json"><a class="header" href="#json">JSON</a></h2>
 <p>JSONA is a superset of JSON, borrowing the syntax of ECMAScript to alleviate some of the limitations of JSON.</p>
@@ -311,19 +311,8 @@ xyz`,
 @anno
 </code></pre>
 <h3 id="annotation-value"><a class="header" href="#annotation-value">Annotation value</a></h3>
-<p>Annotation values ​​must be enclosed in parentheses, but can be omitted.</p>
-<p>Annotation values ​​must be valid but no annotation JSONA, annotation values ​​cannot nest annotation values.</p>
-<pre><code>@anno
-@anno(null)
-@anno(true)
-@anno('a')
-@anno(3)
-@anno(0.3)
-@anno([])
-@anno(['a'])
-@anno({})
-@anno({a:3})
-</code></pre>
+<p>Annotation value ​​must be enclosed in parentheses, if value is null, parentheses and null can be omitted.</p>
+<p>Annotation value must not contain nested annotation. </p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="command-line"><a class="header" href="#command-line">Command Line</a></h1>
 <p>JSONA CLI aims to be an one stop shop tool for working with JSONA files via the command line. The features include validation, formatting, and querying JSONA documents with a jq-like fashion.</p>
 <h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
@@ -375,7 +364,8 @@ As an example if you wish to only see error messages, you can do the following:<
 </code></pre>
 <h4 id="schema-validation"><a class="header" href="#schema-validation">Schema Validation</a></h4>
 <p>JSONA supports validation via <a href="crates/jsona-schema-validator">JSONA Schemas</a>.</p>
-<pre><code class="language-sh">jsona lint --schema https://example.com/foo-schema.json foo.jsona
+<pre><code class="language-sh">jsona lint --schema https://cdn.jsdelivr.net/npm/@jsona/schemastore@0.1.8/openapi.jsona api.jsona
+jsona lint -S api.jsona # use default schemastore
 </code></pre>
 <h3 id="formatting"><a class="header" href="#formatting">Formatting</a></h3>
 <p>It is possible to format files in-place or via standard i/o.</p>
@@ -428,7 +418,7 @@ Hover</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Selection Range</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Schema-related Commands</li>
+Associate Schema</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
 <h2 id="formatter-options"><a class="header" href="#formatter-options">Formatter Options</a></h2>
