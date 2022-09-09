@@ -15,7 +15,11 @@ export function getOutput(): vscode.OutputChannel {
   return output;
 }
 
-export function fromBase64(str: string) {
+export function toBase64(u8: ArrayBufferLike) {
+  return btoa(String.fromCharCode.apply(null, u8));
+}
+
+export function fromBase64(str) {
   return atob(str).split('').map(function (c) { return c.charCodeAt(0); });
 }
 

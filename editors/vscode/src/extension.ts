@@ -2,7 +2,7 @@ import type { ClientRpcResponses, ServerNotificationsParams } from "@jsona/lsp";
 import * as vscode from "vscode";
 import { createClient, syncSchemaCache } from "./client";
 import { registerCommands } from "./commands";
-import { showMessage, getOutput, SCHEMA_CACHE_KEY, fromBase64 } from "./util";
+import { showMessage, getOutput, SCHEMA_CACHE_KEY, fromBase64, toBase64 } from "./util";
 import { BaseLanguageClient } from "vscode-languageclient";
 
 
@@ -42,7 +42,7 @@ export async function activate(context: vscode.ExtensionContext) {
       showMessage(params, c)
     ),
     c.onRequest("lsp/readFile", ({ uri }) => {
-      return vscode.workspace.fs.readFile(vscode.Uri.parse(uri));
+      return vscode.workspace.fs.readFile(vscode.Uri.parse(uri)).then(content => toBase64(content));
     }),
     c.onRequest("lsp/writeFile", async ({ uri, content }) => {
       return vscode.workspace.fs.writeFile(

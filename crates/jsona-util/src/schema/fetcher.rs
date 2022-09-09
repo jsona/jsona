@@ -40,11 +40,13 @@ impl<E: Environment> Fetcher<E> {
             let cache_name = format!("{:x}", md5::compute(url.to_string().as_bytes()));
             let cache_path = cache_root.join(&cache_name)?;
             if let Ok(data) = self.env.read_file(&cache_path).await {
+                tracing::debug!("fetch file from cache {}", cache_path);
                 return Ok(data);
             }
             if let Ok(data) = self.env.fetch_file(url).await {
+                tracing::debug!("fetch file from remote");
                 if let Err(err) = self.env.write_file(&cache_path, &data).await {
-                    tracing::warn!("failed to write cache file {}, {}", cache_path, err);
+                    tracing::warn!("failed to cache file {}, {}", cache_path, err);
                 }
                 return Ok(data);
             }

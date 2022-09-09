@@ -5,7 +5,7 @@ export function createRpc({ write, log }) {
     waitings: {},
     timeouts: {},
     async readFile(uri: string) {
-      return rpc.send("lsp/readFile", { uri }) as Promise<Uint8Array>;
+      return rpc.send("lsp/readFile", { uri }).then(data => fromBase64(data)) as Promise<Uint8Array>;
     },
     async writeFile(uri: string, content: Uint8Array) {
       return rpc.send("lsp/writeFile", { uri, content: toBase64(content) }) as Promise<void>;
@@ -55,6 +55,7 @@ export function createRpc({ write, log }) {
   }
   return rpc;
 }
+
 export function toBase64(u8: ArrayBufferLike) {
   return btoa(String.fromCharCode.apply(null, u8));
 }

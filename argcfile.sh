@@ -73,7 +73,6 @@ vscode.build() {
 vscode.web() {
     if [[ -z $argc_no_build ]]; then
         export DEBUG="true"
-        export LOG_TOPICS="host2lsp,lsp2host"
         vscode.build browser
     fi
     vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
