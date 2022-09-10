@@ -3353,10 +3353,10 @@ walker@^1.0.8:
   dependencies:
     makeerror "1.0.12"
 
-wasm-pack-utils@^0.1.9:
-  version "0.1.9"
-  resolved "https://registry.yarnpkg.com/wasm-pack-utils/-/wasm-pack-utils-0.1.9.tgz#55110df520904d30168f77c23b65edd3513bfcb0"
-  integrity sha512-Uow9V6txH/w8pC0K89Xs1xlhUVWguV4UOJWl5hEOqBVRJDQt80VHKP6CUjG9MMPyJPqeNXYVpag8h/AOR7bfwA==
+wasm-pack-utils@0.1.11:
+  version "0.1.11"
+  resolved "https://registry.yarnpkg.com/wasm-pack-utils/-/wasm-pack-utils-0.1.11.tgz#f402e7a3427944d5a63c5b8c5821aca260ca2cc5"
+  integrity sha512-B69qL2AakJFEkGbqM5IvnVQbmBt7p0hxXo5E8l69AJIeLExlTGlP6ZvTdvhiXcRq5d3LwKoMYiOjLDHMxNCTuQ==
   dependencies:
     "@babel/core" "^7.18.13"
     yargs "^17.5.1"
