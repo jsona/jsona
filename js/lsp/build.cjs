@@ -6,6 +6,6 @@ const $ = v => require("child_process").execSync(v, { stdio: "inherit" });
 const fs = require("fs");
 const cratePath = p(`../../crates/${CREATE}`);
 $(`tsc`);
+$(`wasm-pkg-build --out-name index --cargo-args "${CARGO_ARGS}" --modules esm-sync ${cratePath}`);
 fs.copyFileSync(p("src/index_worker.d.ts"), p("dist/index_worker.d.ts"));
-$(`wasm-pack build --out-name index ${cratePath} ${CARGO_ARGS}`);
-$(`npx wasm-pack-utils worker ${p(cratePath + "/pkg/index_bg.js")} --inline-wasm -o ${p("dist/index_worker.js")}`);
+fs.copyFileSync(p(cratePath + "/pkg/index_worker.js"), p("dist/index_worker.js"));
