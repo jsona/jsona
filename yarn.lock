@@ -3458,17 +3458,16 @@ walker@^1.0.8:
   dependencies:
     makeerror "1.0.12"
 
-wasm-pkg-build@^0.2:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/wasm-pkg-build/-/wasm-pkg-build-0.2.0.tgz#9d30767d2e406ebc4e9c2e9bed61b18e8d7ab9ce"
-  integrity sha512-4YltJ/Yj8Xrj6rp8QyFN0Mrtq/nhG4Cf9dfrKGvX8BMbULvTS2XwgxPz+RpNfQax8Z8DfanQ6vPZxk128BtcsQ==
+wasm-pkg-build@^0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/wasm-pkg-build/-/wasm-pkg-build-0.2.1.tgz#7cb7fc4641bd9bdfd3287e0d8816520e663c2781"
+  integrity sha512-+EopGV7ezVYhvzdmesKBB0ojPWwMEvGpo8xGifVW0k5+/bL1US0C8hUQ4vqvffLWyr9U+SD2ny0og0qykGjCqQ==
   dependencies:
     "@babel/core" "^7.18.13"
     axios "^0.27.2"
     commander "^9.4.0"
     tar "^6.1.11"
     toml "^3.0.0"
-    which "^2.0.2"
 
 web-streams-polyfill@^3.0.3:
   version "3.2.1"

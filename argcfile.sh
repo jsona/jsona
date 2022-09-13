@@ -20,7 +20,6 @@ npm_vars() {
 # @cmd Prepare env
 prepare() {
     cargo --version
-    wasm-pack --version
     jq --version
     yarn
 }

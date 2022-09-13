@@ -23,11 +23,6 @@ jobs:
         owner: sigoden
         name: argc
 
-    - uses: extractions/setup-crate@v1
-      with:
-        owner: rustwasm
-        name: wasm-pack
-
     - name: Install Rust Toolchain Components
       uses: actions-rs/toolchain@v1
       with:

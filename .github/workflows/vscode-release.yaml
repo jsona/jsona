@@ -6,7 +6,7 @@ on:
     - vscode-v[0-9]+.[0-9]+.[0-9]+
 
 jobs:
-  release:
+  vscode-release:
     name: Publish to Github Releases And Marketplace
 
     runs-on: ubuntu-latest
@@ -22,11 +22,6 @@ jobs:
       with:
         owner: sigoden
         name: argc
-
-    - uses: extractions/setup-crate@v1
-      with:
-        owner: rustwasm
-        name: wasm-pack
 
     - name: Install Rust Toolchain Components
       uses: actions-rs/toolchain@v1

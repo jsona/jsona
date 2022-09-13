@@ -12,6 +12,6 @@
   "devDependencies": {
     "rimraf": "^3.0.2",
     "typescript": "^4.8.2",
-    "wasm-pkg-build": "^0.2.0"
+    "wasm-pkg-build": "^0.2.1"
   }
 }
