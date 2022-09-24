@@ -21,7 +21,7 @@ jobs:
     - uses: extractions/setup-crate@v1
       with:
         owner: sigoden
-        name: argc
+        name: runme
 
     - name: Install Rust Toolchain Components
       uses: actions-rs/toolchain@v1
@@ -40,9 +40,9 @@ jobs:
 
     - run: corepack enable
 
-    - run: argc prepare
+    - run: runme prepare
 
-    - run: argc build-js
+    - run: runme build-js
 
     - run: yarn package -o jsona.vsix
       working-directory: editors/vscode

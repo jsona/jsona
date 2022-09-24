@@ -21,7 +21,7 @@ jobs:
     - uses: extractions/setup-crate@v1
       with:
         owner: sigoden
-        name: argc
+        name: runme
 
     - name: Install Rust Toolchain Components
       uses: actions-rs/toolchain@v1
@@ -40,7 +40,7 @@ jobs:
 
     - run: corepack enable
 
-    - run: argc prepare
+    - run: runme prepare
 
     - name: Set nightly version
       run: |
@@ -55,7 +55,7 @@ jobs:
         sed -i 's/^  "version": "'$version'",/  "version": "'$version_new'",/' package.json
       working-directory: editors/vscode
 
-    - run: argc build-js
+    - run: runme build-js
 
     - run: yarn package -o jsona.vsix --pre-release
       working-directory: editors/vscode
