@@ -8,11 +8,11 @@ keywords = ["jsona", "dsl", "jsonschema"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-either = { version = "1.7", features = ["serde"] }
-indexmap = { version = "~1.6", features = ["serde"] }
+either = { version = "1.9", features = ["serde"] }
+indexmap = { version = "2.0", features = ["serde"] }
 jsona = { path = "../jsona", version = "0.6" }
-fancy-regex = "0.10"
+fancy-regex = "0.11"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 thiserror = "1"
-once_cell = "1.13"
+once_cell = "1.18"

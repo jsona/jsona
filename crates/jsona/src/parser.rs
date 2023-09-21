@@ -62,17 +62,12 @@ pub(crate) struct Parser<'p> {
     parse_keys_mode: ParseKeysMode,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) enum ParseKeysMode {
+    #[default]
     None,
     Keys,
     QueryKeys,
-}
-
-impl Default for ParseKeysMode {
-    fn default() -> Self {
-        ParseKeysMode::None
-    }
 }
 
 /// This is just a convenience type during parsing.
@@ -536,32 +531,35 @@ impl<'p> Parser<'p> {
         self.current_token = None;
         while let Some(token) = self.lexer.next() {
             match token {
-                LINE_COMMENT | BLOCK_COMMENT => {
-                    let multiline = token == BLOCK_COMMENT;
-                    if let Err(err_indices) = validates::comment(self.lexer.slice(), multiline) {
-                        for e in err_indices {
-                            let span = self.lexer.span();
-                            self.add_error(&Error {
-                                range: TextRange::new(
-                                    TextSize::from((span.start + e) as u32),
-                                    TextSize::from((span.start + e) as u32),
-                                ),
-                                message: "invalid character in comment".into(),
-                            });
-                        }
-                    };
+                Ok(token) => match token {
+                    LINE_COMMENT | BLOCK_COMMENT => {
+                        let multiline = token == BLOCK_COMMENT;
+                        if let Err(err_indices) = validates::comment(self.lexer.slice(), multiline)
+                        {
+                            for e in err_indices {
+                                let span = self.lexer.span();
+                                self.add_error(&Error {
+                                    range: TextRange::new(
+                                        TextSize::from((span.start + e) as u32),
+                                        TextSize::from((span.start + e) as u32),
+                                    ),
+                                    message: "invalid character in comment".into(),
+                                });
+                            }
+                        };
 
-                    self.consume_token(token, self.lexer.slice());
-                }
-                WHITESPACE | NEWLINE => {
-                    self.consume_token(token, self.lexer.slice());
-                }
-                ERROR => {
+                        self.consume_token(token, self.lexer.slice());
+                    }
+                    WHITESPACE | NEWLINE => {
+                        self.consume_token(token, self.lexer.slice());
+                    }
+                    _ => {
+                        self.current_token = Some(token);
+                        break;
+                    }
+                },
+                Err(_) => {
                     let _ = self.consume_error_token("unexpected token");
-                }
-                _ => {
-                    self.current_token = Some(token);
-                    break;
                 }
             }
         }

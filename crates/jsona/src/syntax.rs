@@ -101,7 +101,6 @@ pub enum SyntaxKind {
     ANNOTATION_PROPERTY,
     ANNOTATION_VALUE,
 
-    #[error]
     ERROR,
 
     KEYS,
@@ -273,7 +272,7 @@ mod tests {
     macro_rules! assert_lex {
         ($text:literal, $kind:expr) => {
             let mut lex = SyntaxKind::lexer($text);
-            assert_eq!(lex.next(), Some($kind));
+            assert_eq!(lex.next(), Some(Ok($kind)));
         };
     }
 

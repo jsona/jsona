@@ -257,4 +257,4 @@ install() {
     ls -alh $HOME/.cargo/bin/jsona
 }
 
-eval "$(runme --runme-eval $0 "$@")"
+eval "$(argc --argc-eval $0 "$@")"

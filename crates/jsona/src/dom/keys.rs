@@ -180,13 +180,12 @@ impl Keys {
 
     pub fn iter_keys(&self) -> Vec<Keys> {
         (0..self.keys.len() + 1)
-            .into_iter()
             .map(|v| Keys::new(self.keys.iter().take(v).cloned()))
             .collect()
     }
 
     pub fn dotted(&self) -> &str {
-        &*self.dotted
+        &self.dotted
     }
 
     pub fn len(&self) -> usize {

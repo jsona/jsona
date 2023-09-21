@@ -14,12 +14,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 jsona = { path = "../jsona", version = "0.6" }
 jsona-schema = { path = "../jsona-schema", version = "0.3" }
-regex = "1.5"
-fancy-regex = "0.10"
-either = { version = "1.7", features = ["serde"] }
-indexmap = { version = "~1.6", features = ["serde"] }
+regex = "1.9"
+fancy-regex = "0.11"
+either = { version = "1.9", features = ["serde"] }
+indexmap = { version = "2.0", features = ["serde"] }
 time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
-once_cell = "1.5"
+once_cell = "1.18"
 bytecount = { version = "0.6", features = ["runtime-dispatch-simd"] }
-url = { version = "2.2", features = ["serde"] }
-ahash = { version = "0.7", features = ["serde"] }
+url = { version = "2.4", features = ["serde"] }
+ahash = { version = "0.8", features = ["serde"] }

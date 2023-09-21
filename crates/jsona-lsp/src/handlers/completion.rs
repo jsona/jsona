@@ -349,7 +349,7 @@ impl CompletionMap {
 
     fn add_schema(&mut self, schema: &Schema) {
         let values = collect_schema_values(schema);
-        self.types_all.extend(schema.types().into_iter());
+        self.types_all.extend(schema.types());
         for value in values {
             match value {
                 Value::Null => {

@@ -16,7 +16,7 @@ pub fn parse(input: &str) -> JsValue {
     let node = match Node::from_str(input) {
         Ok(v) => v,
         Err(err) => {
-            return JsValue::from_serde(&ParseResult {
+            return serde_wasm_bindgen::to_value(&ParseResult {
                 value: None,
                 errors: Some(err.to_error_objects(&mapper)),
             })
@@ -37,5 +37,5 @@ pub fn parse(input: &str) -> JsValue {
             ),
         },
     };
-    JsValue::from_serde(&result).unwrap()
+    serde_wasm_bindgen::to_value(&result).unwrap()
 }

@@ -15,7 +15,7 @@ pub use error::{SchemaError, SchemaResult, ERROR_SOURCE};
 
 pub const REF_PREFIX: &str = "#/$defs/";
 
-pub static REF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^#/\$defs/(\w+)$"#).unwrap());
+pub static REF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^#/\$defs/(\w+)$").unwrap());
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct Schema {

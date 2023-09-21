@@ -9,7 +9,7 @@ mod lint;
 mod lsp;
 mod queries;
 
-use clap::{crate_version, ArgEnum, Args, Parser, Subcommand};
+use clap::{crate_version, Args, Parser, Subcommand, ValueEnum};
 use jsona_util::environment::Environment;
 
 impl<E: Environment> App<E> {
@@ -40,7 +40,7 @@ impl<E: Environment> App<E> {
     }
 }
 
-#[derive(Clone, Copy, ArgEnum)]
+#[derive(Clone, Copy, ValueEnum)]
 pub enum Colors {
     /// Determine whether to colorize output automatically.
     Auto,
@@ -55,7 +55,7 @@ pub enum Colors {
 #[clap(bin_name = "jsona")]
 #[clap(version = crate_version!())]
 pub struct AppArgs {
-    #[clap(long, arg_enum, global = true, default_value = "auto")]
+    #[clap(long, global = true, default_value = "auto")]
     pub colors: Colors,
     /// Enable a verbose logging format.
     #[clap(long, global = true)]

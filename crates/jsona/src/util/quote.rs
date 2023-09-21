@@ -59,10 +59,8 @@ enum Escape {
 
     #[regex(r#"\\."#)]
     Unknown,
-
-    #[error]
-    UnEscaped,
 }
+
 use Escape::*;
 
 /// Remove quote and unescape all supported sequences found in [Escape](Escape).
@@ -74,34 +72,37 @@ pub fn unquote(s: &str) -> Result<String, usize> {
 
     while let Some(t) = lexer.next() {
         match t {
-            Null => new_s += "\u{0000}",
-            Backspace => new_s += "\u{0008}",
-            Tab => new_s += "\u{0009}",
-            LineFeed => new_s += "\u{000A}",
-            FormFeed => new_s += "\u{000C}",
-            CarriageReturn => new_s += "\u{000D}",
-            DoubleQuote => new_s += "\u{0022}",
-            SingleQuote => new_s += "\u{0027}",
-            BacktickQuote => new_s += "\u{0060}",
-            Backslash => new_s += "\u{005C}",
-            Newline => {}
-            Hex | Unicode => {
-                new_s += &std::char::from_u32(
-                    u32::from_str_radix(&lexer.slice()[2..], 16).map_err(|_| lexer.span().start)?,
-                )
-                .ok_or(lexer.span().start)?
-                .to_string();
-            }
-            UnicodeLarge => {
-                new_s += &std::char::from_u32(
-                    u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16)
-                        .map_err(|_| lexer.span().start)?,
-                )
-                .ok_or(lexer.span().start)?
-                .to_string();
-            }
-            Unknown => return Err(lexer.span().start),
-            UnEscaped => {
+            Ok(t) => match t {
+                Null => new_s += "\u{0000}",
+                Backspace => new_s += "\u{0008}",
+                Tab => new_s += "\u{0009}",
+                LineFeed => new_s += "\u{000A}",
+                FormFeed => new_s += "\u{000C}",
+                CarriageReturn => new_s += "\u{000D}",
+                DoubleQuote => new_s += "\u{0022}",
+                SingleQuote => new_s += "\u{0027}",
+                BacktickQuote => new_s += "\u{0060}",
+                Backslash => new_s += "\u{005C}",
+                Newline => {}
+                Hex | Unicode => {
+                    new_s += &std::char::from_u32(
+                        u32::from_str_radix(&lexer.slice()[2..], 16)
+                            .map_err(|_| lexer.span().start)?,
+                    )
+                    .ok_or(lexer.span().start)?
+                    .to_string();
+                }
+                UnicodeLarge => {
+                    new_s += &std::char::from_u32(
+                        u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16)
+                            .map_err(|_| lexer.span().start)?,
+                    )
+                    .ok_or(lexer.span().start)?
+                    .to_string();
+                }
+                Unknown => return Err(lexer.span().start),
+            },
+            Err(_) => {
                 new_s += lexer.slice();
             }
         }
@@ -139,36 +140,20 @@ pub fn validate_quote(s: &str) -> Result<(), Vec<usize>> {
 
     while let Some(t) = lexer.next() {
         match t {
-            Null => {}
-            Backspace => {}
-            Tab => {}
-            LineFeed => {}
-            FormFeed => {}
-            CarriageReturn => {}
-            SingleQuote => {}
-            DoubleQuote => {}
-            BacktickQuote => {}
-            Backslash => {}
-            Newline => {}
-            Hex | Unicode => {
-                let char_val = match u32::from_str_radix(&lexer.slice()[2..], 16) {
-                    Ok(v) => v,
-                    Err(_) => {
-                        invalid.push(lexer.span().start);
-                        continue;
-                    }
-                };
-
-                match std::char::from_u32(char_val) {
-                    None => {
-                        invalid.push(lexer.span().start);
-                    }
-                    Some(_) => {}
-                };
-            }
-            UnicodeLarge => {
-                let char_val =
-                    match u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16) {
+            Ok(t) => match t {
+                Null => {}
+                Backspace => {}
+                Tab => {}
+                LineFeed => {}
+                FormFeed => {}
+                CarriageReturn => {}
+                SingleQuote => {}
+                DoubleQuote => {}
+                BacktickQuote => {}
+                Backslash => {}
+                Newline => {}
+                Hex | Unicode => {
+                    let char_val = match u32::from_str_radix(&lexer.slice()[2..], 16) {
                         Ok(v) => v,
                         Err(_) => {
                             invalid.push(lexer.span().start);
@@ -176,15 +161,34 @@ pub fn validate_quote(s: &str) -> Result<(), Vec<usize>> {
                         }
                     };
 
-                match std::char::from_u32(char_val) {
-                    None => {
-                        invalid.push(lexer.span().start);
-                    }
-                    Some(_) => {}
-                };
-            }
-            Unknown => invalid.push(lexer.span().start),
-            UnEscaped => {}
+                    match std::char::from_u32(char_val) {
+                        None => {
+                            invalid.push(lexer.span().start);
+                        }
+                        Some(_) => {}
+                    };
+                }
+                UnicodeLarge => {
+                    let char_val =
+                        match u32::from_str_radix(&lexer.slice()[3..(lexer.slice().len() - 1)], 16)
+                        {
+                            Ok(v) => v,
+                            Err(_) => {
+                                invalid.push(lexer.span().start);
+                                continue;
+                            }
+                        };
+
+                    match std::char::from_u32(char_val) {
+                        None => {
+                            invalid.push(lexer.span().start);
+                        }
+                        Some(_) => {}
+                    };
+                }
+                Unknown => invalid.push(lexer.span().start),
+            },
+            Err(_) => {}
         }
     }
 
@@ -334,13 +338,13 @@ mod tests {
             "\0\u{8}\u{c}\n\r\t\u{b}'\\©©你"
         );
         assert_eq!(
-            &unquote(r#"\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}"#).unwrap(),
+            &unquote(r"\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}").unwrap(),
             "\0\u{8}\u{c}\n\r\t\u{b}'\\©©你"
         );
         assert_eq!(unquote("\\w"), Err(0));
-        assert_eq!(unquote(r#"\w"#), Err(0));
+        assert_eq!(unquote(r"\w"), Err(0));
         assert_eq!(unquote("'\\w'"), Err(1));
-        assert_eq!(unquote(r#"'\w'"#), Err(1));
+        assert_eq!(unquote(r"'\w'"), Err(1));
     }
 
     #[test]
@@ -348,8 +352,8 @@ mod tests {
         assert!(validate_quote("abc").is_ok());
         assert!(validate_quote("`abc`").is_ok());
         assert!(validate_quote("\\0\\b\\f\\n\\r\\t\\u000b\\'\\\\\\xA9\\u00A9\\u{2F804}").is_ok());
-        assert!(validate_quote(r#"\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}"#).is_ok());
-        assert_eq!(validate_quote(r#"'\w\k'"#), Err(vec![1, 3]));
+        assert!(validate_quote(r"\0\b\f\n\r\t\u000b\'\\\xA9\u00A9\u{2F804}").is_ok());
+        assert_eq!(validate_quote(r"'\w\k'"), Err(vec![1, 3]));
     }
 
     #[test]

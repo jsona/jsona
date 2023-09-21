@@ -37,8 +37,7 @@ struct LintResult {
 pub fn format(input: &str, format_options: JsValue) -> Result<String, JsError> {
     let mut options: Options = Options::default();
     options.update(
-        format_options
-            .into_serde()
+        serde_wasm_bindgen::from_value(format_options)
             .map_err(|_| JsError::new("invalid format options"))?,
     );
     Ok(formatter::format(input, options))
@@ -50,7 +49,7 @@ pub async fn lint(env: JsValue, input: String, schema_url: String) -> JsValue {
     let env = WasmEnvironment::from(env);
     let node = match Node::from_str(&input) {
         Ok(v) => v,
-        Err(err) => return JsValue::from_serde(&err.to_error_objects(&mapper)).unwrap(),
+        Err(err) => return serde_wasm_bindgen::to_value(&err.to_error_objects(&mapper)).unwrap(),
     };
 
     let schemas = Schemas::new(env);
@@ -73,7 +72,7 @@ pub async fn lint(env: JsValue, input: String, schema_url: String) -> JsValue {
             };
         }
     }
-    JsValue::from_serde(&errors).unwrap()
+    serde_wasm_bindgen::to_value(&errors).unwrap()
 }
 
 #[cfg(feature = "cli")]

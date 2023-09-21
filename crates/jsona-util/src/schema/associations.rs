@@ -260,7 +260,7 @@ impl AssociationRule {
     }
 
     pub fn glob(pattern: &str) -> Result<Self, anyhow::Error> {
-        Ok(Self::Glob(GlobRule::new(&[pattern], &[] as &[&str])?))
+        Ok(Self::Glob(GlobRule::new([pattern], &[] as &[&str])?))
     }
 
     pub fn is_match(&self, url: &Url) -> bool {
