@@ -532,6 +532,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "gloo-utils"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b5555354113b18c547c1d3a98fbf7fb32a9ff4f6fa112ce823a21641a0ba3aa"
+dependencies = [
+ "js-sys",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -873,6 +886,7 @@ dependencies = [
  "clap",
  "console_error_panic_hook",
  "futures",
+ "gloo-utils",
  "js-sys",
  "jsona",
  "jsona-cli",
@@ -880,7 +894,6 @@ dependencies = [
  "jsona-util",
  "lsp-async-stub",
  "serde",
- "serde-wasm-bindgen",
  "serde_json",
  "time",
  "tokio",
@@ -894,10 +907,10 @@ dependencies = [
 name = "jsona-wasm-core"
 version = "0.2.0"
 dependencies = [
+ "gloo-utils",
  "jsona",
  "jsona-ast",
  "serde",
- "serde-wasm-bindgen",
  "wasm-bindgen",
 ]
 
@@ -905,10 +918,10 @@ dependencies = [
 name = "jsona-wasm-schema"
 version = "0.2.0"
 dependencies = [
+ "gloo-utils",
  "jsona",
  "jsona-schema",
  "serde",
- "serde-wasm-bindgen",
  "wasm-bindgen",
 ]
 
@@ -1371,17 +1384,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-wasm-bindgen"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30c9933e5689bd420dc6c87b7a1835701810cbc10cd86a26e4da45b73e6b1d78"
-dependencies = [
- "js-sys",
- "serde",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.188"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1828,8 +1830,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7706a72ab36d8cb1f80ffbf0e071533974a60d0a308d01a5d0375bf60499a342"
 dependencies = [
  "cfg-if",
- "serde",
- "serde_json",
  "wasm-bindgen-macro",
 ]
 

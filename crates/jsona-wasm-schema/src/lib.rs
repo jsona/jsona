@@ -3,6 +3,7 @@ use jsona_schema::Schema;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
+use gloo_utils::format::JsValueSerdeExt;
 
 #[derive(Serialize, Deserialize)]
 struct ParseResult {
@@ -16,7 +17,7 @@ pub fn parse(input: &str) -> JsValue {
     let node = match Node::from_str(input) {
         Ok(v) => v,
         Err(err) => {
-            return serde_wasm_bindgen::to_value(&ParseResult {
+            return JsValue::from_serde(&ParseResult {
                 value: None,
                 errors: Some(err.to_error_objects(&mapper)),
             })
@@ -37,5 +38,5 @@ pub fn parse(input: &str) -> JsValue {
             ),
         },
     };
-    serde_wasm_bindgen::to_value(&result).unwrap()
+    JsValue::from_serde(&result).unwrap()
 }

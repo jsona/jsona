@@ -4,6 +4,7 @@ use jsona::formatter::{self, Options};
 use jsona_ast::{Ast, Mapper};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use gloo_utils::format::JsValueSerdeExt;
 
 #[derive(Serialize, Deserialize)]
 struct ParseResult<T> {
@@ -24,7 +25,7 @@ pub fn parse(input: &str) -> JsValue {
             errors: Some(error.to_error_objects(&mapper)),
         },
     };
-    serde_wasm_bindgen::to_value(&result).unwrap()
+    JsValue::from_serde(&result).unwrap()
 }
 
 #[wasm_bindgen(js_name = parseAst)]
@@ -39,13 +40,14 @@ pub fn parse_ast(input: &str) -> JsValue {
             errors: Some(errors),
         },
     };
-    serde_wasm_bindgen::to_value(&result).unwrap()
+    JsValue::from_serde(&result).unwrap()
 }
 
 #[wasm_bindgen(js_name = stringifyAst)]
 pub fn stringify_ast(data: JsValue) -> Result<String, JsError> {
-    let ast: Ast =
-        serde_wasm_bindgen::from_value(data).map_err(|_| JsError::new("invalid jsona ast"))?;
+    let ast: Ast = data
+        .into_serde()
+        .map_err(|_| JsError::new("invalid jsona ast"))?;
     let node: Node = ast.into();
     Ok(format!("{}", node))
 }
@@ -54,7 +56,8 @@ pub fn stringify_ast(data: JsValue) -> Result<String, JsError> {
 pub fn format(input: &str, format_options: JsValue) -> Result<String, JsError> {
     let mut options: Options = Options::default();
     options.update(
-        serde_wasm_bindgen::from_value(format_options)
+        format_options
+            .into_serde()
             .map_err(|_| JsError::new("invalid format options"))?,
     );
     Ok(formatter::format(input, options))

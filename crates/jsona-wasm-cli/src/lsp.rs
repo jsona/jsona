@@ -6,6 +6,7 @@ use lsp_async_stub::{rpc, Server};
 use std::{io, sync::Arc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use gloo_utils::format::JsValueSerdeExt;
 
 #[wasm_bindgen]
 pub struct JsonaWasmLsp {
@@ -17,7 +18,7 @@ pub struct JsonaWasmLsp {
 #[wasm_bindgen]
 impl JsonaWasmLsp {
     pub fn send(&self, message: JsValue) -> Result<(), JsError> {
-        let message: lsp_async_stub::rpc::Message = serde_wasm_bindgen::from_value(message)?;
+        let message: lsp_async_stub::rpc::Message = message.into_serde()?;
         let world = self.world.clone();
         let writer = self.lsp_interface.clone();
 
@@ -64,7 +65,7 @@ impl Sink<rpc::Message> for WasmLspInterface {
     ) -> Result<(), Self::Error> {
         let this = JsValue::null();
         self.js_on_message
-            .call1(&this, &serde_wasm_bindgen::to_value(&message).unwrap())
+            .call1(&this, &JsValue::from_serde(&message).unwrap())
             .unwrap();
         Ok(())
     }
