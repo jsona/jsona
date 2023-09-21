@@ -1,10 +1,10 @@
+use gloo_utils::format::JsValueSerdeExt;
 use jsona::dom::Node;
 use jsona::error::ErrorObject;
 use jsona::formatter::{self, Options};
 use jsona_ast::{Ast, Mapper};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-use gloo_utils::format::JsValueSerdeExt;
 
 #[derive(Serialize, Deserialize)]
 struct ParseResult<T> {

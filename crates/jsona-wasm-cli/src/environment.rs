@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use futures::FutureExt;
+use gloo_utils::format::JsValueSerdeExt;
 use js_sys::{Function, Promise, Uint8Array};
 use jsona_util::environment::Environment;
 use std::{
@@ -12,7 +13,6 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use url::Url;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
-use gloo_utils::format::JsValueSerdeExt;
 
 pub(crate) struct JsAsyncRead {
     fut: Option<JsFuture>,

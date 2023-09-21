@@ -1,9 +1,9 @@
+use gloo_utils::format::JsValueSerdeExt;
 use jsona::{dom::Node, error::ErrorObject, util::mapper::Mapper};
 use jsona_schema::Schema;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
-use gloo_utils::format::JsValueSerdeExt;
 
 #[derive(Serialize, Deserialize)]
 struct ParseResult {

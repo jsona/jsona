@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use environment::WasmEnvironment;
+use gloo_utils::format::JsValueSerdeExt;
 use jsona::{
     dom::Node,
     error::ErrorObject,
@@ -10,7 +11,6 @@ use jsona::{
 use jsona_util::schema::Schemas;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
-use gloo_utils::format::JsValueSerdeExt;
 
 mod environment;
 #[cfg(feature = "lsp")]
