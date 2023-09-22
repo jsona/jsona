@@ -1,66 +1,66 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`parse schema.jsona 1`] = `
-Object {
+{
   "errors": null,
-  "value": Object {
-    "$defs": Object {
-      "Object": Object {
-        "properties": Object {
-          "k1": Object {
+  "value": {
+    "$defs": {
+      "Object": {
+        "properties": {
+          "k1": {
             "type": "string",
           },
-          "k2": Object {
+          "k2": {
             "type": "string",
           },
         },
         "type": "object",
       },
     },
-    "properties": Object {
-      "_": Object {
-        "properties": Object {
-          "value": Object {
+    "properties": {
+      "_": {
+        "properties": {
+          "value": {
             "description": "A value",
-            "properties": Object {
-              "array": Object {
-                "oneOf": Array [
-                  Object {
+            "properties": {
+              "array": {
+                "oneOf": [
+                  {
                     "type": "integer",
                   },
-                  Object {
+                  {
                     "type": "string",
                   },
                 ],
               },
-              "bool": Object {
+              "bool": {
                 "default": true,
                 "type": "boolean",
               },
-              "float": Object {
+              "float": {
                 "type": "number",
               },
-              "integer": Object {
+              "integer": {
                 "maximum": 10,
                 "type": "integer",
               },
-              "null": Object {},
-              "object1": Object {
+              "null": {},
+              "object1": {
                 "$ref": "#/$defs/Object",
               },
-              "object2": Object {
+              "object2": {
                 "$ref": "#/$defs/Object",
               },
-              "object3": Object {
-                "patternProperties": Object {
-                  ".*": Object {
+              "object3": {
+                "patternProperties": {
+                  ".*": {
                     "type": "string",
                   },
                 },
                 "type": "object",
               },
-              "string": Object {
-                "enum": Array [
+              "string": {
+                "enum": [
                   "apple",
                   "orange",
                   "banana",
@@ -68,7 +68,7 @@ Object {
                 "type": "string",
               },
             },
-            "required": Array [
+            "required": [
               "float",
             ],
             "type": "object",
@@ -76,33 +76,33 @@ Object {
         },
         "type": "object",
       },
-      "bool": Object {
+      "bool": {
         "description": "A bool annotation",
-        "properties": Object {
-          "value": Object {
+        "properties": {
+          "value": {
             "type": "boolean",
           },
         },
         "type": "object",
       },
-      "null": Object {
+      "null": {
         "description": "A null annotation",
-        "properties": Object {
-          "value": Object {
+        "properties": {
+          "value": {
             "type": "null",
           },
         },
         "type": "object",
       },
-      "object": Object {
+      "object": {
         "description": "A object annotation",
-        "properties": Object {
-          "value": Object {
-            "properties": Object {
-              "k1": Object {
+        "properties": {
+          "value": {
+            "properties": {
+              "k1": {
                 "type": "string",
               },
-              "k2": Object {
+              "k2": {
                 "type": "string",
               },
             },

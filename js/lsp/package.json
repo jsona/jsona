@@ -3,7 +3,10 @@
   "version": "0.2.0",
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "description": "A Jsona lsp.",
-  "keywords": ["jsona", "lsp"],
+  "keywords": [
+    "jsona",
+    "lsp"
+  ],
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,5 +27,9 @@
   },
   "dependencies": {
     "@jsona/util-types": "^0.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "wasm-pkg-build": "^0.4.0"
   }
 }

@@ -4,6 +4,8 @@
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "description": "A Jsona util types.",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "typings": "dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -11,8 +13,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "yarn rollup --silent -c rollup.config.js",
-    "prebuild": "rm -rf dist"
+    "build": "rollup --silent -c rollup.config.mjs",
+    "prebuild": "rm -rf dist || del /s /q dist"
   },
   "repository": {
     "type": "git",
@@ -21,13 +23,9 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^22.0.0",
-    "@rollup/plugin-node-resolve": "^13.3.0",
-    "@types/node": "^17.0.41",
-    "rimraf": "^3.0.2",
-    "rollup": "^2.75.6",
-    "rollup-plugin-typescript2": "^0.32.1",
-    "tslib": "^2.4.0",
-    "typescript": "^4.7.3"
+    "@rollup/plugin-typescript": "^11.1.3",
+    "@types/node": "^20.6.3",
+    "rollup": "^3.29.2",
+    "tslib": "^2.6.2"
   }
 }

@@ -1,42 +1,22 @@
 import commonjs from "@rollup/plugin-commonjs";
 import resolve from "@rollup/plugin-node-resolve";
-import path from "node:path";
 import esbuild from "rollup-plugin-esbuild";
 import replace from "@rollup/plugin-replace";
 
-const onwarn = (warning, rollupWarn) => {
-  const ignoredWarnings = [
-    {
-      ignoredCode: "CIRCULAR_DEPENDENCY",
-      ignoredPath: "node_modules/semver",
-    },
-  ];
-
-  // only show warning when code and path don't match
-  // anything in above list of ignored warnings
-  if (
-    !ignoredWarnings.some(
-      ({ ignoredCode, ignoredPath }) =>
-        warning.code === ignoredCode &&
-        warning.importer.includes(path.normalize(ignoredPath))
-    )
-  ) {
-    rollupWarn(warning);
-  }
-};
-
 /** @type {import('rollup').RollupOptions} */
 const options = {
-  onwarn,
   input: {
-    server: "src/server.ts",
-    extension: "src/extension.ts",
+    "browser-extension": "src/extension.ts",
   },
   output: {
     sourcemap: !!process.env.DEBUG,
-    format: "commonjs",
+    format: "umd",
     dir: "dist",
+    name: "extension",
     chunkFileNames: "[name].js",
+    globals: {
+      vscode: 'vscode',
+    }
   },
   external: ["vscode"],
   preserveEntrySignatures: true,
@@ -44,14 +24,15 @@ const options = {
   plugins: [
     replace({
       preventAssignment: true,
-      "import.meta.env.BROWSER": false,
+      "import.meta.env.BROWSER": true,
       "import.meta.env.DEBUG": !!process.env.DEBUG,
       "import.meta.env.LOG_TOPICS": JSON.stringify(process.env.LOG_TOPICS || ""),
     }),
-    esbuild({ minify: !!process.env.DEBUG }),
+    esbuild({ minify: !process.env.DEBUG }),
     commonjs(),
     resolve({
       preferBuiltins: true,
+      browser: true,
     }),
   ],
 };
