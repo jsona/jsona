@@ -84,18 +84,13 @@ impl Scope {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum ScopeKind {
+    #[default]
     Root,
     Array,
     Object,
     Annotation,
-}
-
-impl Default for ScopeKind {
-    fn default() -> Self {
-        ScopeKind::Root
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -184,7 +179,7 @@ pub fn format_syntax(node: SyntaxNode, options: Options) -> String {
 
 fn format_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != VALUE {
-        scope.write(&syntax.to_string());
+        scope.write(syntax.to_string());
         return;
     }
 
@@ -226,7 +221,7 @@ fn format_scalar(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 
 fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != OBJECT {
-        scope.write(&syntax.to_string());
+        scope.write(syntax.to_string());
         return;
     }
 
@@ -279,7 +274,7 @@ fn format_object(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 
 fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != PROPERTY {
-        scope.write(&syntax.to_string());
+        scope.write(syntax.to_string());
         return;
     }
     for c in syntax.children_with_tokens() {
@@ -319,7 +314,7 @@ fn format_entry(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 
 fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != ARRAY {
-        scope.write(&syntax.to_string());
+        scope.write(syntax.to_string());
         return;
     }
 
@@ -373,7 +368,7 @@ fn format_array(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
 
 fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context, outside: bool) {
     if syntax.kind() != ANNOTATIONS {
-        scope.write(&syntax.to_string());
+        scope.write(syntax.to_string());
         return;
     }
 
@@ -398,7 +393,7 @@ fn format_annotations(scope: Scope, syntax: SyntaxNode, ctx: &mut Context, outsi
 
 fn format_annotation_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Context, outside: bool) {
     if syntax.kind() != ANNOTATION_PROPERTY {
-        scope.write(&syntax.to_string());
+        scope.write(syntax.to_string());
         return;
     }
 
@@ -430,7 +425,7 @@ fn format_annotation_entry(mut scope: Scope, syntax: SyntaxNode, ctx: &mut Conte
 
 fn format_annotation_value(scope: Scope, syntax: SyntaxNode, ctx: &mut Context) {
     if syntax.kind() != ANNOTATION_VALUE {
-        scope.write(&syntax.to_string());
+        scope.write(syntax.to_string());
         return;
     }
     if syntax.text() == "(null)" {

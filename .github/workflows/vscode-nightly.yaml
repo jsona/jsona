@@ -21,26 +21,23 @@ jobs:
     - uses: extractions/setup-crate@v1
       with:
         owner: sigoden
-        name: runme
+        name: argc
 
     - name: Install Rust Toolchain Components
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
-        components: clippy, rustfmt
-        override: true
-        toolchain: stable
-        target: wasm32-unknown-unknown
+        targets: wasm32-unknown-unknown
 
-    - uses: Swatinem/rust-cache@v1
+    - uses: Swatinem/rust-cache@v2
 
     - uses: actions/setup-node@v3
       with:
-        node-version: '16'
+        node-version: '18'
         cache: 'yarn'
 
     - run: corepack enable
 
-    - run: runme prepare
+    - run: argc prepare
 
     - name: Set nightly version
       run: |
@@ -55,7 +52,7 @@ jobs:
         sed -i 's/^  "version": "'$version'",/  "version": "'$version_new'",/' package.json
       working-directory: editors/vscode
 
-    - run: runme build-js
+    - run: argc build-js
 
     - run: yarn package -o jsona.vsix --pre-release
       working-directory: editors/vscode

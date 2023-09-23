@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use environment::WasmEnvironment;
+use gloo_utils::format::JsValueSerdeExt;
 use jsona::{
     dom::Node,
     error::ErrorObject,

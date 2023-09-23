@@ -26,6 +26,10 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.cjs"
+  },
+  "devDependencies": {
+    "wasm-pkg-build": "^0.4.0",
+    "typescript": "^5.2.2"
   }
 }

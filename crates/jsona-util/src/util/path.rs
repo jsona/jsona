@@ -10,7 +10,7 @@ pub fn is_window<T: AsRef<str>>(path: T) -> bool {
 
 pub fn is_absolute<T: AsRef<str>>(path: T) -> bool {
     let path = path.as_ref();
-    if is_window(&path) {
+    if is_window(path) {
         true
     } else {
         path.starts_with('/')

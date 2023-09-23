@@ -93,7 +93,7 @@ impl QueryKeys {
     }
 
     pub fn dotted(&self) -> &str {
-        &*self.dotted
+        &self.dotted
     }
 
     pub fn len(&self) -> usize {

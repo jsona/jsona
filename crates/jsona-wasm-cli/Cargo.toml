@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "1" 
 async-trait = "0.1"
-clap = { version = "3.2", features = ["derive"], optional = true }
+clap = { version = "4.4", features = ["derive"], optional = true }
 console_error_panic_hook = "0.1"
 futures = "0.3"
 js-sys = "0.3"
@@ -26,9 +26,10 @@ serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", default-features = false, features = ["sync", "parking_lot", "io-util"] }
 time = { version = "0.3", features = ["parsing"] }
 tracing = "0.1"
-url = "2.2"
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+url = "2.4"
+wasm-bindgen = { version = "0.2" }
 wasm-bindgen-futures = "0.4"
+gloo-utils = { version = "0.2", features = ["serde"] }
 
 [features]
 default = []

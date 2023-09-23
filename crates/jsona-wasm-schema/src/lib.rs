@@ -1,3 +1,4 @@
+use gloo_utils::format::JsValueSerdeExt;
 use jsona::{dom::Node, error::ErrorObject, util::mapper::Mapper};
 use jsona_schema::Schema;
 use serde::{Deserialize, Serialize};

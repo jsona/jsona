@@ -10,5 +10,6 @@ crate-type = ["cdylib"]
 [dependencies]
 jsona = { path = "../jsona", version = "0.6" }
 jsona-schema = { path = "../jsona-schema", version = "0.3" }
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen = { version = "0.2" }
 serde = { version = "1", features = ["derive"] }
+gloo-utils = { version = "0.2", features = ["serde"] }

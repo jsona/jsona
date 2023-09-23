@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "target": "es2019",
-    "lib": ["ES2019", "dom"],
+    "lib": ["ES2019"],
     "sourceMap": false,
     "rootDir": "src",
+    "outDir": "dist",
     "moduleResolution": "node",
     "module": "ESNext",
     "newLine": "lf",

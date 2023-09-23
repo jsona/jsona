@@ -1,5 +1,6 @@
 use crate::environment::WasmEnvironment;
 use futures::Sink;
+use gloo_utils::format::JsValueSerdeExt;
 use js_sys::Function;
 use jsona_lsp::world::WorldState;
 use lsp_async_stub::{rpc, Server};

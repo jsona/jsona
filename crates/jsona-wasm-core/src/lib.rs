@@ -1,3 +1,4 @@
+use gloo_utils::format::JsValueSerdeExt;
 use jsona::dom::Node;
 use jsona::error::ErrorObject;
 use jsona::formatter::{self, Options};

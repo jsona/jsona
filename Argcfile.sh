@@ -13,8 +13,8 @@ CRATES=( \
 )
 
 npm_vars() {
-    NPM_NAMES=( $(yarn workspaces info | sed '1d;$d' | jq -r 'to_entries[] | .key' | tr -d '\r') )
-    NPM_PATHS=( $(yarn workspaces info | sed '1d;$d' | jq -r 'to_entries[] | .value.location' | tr -d '\r') )
+    pkg_names=( $(yarn workspaces info | sed '1d;$d' | jq -r 'to_entries[] | .key' | tr -d '\r') )
+    pkg_paths=( $(yarn workspaces info | sed '1d;$d' | jq -r 'to_entries[] | .value.location' | tr -d '\r') )
 }
 
 # @cmd Prepare env
@@ -39,10 +39,10 @@ build-js() {
     _build_js() {
         local path=$1
         echo Build $path
-        (cd $path && yarn build)
+        (cd $path && npm run build)
     }
     if [[ $# -eq 0 ]] || [[ $name == all ]]; then
-        for path in ${NPM_PATHS[@]}; do
+        for path in ${pkg_paths[@]}; do
             if [[ $path =~ vscode ]]; then
                 continue
             fi
@@ -50,7 +50,7 @@ build-js() {
             _build_js $path
         done
     else
-        for path in ${NPM_PATHS[@]}; do
+        for path in ${pkg_paths[@]}; do
             if [[ $path =~ $name ]]; then
                 _build_js $path
                 break
@@ -61,7 +61,7 @@ build-js() {
 
 # @cmd Test js
 test.js() {
-    (cd tests/js && yarn test $@)
+    (cd tests/js && npm test $@)
 }
 
 # @cmd Build vscode extension
@@ -69,12 +69,12 @@ test.js() {
 vscode.build() {
     pushd editors/vscode > /dev/null
     if [[ "$1" == "browser" ]]; then
-        yarn build:browser-server
-        yarn build:browser-extension
+        npm run build:browser-server
+        npm run build:browser-extension
     elif [[ "$1" == "node" ]]; then
-        yarn build:node
+        npm run build:node
     else
-        yarn build
+        npm run build
     fi
     popd > /dev/null
 }
@@ -88,13 +88,13 @@ vscode.web() {
         export LOG_TOPICS="worker,lsp" 
         vscode.build browser
     fi
-    vscode-test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry
+    npx @vscode/test-web --browserType=chromium --extensionDevelopmentPath=editors/vscode $argc_entry # vscode-test-web
 }
 
 # @cmd Package vscode extension
 vscode.pkg() {
     pushd editors/vscode > /dev/null
-        yarn package
+        npm run package
         pkg_ver=$(node -p "require('./package.json').version")
         ls -lh vscode-jsona-$pkg_ver.vsix
     popd > /dev/null
@@ -127,17 +127,17 @@ version.crate() {
 version.npm() {
     npm_vars
     if [[ $# -eq 0 ]]; then
-        for i in ${!NPM_NAMES[@]}; do
-            pkg_ver=$(node -p "require('./"${NPM_PATHS[$i]}"/package.json').version")
-            echo ${NPM_NAMES[$i]}@$pkg_ver
+        for i in ${!pkg_names[@]}; do
+            pkg_ver=$(node -p "require('"${pkg_paths[$i]}"/package.json').version")
+            echo ${pkg_names[$i]}@$pkg_ver
         done
     else
         for item in ${argc_modules[@]}; do
             name=${item%@*}
             version=${item##*@}
-            for i in ${!NPM_NAMES[@]}; do
-                if [[ ${NPM_NAMES[$i]} = $name ]]; then
-                    path=${NPM_PATHS[$i]}
+            for i in ${!pkg_names[@]}; do
+                if [[ ${pkg_names[$i]} = $name ]]; then
+                    path=${pkg_paths[$i]}
                     break
                 fi
             done
@@ -146,7 +146,7 @@ version.npm() {
                 continue
             fi
             sed -i 's/^  "version": ".*",/  "version": "'$version'",/' $path/package.json
-            for dep_path in ${NPM_PATHS[@]}; do
+            for dep_path in ${pkg_paths[@]}; do
                 sed -i 's|"'$name'": ".*"|"'$name'": "^'$version'"|' $dep_path/package.json
             done
         done
@@ -172,9 +172,9 @@ publish.crate() {
 # @cmd Publish to npm
 publish.npm() {
     npm_vars
-    for i in ${!NPM_NAMES[@]}; do
-        local name=${NPM_NAMES[$i]}
-        local path=${NPM_PATHS[$i]}
+    for i in ${!pkg_names[@]}; do
+        local name=${pkg_names[$i]}
+        local path=${pkg_paths[$i]}
         local access=$(node -p "require('./"$path"/package.json').publishConfig?.access")
         if [[ $access != "public" ]]; then
             continue
@@ -257,4 +257,4 @@ install() {
     ls -alh $HOME/.cargo/bin/jsona
 }
 
-eval "$(runme --runme-eval $0 "$@")"
+eval "$(argc --argc-eval $0 "$@")"

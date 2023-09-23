@@ -12,10 +12,10 @@ license = "MIT OR Apache-2.0"
 readme = false
 
 [dependencies]
-arc-swap = "1.5"
-indexmap = { version = "~1.6", features = ["serde"] }
-logos = "0.12"
-once_cell = "1.13"
+arc-swap = "1.6"
+indexmap = { version = "2.0", features = ["serde"] }
+logos = "0.13"
+once_cell = "1.18"
 rowan = "0.15"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

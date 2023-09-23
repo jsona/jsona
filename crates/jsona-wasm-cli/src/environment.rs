@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use futures::FutureExt;
+use gloo_utils::format::JsValueSerdeExt;
 use js_sys::{Function, Promise, Uint8Array};
 use jsona_util::environment::Environment;
 use std::{

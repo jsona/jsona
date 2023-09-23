@@ -7,7 +7,7 @@ macro_rules! wrap_node {
     ) => {
         $(#[$attrs])*
         $vis struct $name {
-            pub(crate) inner: Arc<$inner>,
+            pub(crate) inner: Rc<$inner>,
         }
 
         impl $crate::private::Sealed for $name {}
@@ -39,7 +39,7 @@ macro_rules! wrap_node {
         impl From<$inner> for $name {
             fn from(inner: $inner) -> $name {
                 $name {
-                    inner: Arc::new(inner)
+                    inner: Rc::new(inner)
                 }
             }
         }
