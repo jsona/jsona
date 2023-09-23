@@ -14,9 +14,9 @@ use indexmap::IndexMap;
 use once_cell::unsync::OnceCell;
 use rowan::{NodeOrToken, TextRange};
 use serde_json::Number as JsonNumber;
+use std::rc::Rc;
 use std::str::FromStr;
 use std::string::String as StdString;
-use std::sync::Arc;
 
 pub trait DomNode: Sized + Sealed {
     fn node_syntax(&self) -> Option<&SyntaxElement>;
@@ -609,13 +609,13 @@ pub enum KeyKind {
 
 #[derive(Debug, Clone)]
 pub struct Key {
-    inner: Arc<KeyInner>,
+    inner: Rc<KeyInner>,
 }
 
 impl From<KeyInner> for Key {
     fn from(inner: KeyInner) -> Self {
         Self {
-            inner: Arc::new(inner),
+            inner: Rc::new(inner),
         }
     }
 }
@@ -798,7 +798,7 @@ pub(crate) struct AnnotationsInner {
 
 #[derive(Debug, Clone)]
 pub struct Annotations {
-    inner: Arc<AnnotationsInner>,
+    inner: Rc<AnnotationsInner>,
 }
 
 impl Annotations {
@@ -840,7 +840,7 @@ impl Annotations {
 impl From<AnnotationsInner> for Annotations {
     fn from(inner: AnnotationsInner) -> Self {
         Self {
-            inner: Arc::new(inner),
+            inner: Rc::new(inner),
         }
     }
 }
