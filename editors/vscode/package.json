@@ -143,7 +143,7 @@
       {
         "language": "jsona",
         "scopeName": "source.jsona",
-        "path": "./syntaxes/jsona.json"
+        "path": "./jsona.grammar.json"
       }
     ]
   },
