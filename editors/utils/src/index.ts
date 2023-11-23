@@ -1,7 +1,7 @@
 export const JSONA_EXTENSION_CONFIG = {
   name: 'jsona',
-  publisher: '@jsona/monaco-components',
-  version: '0.1.0',
+  publisher: '@jsona/editor-utils',
+  version: '0.0.0',
   engines: {
     vscode: '*'
   },

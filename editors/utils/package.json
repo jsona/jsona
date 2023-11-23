@@ -16,7 +16,7 @@
     "clean": "rm -rf dist || rmdir /s /q dist"
   },
   "keywords": [
-    "monaco",
+    "editor",
     "jsona"
   ],
   "files": [

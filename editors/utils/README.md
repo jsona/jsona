@@ -1,4 +1,4 @@
-# monaco-jsona
+# Jsona editor utils
 
 JSONA language plugin for the Monaco Editor. It provides the following features when editing JSONA files:
 
@@ -15,60 +15,92 @@ npm i @jsona/editor-utils
 yarn add @jsona/editor-utils
 ```
 
-## Usage
+## Example
 
 ```js
+import { editor } from 'monaco-editor';
+import { MonacoLanguageClient, initServices, useOpenEditorStub } from 'monaco-languageclient';
+import { BrowserMessageReader, BrowserMessageWriter } from 'vscode-languageserver-protocol/browser.js';
+import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient';
+import { createConfiguredEditor } from 'vscode/monaco';
+import { ExtensionHostKind, registerExtension } from 'vscode/extensions';
+import getConfigurationServiceOverride, { updateUserConfiguration } from '@codingame/monaco-vscode-configuration-service-override';
 import getEditorServiceOverride from '@codingame/monaco-vscode-editor-service-override';
 import getKeybindingsServiceOverride from '@codingame/monaco-vscode-keybindings-service-override';
-import { JSONA_EXTENSION_CONFIG, JSONA_USER_CONFIGURATION } from '@jsona/editor-utils';
-import { useOpenEditorStub } from 'monaco-languageclient';
-import { UserConfig } from 'monaco-editor-wrapper';
+import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-override';
+import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-service-override';
+import { LogLevel } from 'vscode/services';
+import { JSONA_EXTENSION_CONFIG, JSONA_SCHEMA_STORE_URL } from '@jsona/editor-utils';
+import { Uri } from 'vscode';
 
-export function createJsonaGlobalConfig(code: string): UserConfig {
-    const jsonaConfigurationUrl = new URL('../node_modules/@jsona/editor-utils/jsona.configuration.json', window.location.href);
-    const jsonaGrammarUrl = new URL('../node_modules/@jsona/editor-utils/jsona.grammar.json', window.location.href);
-    const jsonaWorkerUrl = new URL('../node_modules/@jsona/editor-utils/jsona.worker.js', window.location.href);
+import '@codingame/monaco-vscode-theme-defaults-default-extension';
 
-    const jsonaWorker = new Worker(jsonaWorkerUrl, {
-        type: 'module',
-        name: 'JSONA worker',
-    });
+export async function setupJsonaClient() {
+    const serviceConfig = {
+        userServices: {
+            ...getThemeServiceOverride(),
+            ...getTextmateServiceOverride(),
+            ...getConfigurationServiceOverride(),
+            ...getEditorServiceOverride(useOpenEditorStub),
+            ...getKeybindingsServiceOverride()
+        },
+        debugLogging: true,
+        logLevel: LogLevel.Info
+    };
+    await initServices(serviceConfig);
 
-    const extensionFilesOrContents = new Map<string, string | URL>();
-    extensionFilesOrContents.set('/jsona.configuration.json', jsonaConfigurationUrl);
-    extensionFilesOrContents.set('/jsona.grammar.json', jsonaGrammarUrl);
+    const { registerFileUrl } = registerExtension(JSONA_EXTENSION_CONFIG, ExtensionHostKind.LocalProcess);
 
-    return {
-        wrapperConfig: {
-            serviceConfig: {
-                userServices: {
-                    ...getEditorServiceOverride(useOpenEditorStub),
-                    ...getKeybindingsServiceOverride()
-                },
-                debugLogging: true
+    registerFileUrl('/jsona.configuration.json', new URL('../../node_modules/@jsona/editor-utils/jsona.configuration.json', window.location.href).href);
+    registerFileUrl('/jsona.grammar.json', new URL('../../node_modules/@jsona/editor-utils/jsona.grammar.json', window.location.href).href);
+
+    updateUserConfiguration(`{
+    "editor.fontSize": 14,
+    "workbench.colorTheme": "Default Dark Modern"
+    "jsona.schema.enabled": true,
+    "jsona.schema.storeUrl": "${JSONA_SCHEMA_STORE_URL}",
+}`);
+
+    const languageId = 'jsona';
+    const exampleJsonaUrl = new URL('./src/jsona/example.jsona', window.location.href).href;
+    const editorText = await (await fetch(exampleJsonaUrl)).text();
+
+    const editorOptions = {
+        model: editor.createModel(editorText, languageId, Uri.parse('/workspace/example.jsona')),
+        automaticLayout: true
+    };
+    createConfiguredEditor(document.getElementById('container')!, editorOptions);
+
+    function createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
+        return new MonacoLanguageClient({
+            name: 'Jsona Client',
+            clientOptions: {
+                // use a language id as a document selector
+                documentSelector: [{ language: languageId }],
+                // disable the default error handler
+                errorHandler: {
+                    error: () => ({ action: ErrorAction.Continue }),
+                    closed: () => ({ action: CloseAction.DoNotRestart })
+                }
             },
-            editorAppConfig: {
-                $type: 'extended',
-                languageId: 'jsona',
-                code,
-                useDiffEditor: false,
-                extensions: [{
-                    config: JSONA_EXTENSION_CONFIG,
-                    filesOrContents: extensionFilesOrContents
-                }],
-                userConfiguration: {
-                    json: JSON.stringify({
-                        ...JSONA_USER_CONFIGURATION,
-                    })
+            // create a language client connection to the server running in the web worker
+            connectionProvider: {
+                get: () => {
+                    return Promise.resolve(transports);
                 }
             }
-        },
-        languageClientConfig: {
-            options: {
-                $type: 'WorkerDirect',
-                worker: jsonaWorker
-            }
-        }
-    };
+        });
+    }
+
+    const workerUrl = new URL('../../node_modules/@jsona/editor-utils/jsona.worker.js', window.location.href).href;
+    const worker = new Worker(workerUrl, {
+        type: 'module',
+        name: 'Jsona Language Server'
+    });
+    const reader = new BrowserMessageReader(worker);
+    const writer = new BrowserMessageWriter(worker);
+    const languageClient = createLanguageClient({ reader, writer });
+    languageClient.start();
+    reader.onClose(() => languageClient.stop());
 }
 ```
