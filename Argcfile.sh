@@ -32,7 +32,7 @@ build() {
 }
 
 # @cmd Build js modules
-# @arg name[core|schema|lsp|util-types|monaco|all]
+# @arg name[core|schema|lsp|util-types|all]
 build-js() {
     name=$1
     npm_vars

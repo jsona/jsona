@@ -5,7 +5,7 @@
     "js/core",
     "js/lsp",
     "js/schema",
-    "editors/monaco",
+    "editors/utils",
     "editors/vscode",
     "tests/js"
   ]
