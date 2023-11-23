@@ -22,6 +22,8 @@ node_modules/
 pkg
 dist
 .vscode-test-web
+/editors/utils/jsona.configuration.json
+/editors/utils/jsona.grammar.json
 /editors/vscode/out
 js/*/index_bg.*
 js/*/index_web.js

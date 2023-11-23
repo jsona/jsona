@@ -1,7 +1,7 @@
 {
-  "name": "monaco-jsona",
-  "version": "0.2.0",
-  "description": "Jsona plugin for monaco editor",
+  "name": "@jsona/editor-utils",
+  "version": "0.1.0",
+  "description": "Add JSONA support to the web editor like monaco/codemirror",
   "author": "Sigoden Huang <sigoden@gmail.com>",
   "type": "module",
   "module": "index.js",
@@ -10,7 +10,8 @@
   "scripts": {
     "build:worker": "rollup -c rollup.config.worker.mjs",
     "build:index": "tsc -p tsconfig.build.json",
-    "build": "npm run clean && npm run build:index && npm run build:worker",
+    "copy": "cp ../vscode/jsona.configuration.json ../vscode/jsona.grammar.json ./",
+    "build": "npm run clean && npm run build:index && npm run build:worker && npm run copy",
     "prepublish": "npm run build",
     "clean": "rm -rf dist || rmdir /s /q dist"
   },
@@ -19,20 +20,14 @@
     "jsona"
   ],
   "files": [
+    "jsona.configuration.json",
+    "jsona.grammar.json",
     "jsona.worker.js",
     "index.js",
     "index.d.ts"
   ],
   "publishConfig": {
     "access": "public"
-  },
-  "peerDependencies": {
-    "monaco-editor": ">=0.34"
-  },
-  "dependencies": {
-    "monaco-editor": "^0.34.0",
-    "monaco-languageclient": "^3.0.1",
-    "vscode-languageserver-protocol": "^3.17.2"
   },
   "devDependencies": {
     "@jsona/lsp": "^0.2.0",

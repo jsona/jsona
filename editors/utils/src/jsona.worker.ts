@@ -12,7 +12,7 @@ const writer = new BrowserMessageWriter(worker);
 const reader = new BrowserMessageReader(worker);
 
 let lsp: JsonaWasmLsp;
-let rootUri = "inmemory:///";
+let rootUri = "file:///";
 const logger = createLogger({
   debug: false,
   topics: "*",
@@ -20,8 +20,8 @@ const logger = createLogger({
 
 const log = logger.log;
 const rpc = createRpc({
-    write: v => writer.write(v),
-    log
+  write: v => writer.write(v),
+  log
 });
 
 reader.listen(async (message: RpcMessage) => {
